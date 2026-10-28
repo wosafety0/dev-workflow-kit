@@ -57,13 +57,25 @@ def _diff_sections(diff: str) -> list[tuple[str, str]]:
         section = diff[header.start():end]
         old_header = re.search(r"(?m)^--- (.+)$", section)
         new_header = re.search(r"(?m)^\+\+\+ (.+)$", section)
+        rename_from = re.search(r"(?m)^rename from (.+)$", section)
+        rename_to = re.search(r"(?m)^rename to (.+)$", section)
         if not old_header or not new_header:
-            raise ReviewError("Git diff section is missing ---/+++ file headers")
+            # Pure renames have metadata but no ---/+++ content headers.
+            if not (rename_from and rename_to):
+                raise ReviewError("Git diff section is missing ---/+++ file headers")
+            if rename_from.group(1) != old_path or rename_to.group(1) != new_path:
+                raise ReviewError("Git rename metadata does not match its path header")
+            sections.append((new_path, section))
+            continue
         old_file, new_file = old_header.group(1), new_header.group(1)
         if old_file != ("/dev/null" if old_file == "/dev/null" else "a/" + old_path):
             raise ReviewError("Git diff old-file header does not match its path")
         if new_file != ("/dev/null" if new_file == "/dev/null" else "b/" + new_path):
             raise ReviewError("Git diff new-file header does not match its path")
+        if rename_from and rename_from.group(1) != old_path:
+            raise ReviewError("Git rename-from metadata does not match its path")
+        if rename_to and rename_to.group(1) != new_path:
+            raise ReviewError("Git rename-to metadata does not match its path")
         sections.append((old_path if new_file == "/dev/null" else new_path, section))
     return sections
 
@@ -79,51 +91,50 @@ def _validate_diff_integrity(payload: dict[str, Any]) -> list[tuple[str, str]]:
 
 
 def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
-    """Map a finding's exact patch evidence to its old/new source line numbers."""
+    """Map every source line intersected by exact patch evidence to its old/new line number."""
     offsets = []
     cursor = 0
     while True:
         offset = section.find(evidence, cursor)
         if offset < 0:
             break
-        offsets.append(offset)
+        offsets.append((offset, offset + len(evidence)))
         cursor = offset + 1
     if not offsets:
         return set()
 
-    numbers: set[int] = set()
-    lines = section.splitlines(keepends=True)
+    mapped_spans = []
     offset = 0
     old_line = new_line = None
-    for line in lines:
+    for line in section.splitlines(keepends=True):
+        line_start = offset
+        line_end = offset + len(line)
         header = re.match(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
         if header:
             old_line, new_line = int(header.group(1)), int(header.group(2))
         elif old_line is not None and new_line is not None and line:
             prefix = line[0]
             if prefix == " ":
+                mapped_spans.append((line_start, line_end, {old_line, new_line}))
                 old_line += 1
                 new_line += 1
             elif prefix == "-":
+                mapped_spans.append((line_start, line_end, {old_line}))
                 old_line += 1
             elif prefix == "+":
+                mapped_spans.append((line_start, line_end, {new_line}))
                 new_line += 1
             elif prefix == "\\":
                 pass
             else:
                 old_line = new_line = None
-
-        line_end = offset + len(line)
-        if old_line is not None and new_line is not None:
-            for occurrence in offsets:
-                if offset <= occurrence < line_end:
-                    if line.startswith("-"):
-                        numbers.add(old_line - 1)
-                    elif line.startswith("+"):
-                        numbers.add(new_line - 1)
-                    elif line.startswith(" "):
-                        numbers.update((old_line - 1, new_line - 1))
         offset = line_end
+
+    numbers: set[int] = set()
+    for evidence_start, evidence_end in offsets:
+        for line_start, line_end, source_lines in mapped_spans:
+            if evidence_start < line_end and evidence_end > line_start:
+                numbers.update(source_lines)
     return {number for number in numbers if number >= 1}
 
 
@@ -186,7 +197,7 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
         ))
         if not evidence_lines:
             raise ReviewError("Finding evidence could not be mapped to a source line in the diff")
-        if not any(finding["line_start"] <= line <= finding["line_end"] for line in evidence_lines):
+        if not all(finding["line_start"] <= line <= finding["line_end"] for line in evidence_lines):
             raise ReviewError("Finding line range does not cover the cited diff evidence")
 
     if review["status"] == "PASS" and review["findings"]:
