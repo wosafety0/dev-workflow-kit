@@ -331,14 +331,14 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def test_accepts_no_newline_at_end_of_file_marker(self):
         payload = dict(self.payload)
         payload["diff"] = (
-            "diff --git a/src/client.py b/src/client.py\\n"
-            "--- a/src/client.py\\n"
-            "+++ b/src/client.py\\n"
-            "@@ -1 +1 @@\\n"
-            "-old value\\n"
-            "\\ No newline at end of file\\n"
-            "+new value\\n"
-            "\\ No newline at end of file\\n"
+            "diff --git a/src/client.py b/src/client.py\n"
+            "--- a/src/client.py\n"
+            "+++ b/src/client.py\n"
+            "@@ -1 +1 @@\n"
+            "-old value\n"
+            "\\ No newline at end of file\n"
+            "+new value\n"
+            "\\ No newline at end of file\n"
         )
         payload["changed_files"] = ["src/client.py"]
         self.assertEqual(validate_review(payload, self.pass_review())["status"], "PASS")
@@ -346,15 +346,15 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def test_accepts_content_changing_rename_with_matching_metadata(self):
         payload = dict(self.payload)
         payload["diff"] = (
-            "diff --git a/old_name.py b/new_name.py\\n"
-            "similarity index 90%\\n"
-            "rename from old_name.py\\n"
-            "rename to new_name.py\\n"
-            "--- a/old_name.py\\n"
-            "+++ b/new_name.py\\n"
-            "@@ -1 +1 @@\\n"
-            "-old value\\n"
-            "+new value\\n"
+            "diff --git a/old_name.py b/new_name.py\n"
+            "similarity index 90%\n"
+            "rename from old_name.py\n"
+            "rename to new_name.py\n"
+            "--- a/old_name.py\n"
+            "+++ b/new_name.py\n"
+            "@@ -1 +1 @@\n"
+            "-old value\n"
+            "+new value\n"
         )
         payload["changed_files"] = ["new_name.py"]
         self.assertEqual(validate_review(payload, self.pass_review())["status"], "PASS")
@@ -362,9 +362,9 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def test_rejects_binary_diff_without_line_mappable_headers(self):
         payload = dict(self.payload)
         payload["diff"] = (
-            "diff --git a/image.bin b/image.bin\\n"
-            "index 1111111..2222222 100644\\n"
-            "Binary files a/image.bin and b/image.bin differ\\n"
+            "diff --git a/image.bin b/image.bin\n"
+            "index 1111111..2222222 100644\n"
+            "Binary files a/image.bin and b/image.bin differ\n"
         )
         payload["changed_files"] = ["image.bin"]
         with self.assertRaisesRegex(ReviewError, "missing ---/\\+\\+\\+"):
