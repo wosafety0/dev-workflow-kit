@@ -4,4 +4,4 @@ Early development (0.x). A reusable, provider-agnostic toolkit for validating AI
 
 No credentials are committed. Offline tests do not establish live model behavior or guarantee complete defect detection.
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for staged acceptance criteria.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for staged acceptance criteria and [docs/STABLE_ACCEPTANCE_CONTRACT.md](docs/STABLE_ACCEPTANCE_CONTRACT.md) for the current 0.x acceptance contract.
