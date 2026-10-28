@@ -156,10 +156,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 ### Safe allowlisted task runner
 
 - Draft PR #13: https://github.com/wosafety0/dev-workflow-kit/pull/13
-- Branch: `feat/safe-task-runner-20261028`; latest tested head: `f7a72a2b366d3fd0297681e6072fa2d32c3285ce`.
+- Branch: `feat/safe-task-runner-20261028`; latest tested head: `a54973af06fb9422201646fbbf528f512d4c519a`.
 - Added `scripts/harness_runner.py`, mapping only the existing `python-unittest` and `semantic-review` task IDs to fixed argv arrays. It does not invoke a shell or accept executable names/arbitrary arguments from config.
 - Added preflight validation before any task executes, per-task timeout, project-root path containment, `artifacts/`-only outputs, suppressed raw task stdout/stderr, and a redacted report built through the existing strict acceptance-report module.
 - Added `tests/test_harness_runner.py`, including an end-to-end test that executes the fixed unittest task in a temporary project, failure/report behavior, path traversal/output protections, semantic-review argument requirements, and timeout handling.
 - Added `docs/HARNESS_RUNNER_V1.md`, updated the configuration/README docs, and recorded the runner gate in the roadmap.
-- Hosted CI run [40717109666](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40717109666), run number 163, succeeded on exact head `f7a72a2b366d3fd0297681e6072fa2d32c3285ce`: 98 offline tests passed, end-to-end runner test passed, acceptance report uploaded (artifact ID `12827249434`), and final gate passed.
+- Hosted CI run [40717334934](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40717334934), run number 168, succeeded on exact head `a54973af06fb9422201646fbbf528f512d4c519a`: 99 offline tests passed, end-to-end runner and both task-mapping tests passed, acceptance report uploaded (artifact ID `12828821699`), and final gate passed. Earlier code/test head `413025ae48a5d9369c669530f384ee0a653c0238` also passed in run [40717251863](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40717251863).
 - PR #13 remains draft/unmerged. The runner is not a sandbox; running project tests can have side effects, so consumers must use trusted worktrees and review their test commands. No live model request was made.
