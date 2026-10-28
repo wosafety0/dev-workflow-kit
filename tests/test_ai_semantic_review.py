@@ -666,5 +666,17 @@ class SemanticReviewValidationTests(unittest.TestCase):
             validate_review(payload, self.pass_review())
 
 
+    def test_rejects_hunk_header_with_unbounded_decimal_integer(self):
+        payload = dict(self.payload)
+        huge_number = "9" * 5000
+        payload["diff"] = payload["diff"].replace(
+            "@@ -1 +1 @@",
+            f"@@ -{huge_number} +1 @@",
+            1,
+        )
+        with self.assertRaisesRegex(ReviewError, "Malformed diff hunk header|line range"):
+            validate_review(payload, self.pass_review())
+
+
 if __name__ == "__main__":
     unittest.main()
