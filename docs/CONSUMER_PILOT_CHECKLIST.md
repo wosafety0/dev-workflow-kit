@@ -8,7 +8,8 @@ Use this checklist to decide whether a low-risk consumer repository can adopt th
 
 - [ ] The consumer repository is independent of production game automation and other safety-critical side effects.
 - [ ] The target branch and rollback path are identified.
-- [ ] The consumer's existing test command is known and can run without secrets or live external services.
+- [ ] The consumer's existing test/check command is known and can run without secrets or live external services.
+- [ ] The required runtime is supported (`python` or `node`) and its version is identified.
 - [ ] The reusable workflow reference is pinned to a reviewed full commit SHA.
 - [ ] The caller grants only the permissions required by its own workflow; the reusable workflow currently requests `contents: read`.
 - [ ] The consumer can inspect the uploaded redacted acceptance report without exposing credentials or private payloads.
@@ -17,9 +18,9 @@ Use this checklist to decide whether a low-risk consumer repository can adopt th
 
 1. Create an isolated feature branch in the consumer repository.
 2. Add a minimal caller workflow using `.github/workflows/reusable-acceptance.yml`.
-3. Pass the consumer's explicit Python version and test command.
+3. Pass the consumer's explicit runtime, runtime version, and test command.
 4. Open a draft pull request; do not merge it during the pilot.
-5. Verify the normal path: checkout, Python setup, tests, report generation, artifact upload, and final gate all succeed.
+5. Verify the normal path: checkout, runtime setup, tests, report generation, artifact upload, and final gate all succeed.
 6. Verify a controlled required-stage failure closes the gate. Prefer a deterministic test-command failure over external-service disruption.
 7. Inspect the `consumer-acceptance-report` artifact and workflow logs for accidental secret or payload disclosure.
 8. Record setup effort, required consumer-specific changes, observed failures, and cleanup/rollback results.
@@ -43,7 +44,7 @@ For the pilot, record:
 
 - Consumer repository and branch:
 - Reusable workflow commit SHA:
-- Consumer test command and Python version:
+- Consumer runtime/version and test command:
 - Successful run URL and tested commit SHA:
 - Required-stage failure run URL and tested commit SHA:
 - Artifact/report review:
