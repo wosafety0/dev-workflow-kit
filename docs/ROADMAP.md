@@ -2,7 +2,7 @@
 
 ## Stage 0 — repository bootstrap
 
-- [x] Create a separate private repository.
+- [x] Create an independent repository.
 - [x] Add a clear non-stable status statement.
 - [ ] Run independent CI and review its actual result.
 
@@ -18,7 +18,7 @@
 
 - [ ] Define a versioned project configuration schema.
 - [ ] Validate configuration without requiring a model API.
-- [ ] Define safe, explicit command allowlists; never execute arbitrary project config commands by default.
+- [ ] Define safe, explicit command allowlists; never execute arbitrary configured commands by default.
 - [ ] Emit a redacted, traceable report with commit SHA, rules pin, tool version, and test status.
 - [ ] Add failure-injection tests for all fail-closed paths.
 
@@ -30,8 +30,8 @@
 
 ## Stage 4 — consumer integration
 
-- [ ] Integrate KancolleBot through a separate PR pinned to a tested Harness SHA.
-- [ ] Preserve project-specific tests, safety constraints, and progress archive paths.
+- [ ] Integrate a consumer through a separate PR pinned to a tested toolkit SHA.
+- [ ] Preserve each consumer's project-specific tests, safety constraints, and archive paths.
 - [ ] Pilot with a second, unrelated repository without copying the core.
 - [ ] Publish a reusable-MVP decision based on actual evidence.
 
