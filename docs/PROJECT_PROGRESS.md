@@ -72,3 +72,14 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Result: 89 offline tests passed; report generation passed; upload step failed as deliberately configured because the requested artifact path did not exist; final gate failed with `ARTIFACT_OUTCOME=failure` and named `artifact` as the unsuccessful required stage.
 - This proves the hosted workflow closes the gate on an upload-step failure. It does **not** simulate a GitHub artifact-service outage or validate service-level behavior.
 - The test-only PR was closed after evidence collection and was never merged. Its workflow was restored to the normal artifact path in cleanup commit `9254c3058196a192227bb56a1d6c634ecefbc72d`. The temporary branch remains for auditability; no changes were made to `main`.
+
+### Consumer pilot preparation and normal-path verification
+
+- Created draft PR #7: https://github.com/wosafety0/dev-workflow-kit/pull/7
+- Branch: `test/consumer-pilot-readiness-20261028`; tested head: `bff949fba82e5c514ed9f0f11a32120dae2faabf`.
+- Added `docs/CONSUMER_PILOT_CHECKLIST.md` with entry criteria, controlled pilot steps, pass/fail criteria, evidence capture, and stop conditions. The file was read back from GitHub; blob SHA: `afdc2781809e8e1d1e332c739bdbee4d63989a22`.
+- The checklist explicitly distinguishes a missing-artifact-input failure from a real GitHub Artifact service outage.
+- PR #7 is draft and unmerged. No consumer repository has been integrated; no changes were made to `main`.
+- Normal-path CI validation is requested by this PR, but the GitHub connector currently returned no workflow-run records or commit status checks for its head at the time of this log update. Therefore the normal-path result is **pending/unverified**, not a pass.
+- Next: verify the normal-path CI result through GitHub's checks/runs, then select a low-risk independent consumer repository for the pilot. Do not wait indefinitely for a hard-to-reproduce service outage.
+
