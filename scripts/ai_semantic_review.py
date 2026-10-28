@@ -383,6 +383,23 @@ def validate_model_config(environ: dict[str, str] | None = None) -> tuple[str, s
     return endpoint, api_key, model
 
 
+class _RejectModelRedirects(urllib.request.HTTPRedirectHandler):
+    """Never forward provider credentials to a redirected endpoint."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _open_model_request(request: urllib.request.Request, endpoint: str):
+    handlers = [_RejectModelRedirects()]
+    if urlsplit(endpoint).scheme == "http":
+        # Cleartext HTTP is only permitted for literal loopback IPs. Disable
+        # proxies for this request, without changing global proxy settings.
+        handlers.append(urllib.request.ProxyHandler({}))
+    # For HTTPS, retain urllib's default proxy and TLS verification behavior.
+    return urllib.request.build_opener(*handlers).open(request, timeout=60)
+
+
 def call_model(payload: dict[str, Any]) -> Any:
     endpoint, api_key, model = validate_model_config()
     body = json.dumps({
@@ -398,13 +415,7 @@ def call_model(payload: dict[str, Any]) -> Any:
         method="POST",
     )
     try:
-        if urlsplit(endpoint).scheme == "http":
-            # HTTP is permitted only for literal loopback IPs; bypass configured proxies
-            # for this request so local inference never depends on proxy/NO_PROXY settings.
-            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-            response_context = opener.open(request, timeout=60)
-        else:
-            response_context = urllib.request.urlopen(request, timeout=60)
+        response_context = _open_model_request(request, endpoint)
         with response_context as response:
             raw_response = response.read(MAX_MODEL_RESPONSE_BYTES + 1)
             if len(raw_response) > MAX_MODEL_RESPONSE_BYTES:

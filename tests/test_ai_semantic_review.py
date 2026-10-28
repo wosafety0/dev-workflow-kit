@@ -691,7 +691,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
                   "AI_REVIEW_API_KEY": "SECRET_TEST_TOKEN",
                   "AI_REVIEW_MODEL": "test-model"}
         with patch.dict("os.environ", config, clear=True), patch(
-            "scripts.ai_semantic_review.urllib.request.urlopen",
+            "scripts.ai_semantic_review._open_model_request",
             side_effect=urllib.error.URLError("SECRET_TEST_TOKEN"),
         ):
             with self.assertRaises(ReviewError) as caught:
@@ -705,7 +705,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
                   "AI_REVIEW_API_KEY": "test-key",
                   "AI_REVIEW_MODEL": "test-model"}
         with patch.dict("os.environ", config, clear=True), patch(
-            "scripts.ai_semantic_review.urllib.request.urlopen",
+            "scripts.ai_semantic_review._open_model_request",
             side_effect=TimeoutError("simulated timeout"),
         ):
             with self.assertRaisesRegex(ReviewError, "review cannot pass"):
@@ -729,7 +729,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
                 response = MagicMock()
                 response.__enter__.return_value.read.return_value = raw
                 with patch.dict("os.environ", config, clear=True), patch(
-                    "scripts.ai_semantic_review.urllib.request.urlopen",
+                    "scripts.ai_semantic_review._open_model_request",
                     return_value=response,
                 ):
                     with self.assertRaises(ReviewError):
@@ -747,7 +747,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
         response = MagicMock()
         response.__enter__.return_value.read.return_value = raw
         with patch.dict("os.environ", config, clear=True), patch(
-            "scripts.ai_semantic_review.urllib.request.urlopen",
+            "scripts.ai_semantic_review._open_model_request",
             return_value=response,
         ):
             self.assertEqual(call_model(self.payload)["status"], "PASS")
@@ -765,7 +765,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
         response = MagicMock()
         response.__enter__.return_value.read.return_value = b"x" * (MAX_MODEL_RESPONSE_BYTES + 1)
         with patch.dict("os.environ", config, clear=True), patch(
-            "scripts.ai_semantic_review.urllib.request.urlopen",
+            "scripts.ai_semantic_review._open_model_request",
             return_value=response,
         ):
             with self.assertRaisesRegex(ReviewError, "size limit"):
@@ -774,9 +774,53 @@ class SemanticReviewValidationTests(unittest.TestCase):
             MAX_MODEL_RESPONSE_BYTES + 1
         )
 
+    def test_loopback_model_redirect_is_rejected_without_forwarding_auth(self):
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        from scripts.ai_semantic_review import call_model
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                self.server.posts += 1
+                self.send_response(302)
+                self.send_header(
+                    "Location", f"http://127.0.0.1:{self.server.server_port}/redirected"
+                )
+                self.end_headers()
+
+            def do_GET(self):
+                self.server.redirected += 1
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"{}")
+
+            def log_message(self, _format, *_args):
+                return
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        server.posts = 0
+        server.redirected = 0
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            config = {
+                "AI_REVIEW_API_BASE": f"http://127.0.0.1:{server.server_port}/v1",
+                "AI_REVIEW_API_KEY": "test-redirect-key",
+                "AI_REVIEW_MODEL": "test-model",
+            }
+            with patch.dict("os.environ", config, clear=True):
+                with self.assertRaisesRegex(ReviewError, "review cannot pass"):
+                    call_model(self.payload)
+            self.assertEqual(server.posts, 1)
+            self.assertEqual(server.redirected, 0)
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
     def test_provider_config_validation_is_offline(self):
         from scripts.ai_semantic_review import validate_model_config
-        with patch("scripts.ai_semantic_review.urllib.request.urlopen") as network:
+        with patch("scripts.ai_semantic_review._open_model_request") as network:
             endpoint, key, model = validate_model_config({
                 "AI_REVIEW_API_BASE": "https://example.invalid/v1/",
                 "AI_REVIEW_API_KEY": "test-key",
