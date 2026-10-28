@@ -14,6 +14,7 @@ import re
 import sys
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
 from pathlib import Path
 from typing import Any
 
@@ -330,16 +331,44 @@ def build_messages(payload: dict[str, Any]) -> list[dict[str, str]]:
     ]
 
 
-def call_model(payload: dict[str, Any]) -> Any:
-    base = os.environ.get("AI_REVIEW_API_BASE", "").strip().rstrip("/")
-    api_key = os.environ.get("AI_REVIEW_API_KEY", "")
-    model = os.environ.get("AI_REVIEW_MODEL", "").strip()
+def validate_model_config(environ: dict[str, str] | None = None) -> tuple[str, str, str]:
+    """Validate provider configuration without performing any network request."""
+    env = os.environ if environ is None else environ
+    base = env.get("AI_REVIEW_API_BASE", "").strip()
+    api_key = env.get("AI_REVIEW_API_KEY", "")
+    model = env.get("AI_REVIEW_MODEL", "").strip()
     if not base or not api_key or not model:
         raise ReviewError(
             "AI review is not configured; set AI_REVIEW_API_BASE, AI_REVIEW_API_KEY, "
             "and AI_REVIEW_MODEL"
         )
-    endpoint = base if base.endswith("/chat/completions") else base + "/chat/completions"
+    if any(ord(c) < 33 or ord(c) == 127 for c in api_key):
+        raise ReviewError("AI_REVIEW_API_KEY contains invalid whitespace or control characters")
+    if any(ord(c) < 33 or ord(c) == 127 for c in model):
+        raise ReviewError("AI_REVIEW_MODEL contains invalid whitespace or control characters")
+    try:
+        parsed = urlsplit(base)
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.query
+            or parsed.fragment
+            or any(ord(c) <= 32 or ord(c) == 127 for c in base)
+        ):
+            raise ValueError("unsafe endpoint")
+        _ = parsed.port
+    except ValueError:
+        raise ReviewError("AI_REVIEW_API_BASE must be an HTTPS URL without credentials, query or fragment") from None
+    endpoint = base.rstrip("/")
+    if not endpoint.endswith("/chat/completions"):
+        endpoint += "/chat/completions"
+    return endpoint, api_key, model
+
+
+def call_model(payload: dict[str, Any]) -> Any:
+    endpoint, api_key, model = validate_model_config()
     body = json.dumps({
         "model": model,
         "temperature": 0,
