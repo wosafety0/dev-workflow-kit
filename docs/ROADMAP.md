@@ -22,7 +22,7 @@
 - [x] Define a safe, explicit task-ID allowlist; unknown IDs fail closed and configuration does not execute commands.
 - [x] Build a deterministic, strict-allowlist acceptance report with commit SHA, rules pin, tool version, and test status (`docs/ACCEPTANCE_REPORT_V1.md`).
 - [x] Wire CI to generate and upload the report using the workflow commit SHA, rules-contract content hash, toolkit revision, and test-step outcome.
-- [ ] Verify report artifact and fail-closed job gate in a completed GitHub Actions run.
+- [x] Verify the report artifact was uploaded and the fail-closed job gate passed in a completed GitHub Actions run (Run 40639692633).
 - [x] Add failure-injection tests for the current model-provider fail-closed paths; broader orchestration paths remain pending.
 
 ## Stage 3 — versioned distribution
