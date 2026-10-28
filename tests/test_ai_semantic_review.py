@@ -581,7 +581,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
             "rename to new_name.py\n"
         )
         payload["changed_files"] = ["new_name.py"]
-        with self.assertRaisesRegex(ReviewError, "rename-from metadata"):
+        with self.assertRaisesRegex(ReviewError, "rename metadata does not match"):
             validate_review(payload, self.pass_review())
 
 
