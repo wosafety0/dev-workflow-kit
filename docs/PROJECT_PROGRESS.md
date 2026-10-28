@@ -38,18 +38,17 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 
 - PR #5 CI passed on the exact PR head before merge; both push and pull-request runs succeeded.
 - Hosted failure-path tests have been performed for missing artifact input and consumer test-command failure. They do not establish behavior during an actual Artifact service outage.
-- No real model validation or second independent consumer integration pilot has been completed.
+- No live model validation has been completed. A cross-repository Node.js consumer pilot succeeded in hosted CI, but its consumer PR remains draft/unmerged; this is not a released integration.
 - The local working tree/synchronization state has not been verified.
 - No changes were made to `main`.
 
 ## Next steps
 
-1. Review the successful Node.js consumer pilot evidence and decide whether to revise the consumer PR; keep it draft until separately reviewed.
-2. Review the completed independent consumer pilot evidence; keep the consumer PR draft/unmerged until separately authorized.
-3. Begin controlled real-model validation with strict quotas and no production actions, then define 0.x release criteria from the accumulated evidence.
-3. Define objective 0.x release criteria after the independent pilot evidence is available.
-4. Conduct controlled real-model validation after offline and hosted reliability boundaries are documented.
-5. Keep the Artifact-service-outage boundary explicitly unverified; do not let this hard-to-reproduce scenario block a low-risk independent consumer pilot.
+1. Review the open draft Harness PRs #12, #13 and their stacked hardening PRs #14, #15, #17; do not merge without separate authorization.
+2. Review the independent Node.js consumer pilot evidence (AI-Worker-Proxy PR #1); retain its draft/unmerged status pending authorization.
+3. After approved integration of the proposed stacks, run fresh CI against the combined exact commit before defining 0.x release criteria.
+4. Conduct controlled real-model validation with explicit quotas and no production actions; offline and hosted contract tests are not a substitute.
+5. Keep a real GitHub Artifact service outage explicitly unverified. The tested missing-input upload failure and consumer-command failure are narrower evidence.
 
 ## Decision record
 
