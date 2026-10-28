@@ -133,14 +133,6 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - This verifies cross-repository Node runtime consumption on the exact tested Harness SHA. The PR is draft and unmerged; it adds only a read-only acceptance workflow and does not deploy the Cloudflare Worker or modify `main`.
 
 
-### Updated multi-runtime workflow: independent consumer pilot result
-
-- Pilot workflow run [40715309593](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/40715309593) succeeded on consumer head `642c627bdb8f2e3c791835ec78f837a258c3eb97`, calling Harness commit `65544e290fd875bb6c4e30f6525b238200037bba`.
-- Verified steps: runtime allowlist accepted `node`; Node.js 26 setup succeeded; pnpm 11.4.0 installed; frozen-lockfile install succeeded; the existing `pnpm check` command passed; redacted report uploaded; final gate passed.
-- Artifact ID `12828925328`, digest `sha256:ab0642ac0f7590352cabc08d504b21c75a3b8612e14b6be72ac6fd33f23c938d`.
-- The independent consumer pilot is technically green for its normal path, but its PR remains draft/unmerged pending review. It is not a release or deployment.
-
-
 ### Updated multi-runtime Node failure-path validation
 
 - Temporary draft PR #11: https://github.com/wosafety0/dev-workflow-kit/pull/11 (closed, not merged).
