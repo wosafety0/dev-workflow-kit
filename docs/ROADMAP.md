@@ -4,7 +4,7 @@
 
 - [x] Create an independent repository.
 - [x] Add a clear non-stable status statement.
-- [ ] Run independent CI and review its actual result.
+- [x] Run independent CI and review its actual result.
 
 ## Stage 1 — reusable semantic-review core
 
@@ -12,16 +12,16 @@
 - [x] Port offline contract tests.
 - [x] Document inputs, secrets, status semantics, and limitations.
 - [x] Publish the initial 0.x stable acceptance contract in `docs/STABLE_ACCEPTANCE_CONTRACT.md`.
-- [ ] Expand tests for malformed input, missing configuration, provider errors, and malformed provider responses.
-- [ ] Confirm CI is green on this repository.
+- [x] Expand tests for malformed input, missing configuration, provider errors, and malformed provider responses.
+- [x] Confirm CI is green on this repository.
 
 ## Stage 2 — project contract and deterministic orchestration
 
 - [ ] Define a versioned project configuration schema.
-- [ ] Validate configuration without requiring a model API.
+- [x] Validate model-provider configuration without requiring a model API.
 - [ ] Define safe, explicit command allowlists; never execute arbitrary configured commands by default.
 - [ ] Emit a redacted, traceable report with commit SHA, rules pin, tool version, and test status.
-- [ ] Add failure-injection tests for all fail-closed paths.
+- [x] Add failure-injection tests for the current model-provider fail-closed paths; broader orchestration paths remain pending.
 
 ## Stage 3 — versioned distribution
 
