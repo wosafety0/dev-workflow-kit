@@ -46,7 +46,7 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
     required = {"status", "summary", "checked_scope", "limitations", "findings"}
     if set(review) != required:
         raise ReviewError("Review output keys do not match the required schema")
-    if review["status"] not in STATUSES:
+    if not isinstance(review["status"], str) or review["status"] not in STATUSES:
         raise ReviewError("Invalid review status")
     if not isinstance(review["summary"], str) or not review["summary"].strip():
         raise ReviewError("summary must be non-empty")
@@ -68,7 +68,7 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
             "rule_ref", "rule_quote", "evidence", "rationale", "recommendation"
         }:
             raise ReviewError("Finding does not match the required schema")
-        if finding["severity"] not in SEVERITIES:
+        if not isinstance(finding["severity"], str) or finding["severity"] not in SEVERITIES:
             raise ReviewError("Finding has invalid severity")
         for key in ("title", "file", "rule_ref", "rule_quote", "evidence",
                     "rationale", "recommendation"):
