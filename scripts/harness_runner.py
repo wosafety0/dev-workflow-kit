@@ -35,7 +35,12 @@ def _resolve_inside_root(root: Path, value: str, field: str) -> Path:
     if not isinstance(value, str) or not value.strip() or value != value.strip():
         raise HarnessRunnerError(f"{field} must be a non-empty trimmed repository-relative path")
     candidate = Path(value)
-    if candidate.is_absolute() or any(part in {"", ".", ".."} for part in candidate.parts):
+    if (
+        candidate.is_absolute()
+        or not candidate.parts
+        or candidate == Path(".")
+        or any(part in {"", ".", ".."} for part in candidate.parts)
+    ):
         raise HarnessRunnerError(f"{field} must be a safe repository-relative path")
     resolved = candidate.resolve() if candidate.is_absolute() else (root / candidate).resolve()
     try:
@@ -43,6 +48,16 @@ def _resolve_inside_root(root: Path, value: str, field: str) -> Path:
     except ValueError:
         raise HarnessRunnerError(f"{field} resolves outside the project root") from None
     return resolved
+
+
+def _require_artifact_path(root: Path, path: Path, field: str) -> None:
+    artifact_root = (root / "artifacts").resolve()
+    try:
+        path.relative_to(artifact_root)
+    except ValueError:
+        raise HarnessRunnerError(f"{field} must be inside the artifacts/ directory") from None
+    if path == artifact_root or (path.exists() and path.is_dir()):
+        raise HarnessRunnerError(f"{field} must identify a file inside artifacts/")
 
 
 def _git_commit_sha(root: Path) -> str:
@@ -207,21 +222,27 @@ def main(argv: list[str] | None = None) -> int:
             raise HarnessRunnerError(
                 "--review-input and --review-output are only valid when semantic-review is configured"
             )
+        _require_artifact_path(root, report_path, "report-output")
+        if review_output is not None:
+            _require_artifact_path(root, review_output, "review-output")
         if review_input is not None and not review_input.is_file():
             raise HarnessRunnerError("review-input must identify an existing file")
         if review_output is not None:
             review_output.parent.mkdir(parents=True, exist_ok=True)
 
+        # Preflight every task before executing any of them, avoiding partial execution if
+        # a configured task lacks its required arguments or implementation.
+        planned_tasks = [
+            (task_id, _task_argv(task_id, root, review_input, review_output))
+            for task_id in config["commands"]
+        ]
         commit_sha = _git_commit_sha(root)
         rules_pin = _rules_pin(root)
         outcomes: dict[str, str] = {}
-        exit_codes: dict[str, int | None] = {}
-        for task_id in config["commands"]:
-            argv_for_task = _task_argv(task_id, root, review_input, review_output)
+        for task_id, argv_for_task in planned_tasks:
             status, exit_code = _run_task(argv_for_task, root, args.timeout_seconds)
             outcomes[task_id] = status
-            exit_codes[task_id] = exit_code
-            suffix = " (timeout or launch failure)" if exit_code is None and status == "failed" else (
+                suffix = " (timeout or launch failure)" if exit_code is None and status == "failed" else (
                 f" (exit {exit_code})" if exit_code not in (None, 0) else ""
             )
             print(f"Task {task_id}: {status}{suffix}")
