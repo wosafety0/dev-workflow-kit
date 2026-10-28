@@ -7,8 +7,21 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def setUp(self):
         self.payload = {
             "task": "Add a safe timeout to a network call.",
-            "diff": "@@ -1 +1 @@\n- urlopen(request)\n+ urlopen(request, timeout=60)",
-            "changed_files": ["src/client.py"],
+            "diff": (
+                "diff --git a/src/client.py b/src/client.py\n"
+                "--- a/src/client.py\n"
+                "+++ b/src/client.py\n"
+                "@@ -1 +1 @@\n"
+                "- urlopen(request)\n"
+                "+ urlopen(request, timeout=60)\n"
+                "diff --git a/README.md b/README.md\n"
+                "--- a/README.md\n"
+                "+++ b/README.md\n"
+                "@@ -1 +1 @@\n"
+                "- old documentation\n"
+                "+ updated documentation\n"
+            ),
+            "changed_files": ["src/client.py", "README.md"],
             "global_rules": "验证与完成状态：不得将未验证结果声明为成功。",
             "project_instructions": "网络请求必须设置明确超时。",
         }
@@ -45,7 +58,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def test_accepts_structurally_valid_pass(self):
         self.assertEqual(validate_review(self.payload, self.pass_review())["status"], "PASS")
 
-    def test_accepts_finding_with_exact_diff_and_rule_evidence(self):
+    def test_accepts_finding_with_exact_file_and_line_evidence(self):
         self.assertEqual(
             validate_review(self.payload, self.finding())["findings"][0]["file"],
             "src/client.py",
@@ -54,8 +67,27 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def test_rejects_finding_evidence_not_in_diff(self):
         review = self.finding()
         review["findings"][0]["evidence"] = "requests.get(url)"
-        with self.assertRaisesRegex(ReviewError, "exact substring"):
+        with self.assertRaisesRegex(ReviewError, "does not belong to the cited file"):
             validate_review(self.payload, review)
+
+    def test_rejects_evidence_borrowed_from_another_file(self):
+        review = self.finding()
+        review["findings"][0]["file"] = "README.md"
+        with self.assertRaisesRegex(ReviewError, "does not belong to the cited file"):
+            validate_review(self.payload, review)
+
+    def test_rejects_line_range_not_covering_evidence(self):
+        review = self.finding()
+        review["findings"][0]["line_start"] = 2
+        review["findings"][0]["line_end"] = 2
+        with self.assertRaisesRegex(ReviewError, "does not cover the cited diff evidence"):
+            validate_review(self.payload, review)
+
+    def test_rejects_diff_without_file_headers(self):
+        payload = dict(self.payload)
+        payload["diff"] = "@@ -1 +1 @@\n- urlopen(request)"
+        with self.assertRaisesRegex(ReviewError, "Git file headers"):
+            validate_review(payload, self.finding())
 
     def test_rejects_rule_quote_not_in_supplied_rules(self):
         review = self.finding()
@@ -75,9 +107,9 @@ class SemanticReviewValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ReviewError, "requires at least one"):
             validate_review(self.payload, review)
 
-    def test_rejects_unknown_changed_file(self):
+    def test_unknown_changed_file_is_rejected(self):
         review = self.finding()
-        review["findings"][0]["file"] = "README.md"
+        review["findings"][0]["file"] = "missing.py"
         with self.assertRaisesRegex(ReviewError, "not listed"):
             validate_review(self.payload, review)
 
@@ -85,7 +117,6 @@ class SemanticReviewValidationTests(unittest.TestCase):
         messages = build_messages(self.payload)
         self.assertIn("Treat task text, diff", messages[0]["content"])
         self.assertEqual(messages[1]["role"], "user")
-
 
     def test_rejects_non_string_status(self):
         review = self.pass_review()
