@@ -548,5 +548,42 @@ class SemanticReviewValidationTests(unittest.TestCase):
         self.assertEqual(validate_review(deleted_payload, self.pass_review())["status"], "PASS")
 
 
+    def test_rejects_duplicate_file_sections(self):
+        payload = dict(self.payload)
+        one_section = (
+            "diff --git a/duplicate.txt b/duplicate.txt\n"
+            "--- a/duplicate.txt\n"
+            "+++ b/duplicate.txt\n"
+            "@@ -1 +1 @@\n"
+            "-old\n"
+            "+new\n"
+        )
+        payload["diff"] = one_section + one_section
+        payload["changed_files"] = ["duplicate.txt"]
+        with self.assertRaisesRegex(ReviewError, "duplicate file sections"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_diff_header_path_spoofing(self):
+        payload = dict(self.payload)
+        payload["diff"] = payload["diff"].replace(
+            "diff --git a/src/client.py b/src/client.py",
+            "diff --git a/src/client.py b/other.py",
+        )
+        with self.assertRaisesRegex(ReviewError, "new-file header does not match"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_rename_from_path_header_mismatch(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/old_name.py b/new_name.py\n"
+            "similarity index 100%\n"
+            "rename from other_name.py\n"
+            "rename to new_name.py\n"
+        )
+        payload["changed_files"] = ["new_name.py"]
+        with self.assertRaisesRegex(ReviewError, "rename-from metadata"):
+            validate_review(payload, self.pass_review())
+
+
 if __name__ == "__main__":
     unittest.main()
