@@ -754,5 +754,57 @@ class SemanticReviewValidationTests(unittest.TestCase):
 
 
 
+    def test_provider_config_validation_is_offline(self):
+        from scripts.ai_semantic_review import validate_model_config
+        with patch("scripts.ai_semantic_review.urllib.request.urlopen") as network:
+            endpoint, key, model = validate_model_config({
+                "AI_REVIEW_API_BASE": "https://example.invalid/v1/",
+                "AI_REVIEW_API_KEY": "test-key",
+                "AI_REVIEW_MODEL": "test-model",
+            })
+        self.assertEqual(endpoint, "https://example.invalid/v1/chat/completions")
+        self.assertEqual((key, model), ("test-key", "test-model"))
+        network.assert_not_called()
+
+    def test_provider_config_rejects_unsafe_endpoints(self):
+        from scripts.ai_semantic_review import validate_model_config
+        invalid = [
+            "http://example.invalid/v1",
+            "https://user:password@example.invalid/v1",
+            "https://example.invalid/v1?token=secret",
+            "https://example.invalid/v1#fragment",
+            "https://example.invalid:invalid/v1",
+            "file:///tmp/model",
+            "https://example.invalid/v1\\nX-Injected: yes",
+        ]
+        for base in invalid:
+            with self.subTest(base=base):
+                with self.assertRaises(ReviewError):
+                    validate_model_config({
+                        "AI_REVIEW_API_BASE": base,
+                        "AI_REVIEW_API_KEY": "test-key",
+                        "AI_REVIEW_MODEL": "test-model",
+                    })
+
+    def test_provider_config_rejects_invalid_model_and_key(self):
+        from scripts.ai_semantic_review import validate_model_config
+        valid = {
+            "AI_REVIEW_API_BASE": "https://example.invalid/v1",
+            "AI_REVIEW_API_KEY": "test-key",
+            "AI_REVIEW_MODEL": "test-model",
+        }
+        for field, bad in [
+            ("AI_REVIEW_API_KEY", "key\\nInjected: value"),
+            ("AI_REVIEW_MODEL", "bad\\nmodel"),
+            ("AI_REVIEW_MODEL", "bad model"),
+        ]:
+            with self.subTest(field=field):
+                config = dict(valid)
+                config[field] = bad
+                with self.assertRaises(ReviewError):
+                    validate_model_config(config)
+
+
+
 if __name__ == "__main__":
     unittest.main()
