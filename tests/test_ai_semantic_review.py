@@ -122,6 +122,39 @@ class SemanticReviewValidationTests(unittest.TestCase):
         payload["changed_files"] = ["removed.txt"]
         self.assertEqual(validate_review(payload, self.pass_review())["status"], "PASS")
 
+    def test_evidence_line_mapping_resets_at_each_hunk(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/src/client.py b/src/client.py\n"
+            "--- a/src/client.py\n"
+            "+++ b/src/client.py\n"
+            "@@ -1 +1 @@\n"
+            "-old first\n"
+            "+new first\n"
+            "@@ -20 +30 @@\n"
+            "-old second\n"
+            "+new second target\n"
+        )
+        payload["changed_files"] = ["src/client.py"]
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["evidence"] = "+new second target"
+        finding["line_start"] = 30
+        finding["line_end"] = 30
+        self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+
+    def test_rejects_pure_rename_with_mismatched_metadata(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/old_name.py b/new_name.py\n"
+            "similarity index 100%\n"
+            "rename from wrong_old.py\n"
+            "rename to new_name.py\n"
+        )
+        payload["changed_files"] = ["new_name.py"]
+        with self.assertRaisesRegex(ReviewError, "rename metadata does not match"):
+            validate_review(payload, self.pass_review())
+
     def test_multiline_evidence_requires_full_line_range(self):
         payload = dict(self.payload)
         payload["diff"] = (
