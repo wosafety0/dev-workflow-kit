@@ -59,8 +59,15 @@ def _validate_hunk_integrity(section: str) -> None:
         match = re.match(
             r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(?:.*)$", line
         )
+        old_start = int(match.group(1))
+        new_start = int(match.group(3))
         old_expected = int(match.group(2) or 1)
         new_expected = int(match.group(4) or 1)
+        # Git uses line 0 only for an empty side of a hunk (count must be zero).
+        if (old_start == 0 and old_expected != 0) or (
+            new_start == 0 and new_expected != 0
+        ):
+            raise ReviewError("Malformed diff hunk header")
         old_seen = new_seen = 0
         index += 1
         while index < len(lines) and not lines[index].startswith("@@"):
