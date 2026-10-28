@@ -73,6 +73,8 @@ def _validate_hunk_integrity(section: str) -> None:
         match = re.match(
             r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(?:.*)$", line
         )
+        if any(len(value) > 10 for value in match.groups() if value is not None):
+            raise ReviewError("Diff hunk line range exceeds supported limits")
         old_start = int(match.group(1))
         new_start = int(match.group(3))
         old_expected = int(match.group(2) or 1)
