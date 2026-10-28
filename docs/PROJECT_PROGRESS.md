@@ -55,7 +55,6 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - PR #5 supply-chain pinning was merged into the integration branch after explicit user direction and successful CI.
 - Do not merge to `main`, create a release, or integrate into a consumer project without separate review and authorization.
 
-
 ### PR #5 merged: supply-chain pinning
 
 - PR: https://github.com/wosafety0/dev-workflow-kit/pull/5
@@ -75,11 +74,28 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 
 ### Consumer pilot preparation and normal-path verification
 
-- Created draft PR #7: https://github.com/wosafety0/dev-workflow-kit/pull/7
+- Draft PR #7: https://github.com/wosafety0/dev-workflow-kit/pull/7
 - Branch: `test/consumer-pilot-readiness-20261028`; tested head: `bff949fba82e5c514ed9f0f11a32120dae2faabf`.
 - Added `docs/CONSUMER_PILOT_CHECKLIST.md` with entry criteria, controlled pilot steps, pass/fail criteria, evidence capture, and stop conditions. The file was read back from GitHub; blob SHA: `afdc2781809e8e1d1e332c739bdbee4d63989a22`.
 - The checklist explicitly distinguishes a missing-artifact-input failure from a real GitHub Artifact service outage.
-- PR #7 is draft and unmerged. No consumer repository has been integrated; no changes were made to `main`.
-- Normal-path CI validation is requested by this PR, but the GitHub connector currently returned no workflow-run records or commit status checks for its head at the time of this log update. Therefore the normal-path result is **pending/unverified**, not a pass.
-- Next: verify the normal-path CI result through GitHub's checks/runs, then select a low-risk independent consumer repository for the pilot. Do not wait indefinitely for a hard-to-reproduce service outage.
+- Hosted CI run [40713631149](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40713631149), run number 100, completed successfully for the exact PR head `bff949fba82e5c514ed9f0f11a32120dae2faabf`. Offline tests, report generation, artifact upload, and final gate all succeeded; artifact ID `12826902344`.
+- PR #7 remains draft and unmerged. No consumer repository has been integrated; no changes were made to `main`.
 
+### Reusable acceptance workflow report and fail-closed gate
+
+- Draft PR #8: https://github.com/wosafety0/dev-workflow-kit/pull/8
+- Branch: `feat/reusable-acceptance-report-gate-20261028`; tested PR head: `58dc2c5a84099e588797beccc1ad3b9802614108`.
+- Added a redacted consumer acceptance report containing only schema version, consumer commit SHA, caller workflow reference/SHA, test status, and overall status. The workflow attempts report generation and upload after test failure, then opens the gate only if test, report, and artifact stages all have exact `success`.
+- Added `tests/test_reusable_workflow_contract.py` to check read-only permissions, immutable action pins, report allowlist, failure continuation, and final-gate rules.
+- Updated reusable-workflow documentation, pilot checklist, and roadmap to reflect the implementation and its limits.
+- Hosted CI run [40714595099](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40714595099), run number 108, completed successfully for PR #8's exact tested head `58dc2c5a84099e588797beccc1ad3b9802614108`. The run log confirms 93 offline tests passed, report generation passed, artifact ID `12827468404` was uploaded, and the final gate passed.
+- This verifies the Harness repository's CI and static workflow contract tests. It does not yet verify invocation through a real `workflow_call` from a consumer workflow.
+- PR #8 is draft and unmerged. No changes were made to `main`.
+
+### Reusable workflow consumer smoke test
+
+- Draft PR #9: https://github.com/wosafety0/dev-workflow-kit/pull/9
+- Branch: `test/reusable-workflow-smoke-20261028`; head: `71ec801a1c84c2a52920386466d3c9b63075f0fa`.
+- Added `.github/workflows/reusable-acceptance-smoke.yml`, which invokes the reusable workflow at immutable SHA `58dc2c5a84099e588797beccc1ad3b9802614108` and runs the offline unittest command.
+- At the time of this log update, the connector had not yet returned a workflow run or status for PR #9. The real `workflow_call` smoke result remains pending/unverified.
+- This is a same-repository smoke test only, not a completed second independent consumer pilot. PR #9 is draft and unmerged; no consumer production repository or `main` was modified.
