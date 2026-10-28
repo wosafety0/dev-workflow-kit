@@ -782,6 +782,51 @@ class SemanticReviewValidationTests(unittest.TestCase):
                 self.assertEqual(endpoint, expected)
                 self.assertEqual((key, model), ("test-key", "test-model"))
 
+    def test_call_model_uses_local_loopback_http_without_proxy(self):
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        from scripts.ai_semantic_review import call_model
+
+        response_body = json.dumps({
+            "choices": [{
+                "message": {"content": json.dumps(self.pass_review())}
+            }]
+        }).encode("utf-8")
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                self.server.received_auth = self.headers.get("Authorization")
+                length = int(self.headers.get("Content-Length", "0"))
+                self.rfile.read(length)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(response_body)))
+                self.end_headers()
+                self.wfile.write(response_body)
+
+            def log_message(self, _format, *_args):
+                return
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            config = {
+                "AI_REVIEW_API_BASE": f"http://127.0.0.1:{server.server_port}/v1",
+                "AI_REVIEW_API_KEY": "test-loopback-key",
+                "AI_REVIEW_MODEL": "test-model",
+                "HTTP_PROXY": "http://127.0.0.1:1",
+                "HTTPS_PROXY": "http://127.0.0.1:1",
+            }
+            with patch.dict("os.environ", config, clear=True):
+                review = call_model(self.payload)
+            self.assertEqual(review["status"], "PASS")
+            self.assertEqual(server.received_auth, "Bearer test-loopback-key")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
     def test_provider_config_rejects_unsafe_endpoints(self):
         from scripts.ai_semantic_review import validate_model_config
         invalid = [
