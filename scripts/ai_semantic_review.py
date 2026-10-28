@@ -86,6 +86,8 @@ def _validate_hunk_integrity(section: str) -> None:
 
 def _diff_sections(diff: str) -> list[tuple[str, str]]:
     """Return changed file sections and fail closed on unsupported path formats."""
+    # Normalize Windows and legacy-Mac line endings before parsing headers and mapping evidence.
+    diff = diff.replace("\r\n", "\n").replace("\r", "\n")
     headers = list(re.finditer(r"(?m)^diff --git .*?$", diff))
     if not headers:
         raise ReviewError("Diff must contain Git file headers")
