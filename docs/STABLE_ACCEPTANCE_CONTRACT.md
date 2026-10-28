@@ -54,6 +54,7 @@ The caller must treat validation/provider failures as failure or inconclusive ou
 ## 6. Credentials, side effects, and reporting
 
 - Credentials must be supplied through environment/configuration mechanisms and must not be committed or printed.
+- Remote model-provider endpoints must use HTTPS. Cleartext HTTP is allowed only for a literal loopback IP address (for example, `127.0.0.1` or `[::1]`) to support local inference servers; `localhost` hostnames and non-loopback HTTP endpoints are rejected. Credentials embedded in URLs, query strings, and fragments are rejected.
 - Authorization headers, API keys, and other secrets must not appear in logs or reports.
 - The review module is advisory validation; it does not merge pull requests or execute project/business actions.
 - A green offline test suite establishes only that the tested offline contract cases pass. It does not establish live provider behavior, completeness of defect detection, or production readiness.
