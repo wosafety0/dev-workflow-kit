@@ -1,24 +1,39 @@
-"""Fail CI unless the named test step completed successfully."""
+"""Fail CI unless every required orchestration stage completed successfully."""
 from __future__ import annotations
 
 import sys
 
+_REQUIRED_STAGES = ("tests", "report", "artifact")
 
-def gate_passes(outcome: str) -> bool:
-    """Only the exact GitHub Actions outcome 'success' opens the gate."""
-    return outcome == "success"
+
+def gate_passes(*outcomes: str) -> bool:
+    """Only exact success for tests, report generation, and artifact upload opens the gate."""
+    return len(outcomes) == len(_REQUIRED_STAGES) and all(
+        outcome == "success" for outcome in outcomes
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
-    if len(args) != 1:
-        print("Usage: python scripts/ci_gate.py <test-step-outcome>", file=sys.stderr)
+    if len(args) != len(_REQUIRED_STAGES):
+        print(
+            "Usage: python scripts/ci_gate.py <test-outcome> <report-outcome> <artifact-outcome>",
+            file=sys.stderr,
+        )
         return 2
-    outcome = args[0]
-    if not gate_passes(outcome):
-        print(f"Offline contract tests did not pass (outcome: {outcome}).", file=sys.stderr)
+
+    failed_stages = [
+        stage for stage, outcome in zip(_REQUIRED_STAGES, args) if outcome != "success"
+    ]
+    if failed_stages:
+        print(
+            "Acceptance gate closed; unsuccessful required stage(s): "
+            + ", ".join(failed_stages),
+            file=sys.stderr,
+        )
         return 1
-    print("Offline contract-test gate passed.")
+
+    print("Acceptance orchestration gate passed.")
     return 0
 
 

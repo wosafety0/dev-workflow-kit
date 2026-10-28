@@ -2,9 +2,9 @@ name: Harness CI
 
 on:
   push:
-    branches: [main, "feat/**", "fix/**", "docs/**"]
+    branches: [main, "feat/**", "fix/**", "docs/**", "test/**"]
   pull_request:
-    branches: [main, "feat/**"]
+    branches: [main, "feat/**", "test/**"]
   workflow_dispatch:
 
 permissions:
@@ -33,6 +33,7 @@ jobs:
         continue-on-error: true
         run: python -m unittest discover -s tests -v
       - name: Build redacted acceptance report
+        id: report
         if: always()
         env:
           COMMIT_SHA: ${{ github.sha }}
@@ -70,6 +71,7 @@ jobs:
           print("Acceptance status: " + report["status"])
           PY
       - name: Upload acceptance report
+        id: artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -77,8 +79,12 @@ jobs:
           path: artifacts/acceptance-report.json
           if-no-files-found: error
           retention-days: 14
-      - name: Fail job when offline tests did not pass
+      - name: Fail job unless all required stages succeeded
         if: always()
         env:
           TEST_OUTCOME: ${{ steps.tests.outcome }}
-        run: python scripts/ci_gate.py "$TEST_OUTCOME"
+          REPORT_OUTCOME: ${{ steps.report.outcome }}
+          ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
+        run: >-
+          python scripts/ci_gate.py
+          "$TEST_OUTCOME" "$REPORT_OUTCOME" "$ARTIFACT_OUTCOME"
