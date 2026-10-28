@@ -44,9 +44,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 
 ## Next steps
 
-1. Complete the same-repository reusable workflow smoke test and preserve exact run/artifact evidence.
-2. Select a low-risk independent consumer repository and perform a separate draft-PR pilot without copying Harness core.
-3. Define objective 0.x release criteria after hardening and pilot evidence are available.
+1. Complete the Node.js consumer pilot in `wosafety0/AI-Worker-Proxy` and inspect the exact run, report artifact, and existing checks.
+2. If the pilot passes, record the cross-repository setup effort and any consumer-specific limitations; keep the PR draft until separately reviewed.
+3. Define objective 0.x release criteria after the independent pilot evidence is available.
 4. Conduct controlled real-model validation after offline and hosted reliability boundaries are documented.
 5. Keep the Artifact-service-outage boundary explicitly unverified; do not let this hard-to-reproduce scenario block a low-risk independent consumer pilot.
 
@@ -110,3 +110,22 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Run [40714856655](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40714856655) completed with the expected failure. The consumer test command exited 23; the report step still succeeded and recorded `status: failed`; the artifact uploaded successfully (artifact ID `12827258524`); the final gate exited 1 and reported only the unsuccessful required stage `tests`.
 - The run log verified `TEST_OUTCOME=failure`, `REPORT_OUTCOME=success`, and `ARTIFACT_OUTCOME=success`. This demonstrates that a consumer test failure cannot be hidden by a successful report upload.
 - The temporary PR was closed after evidence collection and was never merged. No changes were made to `main`.
+
+
+### Multi-runtime reusable workflow implementation
+
+- Extended the reusable acceptance workflow to support explicit `python` and `node` runtimes; unsupported runtime values fail closed.
+- Node setup action pin verified against the official `actions/setup-node` repository: commit `48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e`, release v6.4.0.
+- Added contract tests for the runtime allowlist, conditional setup steps, immutable Node action pin, and disabled package-manager cache.
+- Latest PR #8 head: `65544e290fd875bb6c4e30f6525b238200037bba`.
+- Hosted Harness CI run [40715196026](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715196026), run number 126, completed successfully for that exact head; the 93-test suite, report, artifact upload, and final gate succeeded. Artifact ID: `12827137999`.
+- The Node runtime itself still required independent consumer validation at the time of this log update.
+
+### Independent Node.js consumer pilot
+
+- Draft consumer PR: https://github.com/wosafety0/AI-Worker-Proxy/pull/1
+- Branch: `test/dev-workflow-kit-pilot-20261028`; tested head: `642c627bdb8f2e3c791835ec78f837a258c3eb97`.
+- Added `.github/workflows/dev-workflow-kit-pilot.yml`, pinned to Harness SHA `65544e290fd875bb6c4e30f6525b238200037bba`, using Node.js 26 and the consumer's existing `pnpm check` after a frozen-lockfile install.
+- The pilot job verified the runtime allowlist and completed Node.js setup successfully. The consumer command, report upload, and final gate were still in progress; no final outcome or report artifact was available yet.
+- The consumer's existing `Lint and Type Check` run [40715308397](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/40715308397) completed successfully. The Harness pilot remains separately tracked and unverified until its own run completes.
+- The PR is draft and unmerged. It adds only a read-only acceptance workflow and does not deploy the Cloudflare Worker or modify `main`.
