@@ -38,7 +38,8 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [x] Document immutable 40-character SHA pinning, runtime selection, security boundaries, and upgrade/rollback procedure (`docs/REUSABLE_ACCEPTANCE_WORKFLOW.md`).
 - [x] Define a document precedence and stale-content maintenance policy (`docs/DOCUMENT_PRECEDENCE.md`).
 - [x] Verify the normal and consumer-test-failure paths through real hosted `workflow_call` smoke runs on the previous Python-only workflow version.
-- [x] Verify the updated multi-runtime version's normal path with an independent Node.js consumer pilot on the exact candidate SHA. A Node-specific failure-path smoke test is still pending.
+- [x] Verify the updated multi-runtime version's normal path with an independent Node.js consumer pilot on the exact candidate SHA.
+- [x] Verify the updated multi-runtime Node.js failure path: test command failed, report generation and artifact upload succeeded, and the final gate closed. Evidence: [run 40715636382](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715636382).
 - [x] Validate the updated multi-runtime workflow on exact candidate SHA `65544e290fd875bb6c4e30f6525b238200037bba`, including Node.js 26 setup, frozen-lockfile install, consumer check command, report upload, and final gate. Evidence: [consumer run 40715309593](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/40715309593).
 - [ ] Tag an initial 0.x release only after acceptance criteria pass on the exact release candidate and the release scope is reviewed.
 
