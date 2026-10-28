@@ -38,6 +38,16 @@ def validate_input(payload: dict[str, Any]) -> None:
         for item in payload["changed_files"]
     ):
         raise ReviewError("changed_files must be a list of non-empty paths")
+    for path in payload["changed_files"]:
+        parts = path.split("/")
+        if (
+            path.startswith("/")
+            or "\\" in path
+            or re.match(r"^[A-Za-z]:", path)
+            or any(part in {"", ".", ".."} for part in parts)
+            or any(ord(char) < 32 or ord(char) == 127 for char in path)
+        ):
+            raise ReviewError("changed_files contains an unsafe path")
     if len(set(payload["changed_files"])) != len(payload["changed_files"]):
         raise ReviewError("changed_files must not contain duplicate paths")
 
