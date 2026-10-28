@@ -193,6 +193,34 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("unknown command ID", stderr)
         run_task.assert_not_called()
 
+    def test_invalid_config_removes_stale_passing_report(self):
+        report_path = self.root / "artifacts" / "report.json"
+        report_path.write_text('{"status": "passed"}', encoding="utf-8")
+        self.write_config(["unreviewed-command"])
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("unknown command ID", stderr)
+        self.assertFalse(report_path.exists())
+        run_task.assert_not_called()
+
+    def test_missing_review_input_removes_stale_review_and_report(self):
+        self.write_config(["semantic-review"])
+        report_path = self.root / "artifacts" / "report.json"
+        review_path = self.root / "artifacts" / "review.json"
+        report_path.write_text('{"status": "passed"}', encoding="utf-8")
+        review_path.write_text('{"status": "PASS"}', encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "missing-review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("review-input must identify an existing file", stderr)
+        self.assertFalse(report_path.exists())
+        self.assertFalse(review_path.exists())
+        run_task.assert_not_called()
+
     def test_timeout_is_a_failed_task_without_echoing_process_output(self):
         with patch(
             "scripts.harness_runner.subprocess.run",
