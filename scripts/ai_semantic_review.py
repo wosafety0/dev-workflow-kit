@@ -50,14 +50,14 @@ def _validate_hunk_integrity(section: str) -> None:
     while index < len(lines):
         line = lines[index]
         if line.startswith("@@") and not re.match(
-            r"^@@ -(\\d+)(?:,(\\d+))? \\+(\\d+)(?:,(\\d+))? @@(?:.*)$", line
+            r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(?:.*)$", line
         ):
             raise ReviewError("Malformed diff hunk header")
         if not line.startswith("@@"):
             index += 1
             continue
         match = re.match(
-            r"^@@ -(\\d+)(?:,(\\d+))? \\+(\\d+)(?:,(\\d+))? @@(?:.*)$", line
+            r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(?:.*)$", line
         )
         old_expected = int(match.group(2) or 1)
         new_expected = int(match.group(4) or 1)
@@ -67,7 +67,7 @@ def _validate_hunk_integrity(section: str) -> None:
             body_line = lines[index]
             if body_line.startswith("diff --git "):
                 break
-            if body_line.startswith("\\\\ No newline at end of file"):
+            if body_line.startswith("\\ No newline at end of file"):
                 index += 1
                 continue
             if not body_line or body_line[0] not in " +-":
@@ -152,7 +152,7 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
     for line in section.splitlines(keepends=True):
         line_start = offset
         line_end = offset + len(line)
-        header = re.match(r"^@@ -(\\d+)(?:,\\d+)? \\+(\\d+)(?:,\\d+)? @@", line)
+        header = re.match(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
         if header:
             old_line, new_line = int(header.group(1)), int(header.group(2))
         elif old_line is not None and new_line is not None and line:
@@ -167,7 +167,7 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
             elif prefix == "+":
                 mapped_spans.append((line_start, line_end, {new_line}, "added"))
                 new_line += 1
-            elif prefix == "\\\\":
+            elif prefix == "\\":
                 pass
             else:
                 old_line = new_line = None
