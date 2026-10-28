@@ -452,5 +452,59 @@ class SemanticReviewValidationTests(unittest.TestCase):
         self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
 
 
+    def test_maps_partial_added_line_evidence(self):
+        payload = dict(self.payload)
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["evidence"] = "timeout=60"
+        finding["line_start"] = 1
+        finding["line_end"] = 1
+        self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+
+    def test_maps_evidence_in_crlf_diff(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/src/client.py b/src/client.py\r\n"
+            "--- a/src/client.py\r\n"
+            "+++ b/src/client.py\r\n"
+            "@@ -1 +1 @@\r\n"
+            "-old value\r\n"
+            "+new value with target\r\n"
+        )
+        payload["changed_files"] = ["src/client.py"]
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["evidence"] = "+new value with target"
+        finding["line_start"] = 1
+        finding["line_end"] = 1
+        self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+
+    def test_duplicate_evidence_in_other_file_does_not_change_mapping(self):
+        payload = dict(self.payload)
+        payload["diff"] += (
+            "diff --git a/notes.txt b/notes.txt\n"
+            "--- a/notes.txt\n"
+            "+++ b/notes.txt\n"
+            "@@ -1 +1 @@\n"
+            "+ urlopen(request, timeout=60)\n"
+        )
+        payload["changed_files"] = ["src/client.py", "README.md", "notes.txt"]
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["evidence"] = "+ urlopen(request, timeout=60)"
+        finding["line_start"] = 1
+        finding["line_end"] = 1
+        self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+
+    def test_rejects_malformed_hunk_body_boundary(self):
+        payload = dict(self.payload)
+        payload["diff"] = payload["diff"].replace(
+            "+ urlopen(request, timeout=60)\n",
+            "? urlopen(request, timeout=60)\n",
+        )
+        with self.assertRaisesRegex(ReviewError, "Malformed diff hunk body"):
+            validate_review(payload, self.pass_review())
+
+
 if __name__ == "__main__":
     unittest.main()
