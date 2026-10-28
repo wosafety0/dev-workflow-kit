@@ -34,18 +34,47 @@ def validate_input(payload: dict[str, Any]) -> None:
         if not isinstance(payload[key], str) or not payload[key].strip():
             raise ReviewError(f"Input field must be a non-empty string: {key}")
     if not isinstance(payload["changed_files"], list) or not all(
-        isinstance(item, str) and item for item in payload["changed_files"]
+        isinstance(item, str) and item.strip() and item == item.strip()
+        for item in payload["changed_files"]
     ):
         raise ReviewError("changed_files must be a list of non-empty paths")
+    if len(set(payload["changed_files"])) != len(payload["changed_files"]):
+        raise ReviewError("changed_files must not contain duplicate paths")
 
 
 def _diff_sections(diff: str) -> list[tuple[str, str]]:
-    """Return (new-side path, patch section) pairs from a unified Git diff."""
-    matches = list(re.finditer(r"(?m)^diff --git a/(.*?) b/(.*?)\s*$", diff))
+    """Return changed file sections and fail closed on unsupported path formats."""
+    headers = list(re.finditer(r"(?m)^diff --git .*?$", diff))
+    if not headers:
+        raise ReviewError("Diff must contain Git file headers")
     sections = []
-    for index, match in enumerate(matches):
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(diff)
-        sections.append((match.group(2), diff[match.start():end]))
+    for index, header in enumerate(headers):
+        end = headers[index + 1].start() if index + 1 < len(headers) else len(diff)
+        parsed = re.fullmatch(r"diff --git a/([^\s]+) b/([^\s]+)", header.group(0))
+        if not parsed:
+            raise ReviewError("Unsupported or malformed Git diff path header")
+        old_path, new_path = parsed.groups()
+        section = diff[header.start():end]
+        old_header = re.search(r"(?m)^--- (.+)$", section)
+        new_header = re.search(r"(?m)^\+\+\+ (.+)$", section)
+        if not old_header or not new_header:
+            raise ReviewError("Git diff section is missing ---/+++ file headers")
+        old_file, new_file = old_header.group(1), new_header.group(1)
+        if old_file != ("/dev/null" if old_file == "/dev/null" else "a/" + old_path):
+            raise ReviewError("Git diff old-file header does not match its path")
+        if new_file != ("/dev/null" if new_file == "/dev/null" else "b/" + new_path):
+            raise ReviewError("Git diff new-file header does not match its path")
+        sections.append((old_path if new_file == "/dev/null" else new_path, section))
+    return sections
+
+
+def _validate_diff_integrity(payload: dict[str, Any]) -> list[tuple[str, str]]:
+    sections = _diff_sections(payload["diff"])
+    paths = [path for path, _ in sections]
+    if len(paths) != len(set(paths)):
+        raise ReviewError("Diff contains duplicate file sections")
+    if set(paths) != set(payload["changed_files"]):
+        raise ReviewError("changed_files does not exactly match paths in the supplied diff")
     return sections
 
 
@@ -121,7 +150,7 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
         raise ReviewError("limitations entries must be non-empty strings")
 
     changed_files = set(payload["changed_files"])
-    sections = _diff_sections(payload["diff"])
+    sections = _validate_diff_integrity(payload)
     rules = payload["global_rules"] + "\n" + payload["project_instructions"]
     for finding in review["findings"]:
         if not isinstance(finding, dict) or set(finding) != {
@@ -145,8 +174,6 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
         if finding["rule_quote"] not in rules:
             raise ReviewError("Finding rule_quote is not an exact substring of supplied instructions")
 
-        if not sections:
-            raise ReviewError("Diff must contain Git file headers to validate evidence attribution")
         matching_sections = [
             section for path, section in sections
             if path == finding["file"] and finding["evidence"] in section
@@ -253,13 +280,21 @@ def main() -> int:
     parser.add_argument("--output", required=True, help="JSON review artifact output path")
     args = parser.parse_args()
     try:
-        payload = json.loads(Path(args.input).read_text(encoding="utf-8"))
+        input_path = Path(args.input)
+        output_path = Path(args.output)
+        if input_path.resolve() == output_path.resolve():
+            raise ReviewError("Input and output paths must be different")
+        try:
+            output_path.unlink()
+        except FileNotFoundError:
+            pass
+        payload = json.loads(input_path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             raise ReviewError("Input root must be a JSON object")
         validate_input(payload)
         review = validate_review(payload, call_model(payload))
         artifact = {"schema_version": "1.0", "status": review["status"], "review": review}
-        Path(args.output).write_text(
+        output_path.write_text(
             json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
         print(f"AI semantic review result: {review['status']}")
