@@ -189,10 +189,19 @@ Scope: `wosafety0/dev-workflow-kit`, integration baseline `feat/semantic-review-
 - Final-head push CI: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40732024483 — `success`; job log reports 92 offline tests passed, redacted report built/uploaded, final gate succeeded.
 - Boundary: no live model request or LM Studio integration test. Response-size limiting does not itself address redirect handling or all provider trust concerns.
 
+**Redirect refusal for model-provider credentials (stacked draft PR #17)**
+
+- Draft PR: https://github.com/wosafety0/dev-workflow-kit/pull/17
+- Branch: `fix/model-redirect-block-20261029`, based on PR #15 final head `3fff9561088d720cbea2223f69355de3b70f474e`; tested final head `703a344f271dda5f304272c615c320943aabba2d`.
+- Uses a request-scoped redirect-denying opener for HTTPS and literal-loopback HTTP model endpoints. HTTPS keeps its normal TLS/proxy behavior; loopback HTTP keeps per-request proxy bypass. A local redirect-server regression test proves that the redirect target is not requested.
+- Test-first red commit `b31ecd12a5f763d5a097d8c8ff73d4615d1f0b5a` failed CI before implementation. Implementation commit `bdcf2c97c38a23405d85da1ee764f5a8e7eb07de` passed CI.
+- Final-head push CI: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40732362914 — `success`; 93 offline tests passed, report generation/upload and final gate succeeded.
+- Boundary: this is a local redirect simulation, not a live remote provider validation. No model credentials or provider endpoints were accessed in this round.
+
 **Approval queue and next work**
 
-1. Review PR #12 and PR #13 independently, then the stacked PR #15 onto #12 and PR #14 onto #13. Keep all four draft/unmerged until separately authorized. No `main` changes, release, deployment, consumer integration, or permission expansion occurred in this round.
+1. Review PR #12 and PR #13 independently, then the stacked PR #15 onto #12, PR #17 onto #15, and PR #14 onto #13. Keep all five draft/unmerged until separately authorized. No `main` changes, release, deployment, consumer integration, or permission expansion occurred in this round.
 2. After code review, determine whether to integrate the independent stacks into `feat/semantic-review-core-20261028`; verify the combined state with fresh CI before any release discussion.
-3. Consider a separate review of HTTP redirect handling and credential forwarding, plus controlled real-model validation under explicit quota and no production actions.
+3. Review the redirect-hardening evidence in PR #17, then conduct controlled real-model validation under explicit quota and no production actions.
 4. The existing Node.js independent consumer pilot remains draft/unmerged. Do not treat hosted offline tests as live model evidence.
 5. This progress entry is itself a proposed documentation change on `docs/night-shift-handoff-20261029`, not a claim that the integration branch was updated.
