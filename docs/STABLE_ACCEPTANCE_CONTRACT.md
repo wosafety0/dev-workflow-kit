@@ -48,6 +48,7 @@ The following conditions must never yield an accepted passing review:
 - Invalid output schema or unsupported status/severity.
 - Findings whose file, line range, rule quote, or evidence cannot be verified.
 - Missing required provider configuration, network/provider errors, or malformed provider responses.
+- Model-provider response bodies larger than 1 MiB; the client reads at most 1 MiB plus one sentinel byte before failing closed.
 
 The caller must treat validation/provider failures as failure or inconclusive outcomes, not as approval to merge or perform project actions.
 
