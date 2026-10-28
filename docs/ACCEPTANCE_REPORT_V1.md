@@ -40,6 +40,7 @@ Overall status is `passed` only when every declared test status is exactly `pass
 ## Boundaries
 
 - The workflow supplies the current commit SHA, the content hash of the acceptance contract, the toolkit revision label, and the test step outcome. These values are traceable but do not constitute a cryptographic attestation of every runtime action.
+- `rules_pin` is a content fingerprint for traceability, not an enforcement check against a separately pre-approved trusted digest; it does not by itself prove that the reviewed rules revision was authorized.
 - The module does not run tests, inspect repository state, or authenticate arbitrary caller-supplied test evidence.
 - The report reflects the offline contract-test step only; it does not claim live model validation or complete defect detection.
 - Never pass secrets, raw logs, or environment dumps as report metadata. Do not use this report as an authorization to write remotely or merge a pull request.
