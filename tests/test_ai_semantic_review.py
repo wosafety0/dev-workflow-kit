@@ -678,6 +678,29 @@ class SemanticReviewValidationTests(unittest.TestCase):
             validate_review(payload, self.pass_review())
 
 
+    def test_checked_in_semantic_review_example_has_grounded_negative_finding(self):
+        example = Path(__file__).resolve().parents[1] / "examples" / "semantic-review-negative-input.json"
+        payload = json.loads(example.read_text(encoding="utf-8"))
+        review = {
+            "status": "NEEDS_CHANGES",
+            "summary": "The addition function was changed to subtraction without authorization.",
+            "checked_scope": ["arithmetic behavior"],
+            "limitations": ["Only the supplied diff was reviewed."],
+            "findings": [{
+                "severity": "medium",
+                "title": "Addition changed to subtraction",
+                "file": "src/example.py",
+                "line_start": 2,
+                "line_end": 2,
+                "rule_ref": "R1",
+                "rule_quote": "Preserve the documented arithmetic behavior of each function.",
+                "evidence": "return a - b",
+                "rationale": "The changed implementation no longer performs addition.",
+                "recommendation": "Restore addition unless the task explicitly requires subtraction.",
+            }],
+        }
+        self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+
     def test_model_missing_configuration_fails_closed(self):
         from scripts.ai_semantic_review import call_model
         with patch.dict("os.environ", {}, clear=True):
