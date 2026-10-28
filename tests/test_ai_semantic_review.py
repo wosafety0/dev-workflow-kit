@@ -312,16 +312,16 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def test_rejects_evidence_mixing_deleted_and_added_line_coordinates(self):
         payload = dict(self.payload)
         payload["diff"] = (
-            "diff --git a/src/client.py b/src/client.py\\n"
-            "--- a/src/client.py\\n"
-            "+++ b/src/client.py\\n"
-            "@@ -10 +20 @@\\n"
-            "-old behavior\\n"
-            "+new behavior\\n"
+            "diff --git a/src/client.py b/src/client.py\n"
+            "--- a/src/client.py\n"
+            "+++ b/src/client.py\n"
+            "@@ -10 +20 @@\n"
+            "-old behavior\n"
+            "+new behavior\n"
         )
         payload["changed_files"] = ["src/client.py"]
         review = self.finding()
-        review["findings"][0]["evidence"] = "-old behavior\\n+new behavior"
+        review["findings"][0]["evidence"] = "-old behavior\n+new behavior"
         review["findings"][0]["line_start"] = 10
         review["findings"][0]["line_end"] = 20
         with self.assertRaisesRegex(ReviewError, "mixes deleted and added"):
