@@ -118,8 +118,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Extended the reusable acceptance workflow to support explicit `python` and `node` runtimes; unsupported runtime values fail closed.
 - Node setup action pin verified against the official `actions/setup-node` repository: commit `48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e`, release v6.4.0.
 - Added contract tests for the runtime allowlist, conditional setup steps, immutable Node action pin, and disabled package-manager cache.
-- Latest PR #8 head: `65544e290fd875bb6c4e30f6525b238200037bba`.
-- Hosted Harness CI run [40715196026](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715196026), run number 126, completed successfully for that exact head; the 93-test suite, report, artifact upload, and final gate succeeded. Artifact ID: `12827137999`.
+- Workflow-code candidate SHA: `65544e290fd875bb6c4e30f6525b238200037bba`.
+- Hosted Harness CI run [40715196026](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715196026), run number 126, completed successfully for that exact code SHA; the 93-test suite, report, artifact upload, and final gate succeeded. Artifact ID: `12827137999`.
+- Latest PR #8 head after documentation evidence updates: `7e58aaf1d73d82319808a22bf26004e062b67b19`; hosted CI run [40715766990](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715766990), run number 136, also completed successfully.
 - The Node runtime was subsequently verified by the independent consumer pilot below.
 
 ### Independent Node.js consumer pilot
