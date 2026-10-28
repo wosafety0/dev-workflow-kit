@@ -297,5 +297,36 @@ class SemanticReviewValidationTests(unittest.TestCase):
             validate_review(payload, self.pass_review())
 
 
+    def test_rejects_malformed_hunk_header(self):
+        payload = dict(self.payload)
+        payload["diff"] = payload["diff"].replace("@@ -1 +1 @@", "@@ malformed @@")
+        with self.assertRaisesRegex(ReviewError, "hunk"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_hunk_line_count_mismatch(self):
+        payload = dict(self.payload)
+        payload["diff"] = payload["diff"].replace("@@ -1 +1 @@", "@@ -1,2 +1,2 @@")
+        with self.assertRaisesRegex(ReviewError, "hunk"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_evidence_mixing_deleted_and_added_line_coordinates(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/src/client.py b/src/client.py\\n"
+            "--- a/src/client.py\\n"
+            "+++ b/src/client.py\\n"
+            "@@ -10 +20 @@\\n"
+            "-old behavior\\n"
+            "+new behavior\\n"
+        )
+        payload["changed_files"] = ["src/client.py"]
+        review = self.finding()
+        review["findings"][0]["evidence"] = "-old behavior\\n+new behavior"
+        review["findings"][0]["line_start"] = 10
+        review["findings"][0]["line_end"] = 20
+        with self.assertRaisesRegex(ReviewError, "mixes deleted and added"):
+            validate_review(payload, review)
+
+
 if __name__ == "__main__":
     unittest.main()
