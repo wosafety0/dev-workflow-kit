@@ -1,0 +1,27 @@
+name: Harness CI
+
+on:
+  push:
+    branches: [main, "feat/**", "fix/**", "docs/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Compile Python source
+        run: python -m compileall -q scripts tests
+      - name: Run offline semantic-review contract tests
+        run: python -m unittest discover -s tests -p 'test_ai_semantic_review.py' -v
