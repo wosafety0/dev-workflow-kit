@@ -55,6 +55,8 @@ The caller must treat validation/provider failures as failure or inconclusive ou
 
 - Credentials must be supplied through environment/configuration mechanisms and must not be committed or printed.
 - Authorization headers, API keys, and other secrets must not appear in logs or reports.
+- The configured HTTPS endpoint must be rejected if it contains leading/trailing whitespace or any whitespace/control characters.
+- Provider HTTP requests must not follow redirects; redirect responses must fail closed rather than resend credentials or review payloads to another endpoint.
 - The review module is advisory validation; it does not merge pull requests or execute project/business actions.
 - A green offline test suite establishes only that the tested offline contract cases pass. It does not establish live provider behavior, completeness of defect detection, or production readiness.
 
