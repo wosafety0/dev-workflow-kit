@@ -1,0 +1,16 @@
+name: Reusable Acceptance Consumer Smoke Test
+
+on:
+  pull_request:
+    branches: [main, "feat/**", "test/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  consumer-normal-path:
+    uses: wosafety0/dev-workflow-kit/.github/workflows/reusable-acceptance.yml@58dc2c5a84099e588797beccc1ad3b9802614108
+    with:
+      python-version: "3.12"
+      test-command: "python -m unittest discover -s tests -v"
