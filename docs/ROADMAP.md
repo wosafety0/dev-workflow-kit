@@ -1,5 +1,9 @@
 # Roadmap and Acceptance Gates
 
+## Document status and precedence
+
+When current-facing documents conflict, follow the latest applicable, verified project version and correct the obsolete descriptions. Use [DOCUMENT_PRECEDENCE.md](DOCUMENT_PRECEDENCE.md) for the required resolution and maintenance procedure. A newer timestamp alone does not establish correctness; implementation claims require code/tests, and verification claims require evidence tied to the relevant commit. This roadmap describes the current development branch and does not imply its changes have been merged into `main`.
+
 ## Stage 0 — repository bootstrap
 
 - [x] Create an independent repository.
@@ -29,6 +33,7 @@
 
 - [x] Add a minimal reusable acceptance workflow with read-only repository permissions and an explicit consumer-owned test command (`.github/workflows/reusable-acceptance.yml`).
 - [x] Document immutable 40-character SHA pinning, security boundaries, and upgrade/rollback procedure (`docs/REUSABLE_ACCEPTANCE_WORKFLOW.md`).
+- [x] Define a document precedence and stale-content maintenance policy (`docs/DOCUMENT_PRECEDENCE.md`).
 - [ ] Tag an initial 0.x release only after acceptance criteria pass.
 
 ## Stage 4 — consumer integration
@@ -46,3 +51,4 @@
 - No credentials in source, artifacts, or logs.
 - No automatic PR merge or project business actions.
 - Remote GitHub changes must not be described as synced to a local worktree unless independently verified.
+- Documentation conflicts must be resolved under `docs/DOCUMENT_PRECEDENCE.md`; obsolete current-facing descriptions must be updated.
