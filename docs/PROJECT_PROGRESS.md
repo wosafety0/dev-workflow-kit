@@ -165,3 +165,34 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Hosted CI run [40718581286](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40718581286), run number 203, succeeded on exact head `8dd0e4b58cdf7384ebe703b8fd076ec97e98fd72`: 101 offline tests passed, including end-to-end runner execution, both task mappings, both example configs, and validation of the negative-review fixture. Acceptance report uploaded (artifact ID `12829517160`); final gate passed.
 - The model smoke test remains opt-in and was not run by CI; no live model request has been made.
 - PR #13 remains draft/unmerged. The runner is not a sandbox; running project tests can have side effects, so consumers must use trusted worktrees and review their test commands. No live model request was made.
+
+### 2026-10-29 unattended development handoff (proposals only)
+
+Scope: `wosafety0/dev-workflow-kit`, integration baseline `feat/semantic-review-core-20261028`. This round used the repository's `docs/DOCUMENT_PRECEDENCE.md` because no root `AGENTS.md` was present on the inspected integration branch. The local worktree was not inspected or synchronized.
+
+**Runner stale-artifact fail-closed fix (stacked draft PR #14)**
+
+- Draft PR: https://github.com/wosafety0/dev-workflow-kit/pull/14
+- Branch: `fix/runner-stale-artifacts-20261029`, based on PR #13 head `8dd0e4b58cdf7384ebe703b8fd076ec97e98fd72`; tested final head `b0da9892f393f5219ef7f445327af7da893cd827`.
+- A blocked runner invocation previously left an earlier passing acceptance report or semantic-review output on disk. The patch validates output safety and invalidates the previous report and supplied review output before config parsing and task execution. Regression tests cover invalid task configuration and missing review input after stale PASS artifacts.
+- Test-first red commit `8f22f8ebf43f59168b7d7178df45716febeb8135` failed CI as expected before the implementation. Implementation commit `de5f5bd99ac9d7157855fff87aae32cc54f8cc9b` passed CI.
+- Final-head push CI: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40731865209 — `success`.
+- Final-head pull-request CI: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40731894415 — `success`; job log reports 103 offline tests passed, redacted report built/uploaded, final gate succeeded.
+- Boundary: unsafe output-path failures are rejected before artifact invalidation, so a stale artifact at an unrelated path may remain; consumers must correlate acceptance with the current run/commit. The runner remains a trusted-worktree task runner, not a sandbox.
+
+**Bounded semantic-review provider response (stacked draft PR #15)**
+
+- Draft PR: https://github.com/wosafety0/dev-workflow-kit/pull/15
+- Branch: `fix/model-response-size-limit-20261029`, based on PR #12 head `c0df7982e1b1767450199ee42ff17395f3573ae4`; tested final head `3fff9561088d720cbea2223f69355de3b70f474e`.
+- The provider client previously called `response.read()` without a response-size bound. The patch reads at most 1 MiB plus one sentinel byte and rejects oversized responses, with a regression test and contract documentation.
+- Test-first red commit `d8d9ef22ea66b79654facdf035f74bf495a8c2f1` failed CI as expected before the implementation. Implementation commit `5c2235f13aa79ed075ede201e1c060592943c583` passed CI.
+- Final-head push CI: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40732024483 — `success`; job log reports 92 offline tests passed, redacted report built/uploaded, final gate succeeded.
+- Boundary: no live model request or LM Studio integration test. Response-size limiting does not itself address redirect handling or all provider trust concerns.
+
+**Approval queue and next work**
+
+1. Review PR #12 and PR #13 independently, then the stacked PR #15 onto #12 and PR #14 onto #13. Keep all four draft/unmerged until separately authorized. No `main` changes, release, deployment, consumer integration, or permission expansion occurred in this round.
+2. After code review, determine whether to integrate the independent stacks into `feat/semantic-review-core-20261028`; verify the combined state with fresh CI before any release discussion.
+3. Consider a separate review of HTTP redirect handling and credential forwarding, plus controlled real-model validation under explicit quota and no production actions.
+4. The existing Node.js independent consumer pilot remains draft/unmerged. Do not treat hosted offline tests as live model evidence.
+5. This progress entry is itself a proposed documentation change on `docs/night-shift-handoff-20261029`, not a claim that the integration branch was updated.
