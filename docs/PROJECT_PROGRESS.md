@@ -28,26 +28,27 @@ Last updated: 2026-10-28
 - Pinned `actions/upload-artifact` v4 to `ea165f8d65b6e75b540449e92b4886f43607fa02`.
 - The SHA values were read from the corresponding official `actions/*` GitHub tag refs during this work round. These are pinned to the resolved commits, with readable tag comments retained.
 - Workflow permissions remain explicitly limited to `contents: read`.
-- PR #5 was merged into the integration branch after CI and diff verification. See the verified merge record below.
+- PR #5 was merged into the integration branch after CI and diff verification.
 
 ### Gate and test coverage
 
-The final gate requires the test, report-build, and artifact-upload stages to report exact `success`. The existing offline CI run verifies the normal artifact-upload path, not a real GitHub artifact-service outage.
+The final gate requires the test, report-build, and artifact-upload stages to report exact `success`. Hosted evidence covers the normal artifact-upload path and fail-closed behavior when artifact input is missing or the consumer test command fails. No real GitHub Artifact service outage has been simulated.
 
 ## Limits of current evidence
 
 - PR #5 CI passed on the exact PR head before merge; both push and pull-request runs succeeded.
-- No real hosted orchestration failure injection has been performed.
-- No real model validation or cross-project consumer integration pilot has been completed.
+- Hosted failure-path tests have been performed for missing artifact input and consumer test-command failure. They do not establish behavior during an actual Artifact service outage.
+- No real model validation or second independent consumer integration pilot has been completed.
 - The local working tree/synchronization state has not been verified.
 - No changes were made to `main`.
 
 ## Next steps
 
-1. Design a controlled test for a real hosted artifact-service outage; the current test covers missing artifact input, not service outage.
-2. Run a consumer-project integration pilot after defining minimal acceptance criteria; do not couple the Harness to KancolleBot by default.
+1. Complete the same-repository reusable workflow smoke test and preserve exact run/artifact evidence.
+2. Select a low-risk independent consumer repository and perform a separate draft-PR pilot without copying Harness core.
 3. Define objective 0.x release criteria after hardening and pilot evidence are available.
 4. Conduct controlled real-model validation after offline and hosted reliability boundaries are documented.
+5. Keep the Artifact-service-outage boundary explicitly unverified; do not let this hard-to-reproduce scenario block a low-risk independent consumer pilot.
 
 ## Decision record
 
@@ -89,13 +90,23 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added `tests/test_reusable_workflow_contract.py` to check read-only permissions, immutable action pins, report allowlist, failure continuation, and final-gate rules.
 - Updated reusable-workflow documentation, pilot checklist, and roadmap to reflect the implementation and its limits.
 - Hosted CI run [40714595099](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40714595099), run number 108, completed successfully for PR #8's exact tested head `58dc2c5a84099e588797beccc1ad3b9802614108`. The run log confirms 93 offline tests passed, report generation passed, artifact ID `12827468404` was uploaded, and the final gate passed.
-- This verifies the Harness repository's CI and static workflow contract tests. It does not yet verify invocation through a real `workflow_call` from a consumer workflow.
+- This validates the Harness repository CI and workflow-contract tests, not by itself the called workflow's behavior in a consumer context.
 - PR #8 is draft and unmerged. No changes were made to `main`.
 
-### Reusable workflow consumer smoke test
+### Reusable workflow consumer normal-path smoke test
 
 - Draft PR #9: https://github.com/wosafety0/dev-workflow-kit/pull/9
-- Branch: `test/reusable-workflow-smoke-20261028`; head: `71ec801a1c84c2a52920386466d3c9b63075f0fa`.
-- Added `.github/workflows/reusable-acceptance-smoke.yml`, which invokes the reusable workflow at immutable SHA `58dc2c5a84099e588797beccc1ad3b9802614108` and runs the offline unittest command.
-- At the time of this log update, the connector had not yet returned a workflow run or status for PR #9. The real `workflow_call` smoke result remains pending/unverified.
-- This is a same-repository smoke test only, not a completed second independent consumer pilot. PR #9 is draft and unmerged; no consumer production repository or `main` was modified.
+- Branch: `test/reusable-workflow-smoke-20261028`; tested head: `71ec801a1c84c2a52920386466d3c9b63075f0fa`.
+- Added `.github/workflows/reusable-acceptance-smoke.yml`, invoking the reusable workflow at immutable SHA `58dc2c5a84099e588797beccc1ad3b9802614108`.
+- Consumer workflow run [40714715392](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40714715392) completed successfully. The called job's checkout, Python setup, consumer test command, redacted report generation, artifact upload, and final gate all succeeded.
+- Artifact `consumer-acceptance-report` ID: `12827428586`; digest: `sha256:b9b896241e5840897a9c65595cf0008bab79a5e2ea9d6287fe624ba1dd8b40cf`.
+- The same PR's Harness CI run [40714714617](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40714714617) also succeeded.
+- This is a same-repository smoke test only, not proof of a second independent consumer. PR #9 remains draft and unmerged.
+
+### Reusable workflow consumer failure-path smoke test
+
+- Temporary draft PR #10: https://github.com/wosafety0/dev-workflow-kit/pull/10 (closed, not merged).
+- Branch: `test/reusable-workflow-failure-smoke-20261028`; tested head: `dc46f7593f95fd1e84e0438d2b5c2bdf661910a2`.
+- Run [40714856655](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40714856655) completed with the expected failure. The consumer test command exited 23; the report step still succeeded and recorded `status: failed`; the artifact uploaded successfully (artifact ID `12827258524`); the final gate exited 1 and reported only the unsuccessful required stage `tests`.
+- The run log verified `TEST_OUTCOME=failure`, `REPORT_OUTCOME=success`, and `ARTIFACT_OUTCOME=success`. This demonstrates that a consumer test failure cannot be hidden by a successful report upload.
+- The temporary PR was closed after evidence collection and was never merged. No changes were made to `main`.
