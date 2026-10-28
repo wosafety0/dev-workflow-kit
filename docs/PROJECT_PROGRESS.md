@@ -28,7 +28,7 @@ Last updated: 2026-10-28
 - Pinned `actions/upload-artifact` v4 to `ea165f8d65b6e75b540449e92b4886f43607fa02`.
 - The SHA values were read from the corresponding official `actions/*` GitHub tag refs during this work round. These are pinned to the resolved commits, with readable tag comments retained.
 - Workflow permissions remain explicitly limited to `contents: read`.
-- Changes are proposed for review via a PR; do not merge automatically.
+- PR #5 was merged into the integration branch after CI and diff verification. See the verified merge record below.
 
 ### Gate and test coverage
 
@@ -36,7 +36,7 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 
 ## Limits of current evidence
 
-- The SHA-pinning changes have not yet been validated by a new CI run in this work round.
+- PR #5 CI passed on the exact PR head before merge; both push and pull-request runs succeeded.
 - No real hosted orchestration failure injection has been performed.
 - No real model validation or cross-project consumer integration pilot has been completed.
 - The local working tree/synchronization state has not been verified.
@@ -44,15 +44,31 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 
 ## Next steps
 
-1. Review the SHA-pinning PR and its diff; merge only after explicit authorization.
-2. Verify CI for the SHA-pinning change without triggering redundant runs.
-3. Plan a minimal, controlled hosted fault-injection method that avoids unnecessary Actions quota use.
-4. Run a consumer-project integration pilot only after defining minimal acceptance criteria; do not couple the Harness to KancolleBot by default.
-5. Define objective 0.x release criteria after hardening and pilot evidence are available.
-6. Conduct controlled real-model validation only after offline and hosted reliability boundaries are documented.
+1. Design a controlled test for a real hosted artifact-service outage; the current test covers missing artifact input, not service outage.
+2. Run a consumer-project integration pilot after defining minimal acceptance criteria; do not couple the Harness to KancolleBot by default.
+3. Define objective 0.x release criteria after hardening and pilot evidence are available.
+4. Conduct controlled real-model validation after offline and hosted reliability boundaries are documented.
 
 ## Decision record
 
 - PR #4 was merged only into `feat/semantic-review-core-20261028` after explicit user authorization.
-- Supply-chain pinning is proposed on a separate branch and must remain unmerged until reviewed.
+- PR #5 supply-chain pinning was merged into the integration branch after explicit user direction and successful CI.
 - Do not merge to `main`, create a release, or integrate into a consumer project without separate review and authorization.
+
+
+### PR #5 merged: supply-chain pinning
+
+- PR: https://github.com/wosafety0/dev-workflow-kit/pull/5
+- Merge commit on `feat/semantic-review-core-20261028`: `50c8027dd6e410f7d40d21778e74a8c5b22fe364`
+- PR head: `5af3377d0533229d98eb7ccaa86830fbb4d48af3`
+- Both automatic CI runs passed; no manual workflow dispatch was used.
+- Actions are pinned to full commit SHAs; workflow permissions remain `contents: read`.
+
+### Hosted fault-path validation: missing artifact input
+
+- Temporary PR: https://github.com/wosafety0/dev-workflow-kit/pull/6 (closed, not merged).
+- Test commit: `1add4e2369f6e1daa343e36b442bd10b51dae63c`.
+- Run: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40712433963
+- Result: 89 offline tests passed; report generation passed; upload step failed as deliberately configured because the requested artifact path did not exist; final gate failed with `ARTIFACT_OUTCOME=failure` and named `artifact` as the unsuccessful required stage.
+- This proves the hosted workflow closes the gate on an upload-step failure. It does **not** simulate a GitHub artifact-service outage or validate service-level behavior.
+- The test-only PR was closed after evidence collection and was never merged. No changes were made to `main`.
