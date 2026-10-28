@@ -1,6 +1,10 @@
+import json
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
-from scripts.ai_semantic_review import ReviewError, build_messages, validate_review
+from scripts.ai_semantic_review import ReviewError, build_messages, main, validate_review
 
 
 class SemanticReviewValidationTests(unittest.TestCase):
@@ -88,6 +92,65 @@ class SemanticReviewValidationTests(unittest.TestCase):
         payload["diff"] = "@@ -1 +1 @@\n- urlopen(request)"
         with self.assertRaisesRegex(ReviewError, "Git file headers"):
             validate_review(payload, self.finding())
+
+    def test_pass_rejects_diff_without_file_headers(self):
+        payload = dict(self.payload)
+        payload["diff"] = "malformed diff without file sections"
+        with self.assertRaisesRegex(ReviewError, "Git file headers"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_changed_files_that_do_not_match_diff_paths(self):
+        payload = dict(self.payload)
+        payload["changed_files"] = ["src/client.py"]
+        with self.assertRaisesRegex(ReviewError, "does not exactly match"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_extra_diff_path_not_listed_in_changed_files(self):
+        payload = dict(self.payload)
+        payload["diff"] += (
+            "diff --git a/extra.txt b/extra.txt\n"
+            "--- a/extra.txt\n+++ b/extra.txt\n"
+            "@@ -1 +1 @@\n-old\n+new\n"
+        )
+        with self.assertRaisesRegex(ReviewError, "does not exactly match"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_unsupported_quoted_diff_paths(self):
+        payload = dict(self.payload)
+        payload["diff"] = payload["diff"].replace(
+            "diff --git a/src/client.py b/src/client.py",
+            'diff --git "a/src/client.py" "b/src/client.py"',
+        )
+        with self.assertRaisesRegex(ReviewError, "Unsupported or malformed"):
+            validate_review(payload, self.pass_review())
+
+    def test_failed_run_removes_previous_pass_artifact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            input_path = Path(directory) / "input.json"
+            output_path = Path(directory) / "review.json"
+            input_path.write_text(json.dumps(self.payload), encoding="utf-8")
+            argv = ["ai_semantic_review.py", "--input", str(input_path),
+                    "--output", str(output_path)]
+            with patch("sys.argv", argv), patch(
+                "scripts.ai_semantic_review.call_model", return_value=self.pass_review()
+            ):
+                self.assertEqual(main(), 0)
+            self.assertTrue(output_path.exists())
+            with patch("sys.argv", argv), patch(
+                "scripts.ai_semantic_review.call_model",
+                side_effect=ReviewError("simulated model failure"),
+            ):
+                self.assertEqual(main(), 2)
+            self.assertFalse(output_path.exists())
+
+    def test_input_and_output_must_not_be_same_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            same_path = Path(directory) / "input.json"
+            same_path.write_text(json.dumps(self.payload), encoding="utf-8")
+            with patch("sys.argv", ["ai_semantic_review.py", "--input", str(same_path),
+                                    "--output", str(same_path)]):
+                self.assertEqual(main(), 2)
+            self.assertTrue(same_path.exists())
 
     def test_rejects_rule_quote_not_in_supplied_rules(self):
         review = self.finding()
