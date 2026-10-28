@@ -585,5 +585,30 @@ class SemanticReviewValidationTests(unittest.TestCase):
             validate_review(payload, self.pass_review())
 
 
+    def test_rejects_parent_traversal_changed_file_path(self):
+        payload = dict(self.payload)
+        payload["changed_files"] = ["../client.py", "README.md"]
+        with self.assertRaisesRegex(ReviewError, "changed_files contains an unsafe path"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_absolute_changed_file_path(self):
+        payload = dict(self.payload)
+        payload["changed_files"] = ["/src/client.py", "README.md"]
+        with self.assertRaisesRegex(ReviewError, "changed_files contains an unsafe path"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_backslash_changed_file_path(self):
+        payload = dict(self.payload)
+        payload["changed_files"] = [r"src\\client.py", "README.md"]
+        with self.assertRaisesRegex(ReviewError, "changed_files contains an unsafe path"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_control_characters_in_changed_file_path(self):
+        payload = dict(self.payload)
+        payload["changed_files"] = ["src/client.py\\x00", "README.md"]
+        with self.assertRaisesRegex(ReviewError, "changed_files contains an unsafe path"):
+            validate_review(payload, self.pass_review())
+
+
 if __name__ == "__main__":
     unittest.main()
