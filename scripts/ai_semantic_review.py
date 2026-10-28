@@ -8,6 +8,7 @@ No credentials or raw authorization headers are written to output.
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import os
 import re
@@ -348,9 +349,20 @@ def validate_model_config(environ: dict[str, str] | None = None) -> tuple[str, s
         raise ReviewError("AI_REVIEW_MODEL contains invalid whitespace or control characters")
     try:
         parsed = urlsplit(base)
+        hostname = parsed.hostname
+        if not hostname:
+            raise ValueError("missing host")
+        try:
+            is_literal_loopback = ipaddress.ip_address(hostname).is_loopback
+        except ValueError:
+            # Hostnames such as "localhost" are intentionally not trusted for cleartext HTTP:
+            # only a literal loopback IP avoids relying on resolver configuration.
+            is_literal_loopback = False
+        scheme_is_safe = parsed.scheme == "https" or (
+            parsed.scheme == "http" and is_literal_loopback
+        )
         if (
-            parsed.scheme != "https"
-            or not parsed.hostname
+            not scheme_is_safe
             or parsed.username is not None
             or parsed.password is not None
             or parsed.query
@@ -360,7 +372,10 @@ def validate_model_config(environ: dict[str, str] | None = None) -> tuple[str, s
             raise ValueError("unsafe endpoint")
         _ = parsed.port
     except ValueError:
-        raise ReviewError("AI_REVIEW_API_BASE must be an HTTPS URL without credentials, query or fragment") from None
+        raise ReviewError(
+            "AI_REVIEW_API_BASE must use HTTPS, or HTTP with a literal loopback IP, "
+            "without credentials, query or fragment"
+        ) from None
     endpoint = base.rstrip("/")
     if not endpoint.endswith("/chat/completions"):
         endpoint += "/chat/completions"
@@ -382,7 +397,14 @@ def call_model(payload: dict[str, Any]) -> Any:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
+        if urlsplit(endpoint).scheme == "http":
+            # HTTP is permitted only for literal loopback IPs; bypass configured proxies
+            # for this request so local inference never depends on proxy/NO_PROXY settings.
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            response_context = opener.open(request, timeout=60)
+        else:
+            response_context = urllib.request.urlopen(request, timeout=60)
+        with response_context as response:
             response_data = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ReviewError(f"Model request failed ({type(exc).__name__}); review cannot pass") from None
