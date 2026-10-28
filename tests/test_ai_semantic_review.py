@@ -374,11 +374,11 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def test_maps_added_line_after_empty_old_file_range(self):
         payload = dict(self.payload)
         payload["diff"] = (
-            "diff --git a/new.txt b/new.txt\\n"
-            "--- /dev/null\\n"
-            "+++ b/new.txt\\n"
-            "@@ -0,0 +1 @@\\n"
-            "+first line\\n"
+            "diff --git a/new.txt b/new.txt\n"
+            "--- /dev/null\n"
+            "+++ b/new.txt\n"
+            "@@ -0,0 +1 @@\n"
+            "+first line\n"
         )
         payload["changed_files"] = ["new.txt"]
         review = self.finding()
@@ -392,11 +392,11 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def test_maps_deleted_line_using_old_file_coordinates(self):
         payload = dict(self.payload)
         payload["diff"] = (
-            "diff --git a/removed.txt b/removed.txt\\n"
-            "--- a/removed.txt\\n"
-            "+++ /dev/null\\n"
-            "@@ -7 +0,0 @@\\n"
-            "-removed content\\n"
+            "diff --git a/removed.txt b/removed.txt\n"
+            "--- a/removed.txt\n"
+            "+++ /dev/null\n"
+            "@@ -7 +0,0 @@\n"
+            "-removed content\n"
         )
         payload["changed_files"] = ["removed.txt"]
         review = self.finding()
@@ -410,13 +410,13 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def test_context_evidence_requires_both_old_and_new_coordinates(self):
         payload = dict(self.payload)
         payload["diff"] = (
-            "diff --git a/src/client.py b/src/client.py\\n"
-            "--- a/src/client.py\\n"
-            "+++ b/src/client.py\\n"
-            "@@ -10,2 +20,2 @@\\n"
-            " context target\\n"
-            "-old line\\n"
-            "+new line\\n"
+            "diff --git a/src/client.py b/src/client.py\n"
+            "--- a/src/client.py\n"
+            "+++ b/src/client.py\n"
+            "@@ -10,2 +20,2 @@\n"
+            " context target\n"
+            "-old line\n"
+            "+new line\n"
         )
         payload["changed_files"] = ["src/client.py"]
         review = self.finding()
@@ -432,13 +432,13 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def test_repeated_evidence_across_hunks_requires_all_mapped_lines(self):
         payload = dict(self.payload)
         payload["diff"] = (
-            "diff --git a/src/client.py b/src/client.py\\n"
-            "--- a/src/client.py\\n"
-            "+++ b/src/client.py\\n"
-            "@@ -1 +1 @@\\n"
-            "+same target\\n"
-            "@@ -30 +40 @@\\n"
-            "+same target\\n"
+            "diff --git a/src/client.py b/src/client.py\n"
+            "--- a/src/client.py\n"
+            "+++ b/src/client.py\n"
+            "@@ -1 +1 @@\n"
+            "+same target\n"
+            "@@ -30 +40 @@\n"
+            "+same target\n"
         )
         payload["changed_files"] = ["src/client.py"]
         review = self.finding()
