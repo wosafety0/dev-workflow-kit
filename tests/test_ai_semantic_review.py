@@ -775,7 +775,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
             "https://example.invalid/v1#fragment",
             "https://example.invalid:invalid/v1",
             "file:///tmp/model",
-            "https://example.invalid/v1\\nX-Injected: yes",
+            "https://example.invalid/v1\nX-Injected: yes",
         ]
         for base in invalid:
             with self.subTest(base=base):
@@ -794,8 +794,8 @@ class SemanticReviewValidationTests(unittest.TestCase):
             "AI_REVIEW_MODEL": "test-model",
         }
         for field, bad in [
-            ("AI_REVIEW_API_KEY", "key\\nInjected: value"),
-            ("AI_REVIEW_MODEL", "bad\\nmodel"),
+            ("AI_REVIEW_API_KEY", "key\nInjected: value"),
+            ("AI_REVIEW_MODEL", "bad\nmodel"),
             ("AI_REVIEW_MODEL", "bad model"),
         ]:
             with self.subTest(field=field):
