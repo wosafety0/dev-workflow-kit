@@ -36,6 +36,7 @@ If `semantic-review` is configured, a caller must pass both review paths. Review
 - Each task has a timeout; default is 600 seconds, maximum is 3600 seconds.
 - Tasks run in the order declared by the config. A failed task does not suppress later configured tasks; each task status is recorded.
 - Task stdout/stderr are suppressed by default to reduce accidental credential or private-payload disclosure in logs.
+- Before configuration validation or task execution, previously generated report and explicitly supplied review-output files are invalidated after output-path safety checks. A blocked run must not leave an old successful artifact available as if it were current. Invalid or unsafe output paths are rejected without deleting arbitrary files.
 - Exit code `0`: all configured tasks passed and the report status is `passed`.
 - Exit code `1`: at least one task failed; a redacted report is still written with overall status `failed`.
 - Exit code `2`: invalid config/paths, missing required review arguments, project metadata failure, or report-writing failure blocks the run.
