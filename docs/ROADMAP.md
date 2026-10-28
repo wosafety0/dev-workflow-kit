@@ -17,9 +17,9 @@
 
 ## Stage 2 — project contract and deterministic orchestration
 
-- [ ] Define a versioned project configuration schema.
+- [x] Define a versioned project configuration schema (`docs/HARNESS_CONFIG_V1.md`; validation-only, no runner).
 - [x] Validate model-provider configuration without requiring a model API.
-- [ ] Define safe, explicit command allowlists; never execute arbitrary configured commands by default.
+- [x] Define a safe, explicit task-ID allowlist; unknown IDs fail closed and configuration does not execute commands.
 - [ ] Emit a redacted, traceable report with commit SHA, rules pin, tool version, and test status.
 - [x] Add failure-injection tests for the current model-provider fail-closed paths; broader orchestration paths remain pending.
 
