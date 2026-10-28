@@ -678,5 +678,81 @@ class SemanticReviewValidationTests(unittest.TestCase):
             validate_review(payload, self.pass_review())
 
 
+    def test_model_missing_configuration_fails_closed(self):
+        from scripts.ai_semantic_review import call_model
+        with patch.dict("os.environ", {}, clear=True):
+            with self.assertRaisesRegex(ReviewError, "not configured"):
+                call_model(self.payload)
+
+    def test_model_network_failure_fails_closed_without_leaking_key(self):
+        import urllib.error
+        from scripts.ai_semantic_review import call_model
+        config = {"AI_REVIEW_API_BASE": "https://example.invalid/v1",
+                  "AI_REVIEW_API_KEY": "SECRET_TEST_TOKEN",
+                  "AI_REVIEW_MODEL": "test-model"}
+        with patch.dict("os.environ", config, clear=True), patch(
+            "scripts.ai_semantic_review.urllib.request.urlopen",
+            side_effect=urllib.error.URLError("SECRET_TEST_TOKEN"),
+        ):
+            with self.assertRaises(ReviewError) as caught:
+                call_model(self.payload)
+        self.assertIn("review cannot pass", str(caught.exception))
+        self.assertNotIn("SECRET_TEST_TOKEN", str(caught.exception))
+
+    def test_model_timeout_fails_closed(self):
+        from scripts.ai_semantic_review import call_model
+        config = {"AI_REVIEW_API_BASE": "https://example.invalid/v1",
+                  "AI_REVIEW_API_KEY": "test-key",
+                  "AI_REVIEW_MODEL": "test-model"}
+        with patch.dict("os.environ", config, clear=True), patch(
+            "scripts.ai_semantic_review.urllib.request.urlopen",
+            side_effect=TimeoutError("simulated timeout"),
+        ):
+            with self.assertRaisesRegex(ReviewError, "review cannot pass"):
+                call_model(self.payload)
+
+    def test_model_malformed_responses_fail_closed(self):
+        from unittest.mock import MagicMock
+        from scripts.ai_semantic_review import call_model
+        config = {"AI_REVIEW_API_BASE": "https://example.invalid/v1",
+                  "AI_REVIEW_API_KEY": "test-key",
+                  "AI_REVIEW_MODEL": "test-model"}
+        responses = [
+            b"not-json",
+            b"{}",
+            b'{"choices":[]}',
+            b'{"choices":[{"message":{"content":"not-json"}}]}',
+            b'{"choices":[{"message":{"content":null}}]}',
+        ]
+        for raw in responses:
+            with self.subTest(raw=raw):
+                response = MagicMock()
+                response.__enter__.return_value.read.return_value = raw
+                with patch.dict("os.environ", config, clear=True), patch(
+                    "scripts.ai_semantic_review.urllib.request.urlopen",
+                    return_value=response,
+                ):
+                    with self.assertRaises(ReviewError):
+                        call_model(self.payload)
+
+    def test_model_valid_response_is_parsed(self):
+        from unittest.mock import MagicMock
+        from scripts.ai_semantic_review import call_model
+        config = {"AI_REVIEW_API_BASE": "https://example.invalid/v1",
+                  "AI_REVIEW_API_KEY": "test-key",
+                  "AI_REVIEW_MODEL": "test-model"}
+        raw = json.dumps({"choices": [{"message": {
+            "content": json.dumps(self.pass_review())
+        }}]}).encode("utf-8")
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = raw
+        with patch.dict("os.environ", config, clear=True), patch(
+            "scripts.ai_semantic_review.urllib.request.urlopen",
+            return_value=response,
+        ):
+            self.assertEqual(call_model(self.payload)["status"], "PASS")
+
+
+
 if __name__ == "__main__":
     unittest.main()
