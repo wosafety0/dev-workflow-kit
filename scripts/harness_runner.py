@@ -242,7 +242,7 @@ def main(argv: list[str] | None = None) -> int:
         for task_id, argv_for_task in planned_tasks:
             status, exit_code = _run_task(argv_for_task, root, args.timeout_seconds)
             outcomes[task_id] = status
-                suffix = " (timeout or launch failure)" if exit_code is None and status == "failed" else (
+            suffix = " (timeout or launch failure)" if exit_code is None and status == "failed" else (
                 f" (exit {exit_code})" if exit_code not in (None, 0) else ""
             )
             print(f"Task {task_id}: {status}{suffix}")
