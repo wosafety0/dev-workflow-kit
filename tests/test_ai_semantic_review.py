@@ -99,6 +99,70 @@ class SemanticReviewValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ReviewError, "Git file headers"):
             validate_review(payload, self.pass_review())
 
+    def test_accepts_pure_rename_with_matching_metadata(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/old_name.py b/new_name.py\n"
+            "similarity index 100%\n"
+            "rename from old_name.py\n"
+            "rename to new_name.py\n"
+        )
+        payload["changed_files"] = ["new_name.py"]
+        self.assertEqual(validate_review(payload, self.pass_review())["status"], "PASS")
+
+    def test_accepts_file_deletion(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/removed.txt b/removed.txt\n"
+            "--- a/removed.txt\n"
+            "+++ /dev/null\n"
+            "@@ -1 +0,0 @@\n"
+            "-removed content\n"
+        )
+        payload["changed_files"] = ["removed.txt"]
+        self.assertEqual(validate_review(payload, self.pass_review())["status"], "PASS")
+
+    def test_multiline_evidence_requires_full_line_range(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/src/client.py b/src/client.py\n"
+            "--- a/src/client.py\n"
+            "+++ b/src/client.py\n"
+            "@@ -1,2 +1,2 @@\n"
+            "-first old line\n"
+            "-second old line\n"
+            "+first new line\n"
+            "+second new line\n"
+        )
+        payload["changed_files"] = ["src/client.py"]
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["evidence"] = "-first old line\n-second old line"
+        finding["line_start"] = 1
+        finding["line_end"] = 1
+        with self.assertRaisesRegex(ReviewError, "does not cover the cited diff evidence"):
+            validate_review(payload, review)
+
+    def test_multiline_evidence_accepts_complete_line_range(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/src/client.py b/src/client.py\n"
+            "--- a/src/client.py\n"
+            "+++ b/src/client.py\n"
+            "@@ -1,2 +1,2 @@\n"
+            "-first old line\n"
+            "-second old line\n"
+            "+first new line\n"
+            "+second new line\n"
+        )
+        payload["changed_files"] = ["src/client.py"]
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["evidence"] = "-first old line\n-second old line"
+        finding["line_start"] = 1
+        finding["line_end"] = 2
+        self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+
     def test_rejects_changed_files_that_do_not_match_diff_paths(self):
         payload = dict(self.payload)
         payload["changed_files"] = ["src/client.py"]
