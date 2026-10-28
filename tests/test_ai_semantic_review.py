@@ -610,5 +610,61 @@ class SemanticReviewValidationTests(unittest.TestCase):
             validate_review(payload, self.pass_review())
 
 
+    def test_rejects_extremely_large_hunk_line_numbers(self):
+        payload = dict(self.payload)
+        payload["diff"] = payload["diff"].replace(
+            "@@ -1 +1 @@",
+            "@@ -999999999999999999999999999999999999999999 +1 @@",
+            1,
+        )
+        with self.assertRaisesRegex(ReviewError, "line range|evidence|hunk"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_changed_file_path_with_repeated_separator(self):
+        payload = dict(self.payload)
+        payload["changed_files"] = ["src//client.py", "README.md"]
+        with self.assertRaisesRegex(ReviewError, "unsafe path"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_diff_path_with_parent_traversal(self):
+        payload = dict(self.payload)
+        payload["diff"] = payload["diff"].replace(
+            "a/src/client.py b/src/client.py",
+            "a/../client.py b/../client.py",
+            1,
+        ).replace(
+            "--- a/src/client.py",
+            "--- a/../client.py",
+            1,
+        ).replace(
+            "+++ b/src/client.py",
+            "+++ b/../client.py",
+            1,
+        )
+        payload["changed_files"] = ["../client.py", "README.md"]
+        with self.assertRaisesRegex(ReviewError, "unsafe path|path|changed_files"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_excessively_long_changed_file_path(self):
+        payload = dict(self.payload)
+        long_path = "a" * 5000 + ".py"
+        payload["changed_files"] = [long_path, "README.md"]
+        payload["diff"] = payload["diff"].replace(
+            "a/src/client.py b/src/client.py",
+            f"a/{long_path} b/{long_path}",
+            1,
+        ).replace(
+            "--- a/src/client.py",
+            f"--- a/{long_path}",
+            1,
+        ).replace(
+            "+++ b/src/client.py",
+            f"+++ b/{long_path}",
+            1,
+        )
+        with self.assertRaisesRegex(ReviewError, "path is too long"):
+            validate_review(payload, self.pass_review())
+
+
 if __name__ == "__main__":
     unittest.main()
