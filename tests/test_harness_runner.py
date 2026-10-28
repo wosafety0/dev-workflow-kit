@@ -81,6 +81,19 @@ class HarnessRunnerTests(unittest.TestCase):
             {"schema_version", "commit_sha", "rules_pin", "tool_version", "tests", "status"},
         )
 
+    def test_runner_executes_fixed_task_end_to_end(self):
+        with patch("scripts.harness_runner._git_commit_sha", return_value="c" * 40), patch(
+            "scripts.harness_runner._rules_pin", return_value="sha256:contract"
+        ):
+            code, stdout, stderr = self.run_runner()
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
+        self.assertIn("Task python-unittest: passed", stdout)
+        report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["status"], "passed")
+        self.assertEqual(report["tests"], {"python-unittest": "passed"})
+
     def test_task_failure_writes_failed_report_and_returns_one(self):
         with patch("scripts.harness_runner._git_commit_sha", return_value="b" * 40), patch(
             "scripts.harness_runner._rules_pin", return_value="sha256:contract"
