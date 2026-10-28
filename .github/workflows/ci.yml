@@ -81,8 +81,4 @@ jobs:
         if: always()
         env:
           TEST_OUTCOME: ${{ steps.tests.outcome }}
-        run: |
-          if [ "$TEST_OUTCOME" != "success" ]; then
-            echo "Offline contract tests did not pass (outcome: $TEST_OUTCOME)." >&2
-            exit 1
-          fi
+        run: python scripts/ci_gate.py "$TEST_OUTCOME"
