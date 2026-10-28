@@ -42,6 +42,48 @@ def validate_input(payload: dict[str, Any]) -> None:
         raise ReviewError("changed_files must not contain duplicate paths")
 
 
+
+def _validate_hunk_integrity(section: str) -> None:
+    """Reject malformed hunk headers and body counts that disagree with the header."""
+    lines = section.splitlines()
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        if line.startswith("@@") and not re.match(
+            r"^@@ -(\\d+)(?:,(\\d+))? \\+(\\d+)(?:,(\\d+))? @@(?:.*)$", line
+        ):
+            raise ReviewError("Malformed diff hunk header")
+        if not line.startswith("@@"):
+            index += 1
+            continue
+        match = re.match(
+            r"^@@ -(\\d+)(?:,(\\d+))? \\+(\\d+)(?:,(\\d+))? @@(?:.*)$", line
+        )
+        old_expected = int(match.group(2) or 1)
+        new_expected = int(match.group(4) or 1)
+        old_seen = new_seen = 0
+        index += 1
+        while index < len(lines) and not lines[index].startswith("@@"):
+            body_line = lines[index]
+            if body_line.startswith("diff --git "):
+                break
+            if body_line.startswith("\\\\ No newline at end of file"):
+                index += 1
+                continue
+            if not body_line or body_line[0] not in " +-":
+                raise ReviewError("Malformed diff hunk body")
+            if body_line[0] in " -":
+                old_seen += 1
+            if body_line[0] in " +":
+                new_seen += 1
+            index += 1
+        if old_seen != old_expected or new_seen != new_expected:
+            raise ReviewError(
+                f"Diff hunk line count mismatch (expected old/new {old_expected}/{new_expected}, "
+                f"found {old_seen}/{new_seen})"
+            )
+
+
 def _diff_sections(diff: str) -> list[tuple[str, str]]:
     """Return changed file sections and fail closed on unsupported path formats."""
     headers = list(re.finditer(r"(?m)^diff --git .*?$", diff))
@@ -55,6 +97,7 @@ def _diff_sections(diff: str) -> list[tuple[str, str]]:
             raise ReviewError("Unsupported or malformed Git diff path header")
         old_path, new_path = parsed.groups()
         section = diff[header.start():end]
+        _validate_hunk_integrity(section)
         old_header = re.search(r"(?m)^--- (.+)$", section)
         new_header = re.search(r"(?m)^\+\+\+ (.+)$", section)
         rename_from = re.search(r"(?m)^rename from (.+)$", section)
@@ -91,7 +134,7 @@ def _validate_diff_integrity(payload: dict[str, Any]) -> list[tuple[str, str]]:
 
 
 def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
-    """Map every source line intersected by exact patch evidence to its old/new line number."""
+    """Map exact patch evidence to source lines, rejecting mixed old/new coordinates."""
     offsets = []
     cursor = 0
     while True:
@@ -109,22 +152,22 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
     for line in section.splitlines(keepends=True):
         line_start = offset
         line_end = offset + len(line)
-        header = re.match(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
+        header = re.match(r"^@@ -(\\d+)(?:,\\d+)? \\+(\\d+)(?:,\\d+)? @@", line)
         if header:
             old_line, new_line = int(header.group(1)), int(header.group(2))
         elif old_line is not None and new_line is not None and line:
             prefix = line[0]
             if prefix == " ":
-                mapped_spans.append((line_start, line_end, {old_line, new_line}))
+                mapped_spans.append((line_start, line_end, {old_line, new_line}, "context"))
                 old_line += 1
                 new_line += 1
             elif prefix == "-":
-                mapped_spans.append((line_start, line_end, {old_line}))
+                mapped_spans.append((line_start, line_end, {old_line}, "deleted"))
                 old_line += 1
             elif prefix == "+":
-                mapped_spans.append((line_start, line_end, {new_line}))
+                mapped_spans.append((line_start, line_end, {new_line}, "added"))
                 new_line += 1
-            elif prefix == "\\":
+            elif prefix == "\\\\":
                 pass
             else:
                 old_line = new_line = None
@@ -132,9 +175,14 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
 
     numbers: set[int] = set()
     for evidence_start, evidence_end in offsets:
-        for line_start, line_end, source_lines in mapped_spans:
+        evidence_kinds = set()
+        for line_start, line_end, source_lines, kind in mapped_spans:
             if evidence_start < line_end and evidence_end > line_start:
                 numbers.update(source_lines)
+                if kind in {"deleted", "added"}:
+                    evidence_kinds.add(kind)
+        if evidence_kinds == {"deleted", "added"}:
+            raise ReviewError("Evidence mixes deleted and added lines with different source coordinates")
     return {number for number in numbers if number >= 1}
 
 
