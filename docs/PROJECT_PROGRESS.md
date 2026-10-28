@@ -151,3 +151,15 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added offline tests for `http://127.0.0.1:1235/v1` and `http://[::1]:1235/v1`, and retained negative tests for unsafe HTTP endpoints. Updated `docs/STABLE_ACCEPTANCE_CONTRACT.md`.
 - Hosted CI run [40716125120](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40716125120), run number 144, succeeded on the exact tested head. 90 offline tests passed, the acceptance report uploaded (artifact ID `12829135525`), and the final gate passed.
 - This validates configuration parsing and security boundaries only. It does not constitute a live model request or prove that the user's local LM Studio endpoint is reachable from this environment. PR #12 remains draft and unmerged.
+
+
+### Safe allowlisted task runner
+
+- Draft PR #13: https://github.com/wosafety0/dev-workflow-kit/pull/13
+- Branch: `feat/safe-task-runner-20261028`; latest tested head: `f7a72a2b366d3fd0297681e6072fa2d32c3285ce`.
+- Added `scripts/harness_runner.py`, mapping only the existing `python-unittest` and `semantic-review` task IDs to fixed argv arrays. It does not invoke a shell or accept executable names/arbitrary arguments from config.
+- Added preflight validation before any task executes, per-task timeout, project-root path containment, `artifacts/`-only outputs, suppressed raw task stdout/stderr, and a redacted report built through the existing strict acceptance-report module.
+- Added `tests/test_harness_runner.py`, including an end-to-end test that executes the fixed unittest task in a temporary project, failure/report behavior, path traversal/output protections, semantic-review argument requirements, and timeout handling.
+- Added `docs/HARNESS_RUNNER_V1.md`, updated the configuration/README docs, and recorded the runner gate in the roadmap.
+- Hosted CI run [40717109666](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40717109666), run number 163, succeeded on exact head `f7a72a2b366d3fd0297681e6072fa2d32c3285ce`: 98 offline tests passed, end-to-end runner test passed, acceptance report uploaded (artifact ID `12827249434`), and final gate passed.
+- PR #13 remains draft/unmerged. The runner is not a sandbox; running project tests can have side effects, so consumers must use trusted worktrees and review their test commands. No live model request was made.
