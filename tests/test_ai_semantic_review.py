@@ -371,5 +371,86 @@ class SemanticReviewValidationTests(unittest.TestCase):
             validate_review(payload, self.pass_review())
 
 
+    def test_maps_added_line_after_empty_old_file_range(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/new.txt b/new.txt\\n"
+            "--- /dev/null\\n"
+            "+++ b/new.txt\\n"
+            "@@ -0,0 +1 @@\\n"
+            "+first line\\n"
+        )
+        payload["changed_files"] = ["new.txt"]
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["file"] = "new.txt"
+        finding["evidence"] = "+first line"
+        finding["line_start"] = 1
+        finding["line_end"] = 1
+        self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+
+    def test_maps_deleted_line_using_old_file_coordinates(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/removed.txt b/removed.txt\\n"
+            "--- a/removed.txt\\n"
+            "+++ /dev/null\\n"
+            "@@ -7 +0,0 @@\\n"
+            "-removed content\\n"
+        )
+        payload["changed_files"] = ["removed.txt"]
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["file"] = "removed.txt"
+        finding["evidence"] = "-removed content"
+        finding["line_start"] = 7
+        finding["line_end"] = 7
+        self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+
+    def test_context_evidence_requires_both_old_and_new_coordinates(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/src/client.py b/src/client.py\\n"
+            "--- a/src/client.py\\n"
+            "+++ b/src/client.py\\n"
+            "@@ -10,2 +20,2 @@\\n"
+            " context target\\n"
+            "-old line\\n"
+            "+new line\\n"
+        )
+        payload["changed_files"] = ["src/client.py"]
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["evidence"] = " context target"
+        finding["line_start"] = 10
+        finding["line_end"] = 10
+        with self.assertRaisesRegex(ReviewError, "does not cover the cited diff evidence"):
+            validate_review(payload, review)
+        finding["line_end"] = 20
+        self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+
+    def test_repeated_evidence_across_hunks_requires_all_mapped_lines(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/src/client.py b/src/client.py\\n"
+            "--- a/src/client.py\\n"
+            "+++ b/src/client.py\\n"
+            "@@ -1 +1 @@\\n"
+            "+same target\\n"
+            "@@ -30 +40 @@\\n"
+            "+same target\\n"
+        )
+        payload["changed_files"] = ["src/client.py"]
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["evidence"] = "+same target"
+        finding["line_start"] = 1
+        finding["line_end"] = 1
+        with self.assertRaisesRegex(ReviewError, "does not cover the cited diff evidence"):
+            validate_review(payload, review)
+        finding["line_end"] = 40
+        self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+
+
 if __name__ == "__main__":
     unittest.main()
