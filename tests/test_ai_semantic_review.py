@@ -766,10 +766,28 @@ class SemanticReviewValidationTests(unittest.TestCase):
         self.assertEqual((key, model), ("test-key", "test-model"))
         network.assert_not_called()
 
+    def test_provider_config_allows_http_only_for_literal_loopback_ips(self):
+        from scripts.ai_semantic_review import validate_model_config
+
+        for base, expected in (
+            ("http://127.0.0.1:1235/v1", "http://127.0.0.1:1235/v1/chat/completions"),
+            ("http://[::1]:1235/v1", "http://[::1]:1235/v1/chat/completions"),
+        ):
+            with self.subTest(base=base):
+                endpoint, key, model = validate_model_config({
+                    "AI_REVIEW_API_BASE": base,
+                    "AI_REVIEW_API_KEY": "test-key",
+                    "AI_REVIEW_MODEL": "test-model",
+                })
+                self.assertEqual(endpoint, expected)
+                self.assertEqual((key, model), ("test-key", "test-model"))
+
     def test_provider_config_rejects_unsafe_endpoints(self):
         from scripts.ai_semantic_review import validate_model_config
         invalid = [
             "http://example.invalid/v1",
+            "http://localhost:1235/v1",
+            "http://192.168.1.5/v1",
             "https://user:password@example.invalid/v1",
             "https://example.invalid/v1?token=secret",
             "https://example.invalid/v1#fragment",
