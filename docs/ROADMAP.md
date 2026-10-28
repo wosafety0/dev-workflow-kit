@@ -26,7 +26,8 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [x] Define a safe, explicit task-ID allowlist; unknown IDs fail closed and configuration does not execute commands.
 - [x] Build a deterministic, strict-allowlist acceptance report with commit SHA, rules pin, tool version, and test status (`docs/ACCEPTANCE_REPORT_V1.md`).
 - [x] Wire CI to generate and upload the report using the workflow commit SHA, rules-contract content hash, toolkit revision, and test-step outcome.
-- [x] Verify that a historical GitHub Actions run (Run 40639692633; tested commit `cfbcf095850b8e13c52c2a1ab9050d6397886f50`) uploaded the report artifact and passed the fail-closed job gate. This is historical evidence only and does not verify the current PR HEAD (`6cc489bc5af0805cbbf8291c1a2d4bc1a5369298`); current-HEAD CI verification remains pending.
+- [x] Verify that a historical GitHub Actions run (Run 40639692633; tested commit `cfbcf095850b8e13c52c2a1ab9050d6397886f50`) uploaded the report artifact and passed the fail-closed job gate. This is historical evidence only.
+- [x] Verify PR-head CI run [40691689194](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40691689194) succeeded for tested commit `4fa5f05316876cefa39bd8cdbe4187f63ee0757a`. This establishes the result for that exact PR head only; it does not independently verify the later merge commit `9b236112d4d6f07e15480b5b0ae6e9a3ef5c8aea`.
 - [x] Add failure-injection tests for the current model-provider fail-closed paths; broader orchestration paths remain pending.
 
 ## Stage 3 — versioned distribution
@@ -34,7 +35,7 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [x] Add a minimal reusable acceptance workflow with read-only repository permissions and an explicit consumer-owned test command (`.github/workflows/reusable-acceptance.yml`).
 - [x] Document immutable 40-character SHA pinning, security boundaries, and upgrade/rollback procedure (`docs/REUSABLE_ACCEPTANCE_WORKFLOW.md`).
 - [x] Define a document precedence and stale-content maintenance policy (`docs/DOCUMENT_PRECEDENCE.md`).
-- [ ] Tag an initial 0.x release only after acceptance criteria pass.
+- [ ] Tag an initial 0.x release only after acceptance criteria pass on the exact release candidate and the release scope is reviewed.
 
 ## Stage 4 — consumer integration
 
@@ -47,7 +48,7 @@ When current-facing documents conflict, follow the latest applicable, verified p
 
 - Offline tests do not count as live model validation.
 - Missing configuration, network errors, invalid output, or unverifiable evidence must never produce a passing review.
-- CI results must link to the actual workflow run.
+- CI results must link to the actual workflow run and identify the exact tested commit.
 - No credentials in source, artifacts, or logs.
 - No automatic PR merge or project business actions.
 - Remote GitHub changes must not be described as synced to a local worktree unless independently verified.
