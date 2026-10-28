@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, "feat/**", "fix/**", "docs/**"]
   pull_request:
-    branches: [main]
+    branches: [main, "feat/**"]
   workflow_dispatch:
 
 permissions:
@@ -21,7 +21,64 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+      - name: Pin acceptance rules by content hash
+        id: rules
+        shell: bash
+        run: |
+          echo "pin=sha256:$(sha256sum docs/STABLE_ACCEPTANCE_CONTRACT.md | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
       - name: Compile Python source
         run: python -m compileall -q scripts tests
-      - name: Run offline semantic-review contract tests
-        run: python -m unittest discover -s tests -p 'test_ai_semantic_review.py' -v
+      - name: Run all offline contract tests
+        id: tests
+        continue-on-error: true
+        run: python -m unittest discover -s tests -v
+      - name: Build redacted acceptance report
+        if: always()
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+          RULES_PIN: ${{ steps.rules.outputs.pin }}
+          TOOL_VERSION: dev-workflow-kit@${{ github.sha }}
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from scripts.acceptance_report import build_acceptance_report
+
+          outcome = os.environ.get("TEST_OUTCOME", "skipped")
+          status = {
+              "success": "passed",
+              "failure": "failed",
+              "cancelled": "not_run",
+              "skipped": "not_run",
+          }.get(outcome, "not_run")
+          metadata = {
+              "commit_sha": os.environ["COMMIT_SHA"],
+              "rules_pin": os.environ["RULES_PIN"],
+              "tool_version": os.environ["TOOL_VERSION"],
+              "tests": {"offline-contract-tests": status},
+          }
+          report = build_acceptance_report(metadata)
+          output = Path("artifacts/acceptance-report.json")
+          output.parent.mkdir(parents=True, exist_ok=True)
+          output.write_text(
+              json.dumps(report, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print("Acceptance report written: artifacts/acceptance-report.json")
+          print("Acceptance status: " + report["status"])
+          PY
+      - name: Upload acceptance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-report
+          path: artifacts/acceptance-report.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Fail job when offline tests did not pass
+        if: always()
+        env:
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+        run: python scripts/ci_gate.py "$TEST_OUTCOME"

@@ -1,0 +1,39 @@
+name: Reusable Acceptance Gate
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: Python version requested by the consuming repository
+        required: false
+        type: string
+        default: "3.12"
+      test-command:
+        description: Explicit test command owned and reviewed by the consuming repository
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out consuming repository
+        uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Run consumer-owned acceptance command
+        shell: bash
+        env:
+          ACCEPTANCE_COMMAND: ${{ inputs.test-command }}
+        run: |
+          if [ -z "${ACCEPTANCE_COMMAND//[[:space:]]/}" ]; then
+            echo "test-command must not be empty." >&2
+            exit 2
+          fi
+          bash -euo pipefail -c "$ACCEPTANCE_COMMAND"
