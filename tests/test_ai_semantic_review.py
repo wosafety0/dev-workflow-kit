@@ -87,5 +87,24 @@ class SemanticReviewValidationTests(unittest.TestCase):
         self.assertEqual(messages[1]["role"], "user")
 
 
+    def test_rejects_non_string_status(self):
+        review = self.pass_review()
+        review["status"] = []
+        with self.assertRaisesRegex(ReviewError, "Invalid review status"):
+            validate_review(self.payload, review)
+
+    def test_rejects_non_string_severity(self):
+        review = self.finding()
+        review["findings"][0]["severity"] = []
+        with self.assertRaisesRegex(ReviewError, "invalid severity"):
+            validate_review(self.payload, review)
+
+    def test_rejects_missing_input_field(self):
+        payload = dict(self.payload)
+        del payload["diff"]
+        with self.assertRaisesRegex(ReviewError, "missing required field"):
+            validate_review(payload, self.pass_review())
+
+
 if __name__ == "__main__":
     unittest.main()
