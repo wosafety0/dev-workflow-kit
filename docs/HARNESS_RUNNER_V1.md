@@ -4,7 +4,7 @@ Status: early implementation; reviewed task allowlist only. This is not an auton
 
 ## Example
 
-From the project root, with a reviewed `harness.json`:
+From the project root, start with the checked-in example `examples/harness-config.json` or a reviewed project-specific config:
 
 ```json
 {
@@ -17,7 +17,7 @@ From the project root, with a reviewed `harness.json`:
 Run:
 
 ```bash
-python scripts/harness_runner.py --config harness.json
+python scripts/harness_runner.py --config examples/harness-config.json
 ```
 
 The runner writes `artifacts/acceptance-report.json`. It requires a Git worktree with a valid HEAD and the reviewed contract file at `docs/STABLE_ACCEPTANCE_CONTRACT.md`.
