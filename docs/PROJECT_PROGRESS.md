@@ -81,7 +81,7 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added `docs/CONSUMER_PILOT_CHECKLIST.md` with entry criteria, controlled pilot steps, pass/fail criteria, evidence capture, and stop conditions. The file was read back from GitHub; blob SHA: `afdc2781809e8e1d1e332c739bdbee4d63989a22`.
 - The checklist explicitly distinguishes a missing-artifact-input failure from a real GitHub Artifact service outage.
 - Hosted CI run [40713631149](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40713631149), run number 100, completed successfully for the exact PR head `bff949fba82e5c514ed9f0f11a32120dae2faabf`. Offline tests, report generation, artifact upload, and final gate all succeeded; artifact ID `12826902344`.
-- PR #7 remains draft and unmerged. No consumer repository has been integrated; no changes were made to `main`.
+- PR #7 was closed unmerged after its checklist content was carried into PR #8; no consumer repository has been merged or released, and no changes were made to `main`.
 
 ### Reusable acceptance workflow report and fail-closed gate
 
@@ -102,7 +102,7 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Consumer workflow run [40714715392](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40714715392) completed successfully. The called job's checkout, Python setup, consumer test command, redacted report generation, artifact upload, and final gate all succeeded.
 - Artifact `consumer-acceptance-report` ID: `12827428586`; digest: `sha256:b9b896241e5840897a9c65595cf0008bab79a5e2ea9d6287fe624ba1dd8b40cf`.
 - The same PR's Harness CI run [40714714617](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40714714617) also succeeded.
-- This is a same-repository smoke test only, not proof of a second independent consumer. PR #9 remains draft and unmerged.
+- This is a same-repository smoke test only, not proof of a second independent consumer. PR #9 was closed unmerged after its successful run and artifact evidence were recorded.
 
 ### Reusable workflow consumer failure-path smoke test
 
