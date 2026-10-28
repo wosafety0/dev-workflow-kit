@@ -485,7 +485,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
             "diff --git a/notes.txt b/notes.txt\n"
             "--- a/notes.txt\n"
             "+++ b/notes.txt\n"
-            "@@ -1 +1 @@\n"
+            "@@ -0,0 +1 @@\n"
             "+ urlopen(request, timeout=60)\n"
         )
         payload["changed_files"] = ["src/client.py", "README.md", "notes.txt"]
