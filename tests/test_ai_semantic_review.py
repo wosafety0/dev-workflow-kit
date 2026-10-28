@@ -435,9 +435,9 @@ class SemanticReviewValidationTests(unittest.TestCase):
             "diff --git a/src/client.py b/src/client.py\n"
             "--- a/src/client.py\n"
             "+++ b/src/client.py\n"
-            "@@ -1 +1 @@\n"
+            "@@ -0,0 +1 @@\n"
             "+same target\n"
-            "@@ -30 +40 @@\n"
+            "@@ -29,0 +40 @@\n"
             "+same target\n"
         )
         payload["changed_files"] = ["src/client.py"]
