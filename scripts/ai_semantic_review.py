@@ -397,7 +397,14 @@ def call_model(payload: dict[str, Any]) -> Any:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
+        if urlsplit(endpoint).scheme == "http":
+            # HTTP is permitted only for literal loopback IPs; bypass configured proxies
+            # for this request so local inference never depends on proxy/NO_PROXY settings.
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            response_context = opener.open(request, timeout=60)
+        else:
+            response_context = urllib.request.urlopen(request, timeout=60)
+        with response_context as response:
             response_data = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ReviewError(f"Model request failed ({type(exc).__name__}); review cannot pass") from None
