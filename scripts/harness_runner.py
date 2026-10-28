@@ -260,6 +260,9 @@ def main(argv: list[str] | None = None) -> int:
     except (HarnessRunnerError, HarnessConfigError, AcceptanceReportError) as exc:
         print(f"Harness run blocked: {exc}", file=sys.stderr)
         return 2
+    except OSError:
+        print("Harness run blocked: filesystem operation failed", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
