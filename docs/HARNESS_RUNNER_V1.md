@@ -20,7 +20,7 @@ Run:
 python scripts/harness_runner.py --config examples/harness-config.json
 ```
 
-The runner writes `artifacts/acceptance-report.json`. It requires a Git worktree with a valid HEAD and the reviewed contract file at `docs/STABLE_ACCEPTANCE_CONTRACT.md`.
+The runner writes `artifacts/acceptance-report.json`. It requires a Git worktree with a valid HEAD and the reviewed contract file at `docs/STABLE_ACCEPTANCE_CONTRACT.md`. For an opt-in live model test, see [SEMANTIC_REVIEW_SMOKE_TEST.md](SEMANTIC_REVIEW_SMOKE_TEST.md) and the semantic-review example config/input.
 
 ## Task mapping
 
