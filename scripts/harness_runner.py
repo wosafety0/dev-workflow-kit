@@ -61,9 +61,15 @@ def _require_artifact_path(root: Path, path: Path, field: str) -> None:
 
 
 def _git_commit_sha(root: Path) -> str:
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
+    """Require that the report's commit describes the exact checked-out source.
+
+    Git status checks tracked changes and untracked files, excluding only generated
+    artifacts/. Normal interpreter caches should be covered by the project's
+    .gitignore. No filenames or file contents are included in error messages.
+    """
+    def run_git(*args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", *args],
             cwd=root,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -71,11 +77,29 @@ def _git_commit_sha(root: Path) -> str:
             timeout=10,
             check=False,
         )
+
+    try:
+        top = run_git("rev-parse", "--show-toplevel")
+        result = run_git("rev-parse", "HEAD")
+        status = run_git(
+            "status", "--porcelain=v1", "--untracked-files=all",
+            "--", ".", ":(exclude)artifacts",
+        )
     except (OSError, subprocess.TimeoutExpired):
-        raise HarnessRunnerError("Could not determine the project Git commit SHA") from None
+        raise HarnessRunnerError("Could not verify Git commit provenance") from None
+    if top.returncode != 0 or not top.stdout.strip() or (
+        Path(top.stdout.strip()).resolve() != root.resolve()
+    ):
+        raise HarnessRunnerError("project-root must be the Git repository root")
     sha = result.stdout.strip()
     if result.returncode != 0 or not _SHA_RE.fullmatch(sha):
         raise HarnessRunnerError("Project root must be a Git worktree with a valid HEAD commit")
+    if status.returncode != 0:
+        raise HarnessRunnerError("Could not verify clean Git worktree")
+    if status.stdout:
+        raise HarnessRunnerError(
+            "Git worktree must be clean outside artifacts/ before acceptance"
+        )
     return sha.lower()
 
 
@@ -255,6 +279,11 @@ def main(argv: list[str] | None = None) -> int:
                 f" (exit {exit_code})" if exit_code not in (None, 0) else ""
             )
             print(f"Task {task_id}: {status}{suffix}")
+
+        # Tests or hooks may edit tracked/untracked source or move HEAD. Never
+        # attribute such a run to the original commit in a passing report.
+        if _git_commit_sha(root) != commit_sha:
+            raise HarnessRunnerError("Git HEAD changed during task execution")
 
         metadata = {
             "commit_sha": commit_sha,
