@@ -109,6 +109,41 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(report["status"], "failed")
         self.assertEqual(report["tests"], {"python-unittest": "failed"})
 
+    def test_runs_configured_tasks_in_order_with_explicit_review_paths(self):
+        self.write_config(["python-unittest", "semantic-review"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        with patch("scripts.harness_runner._git_commit_sha", return_value="d" * 40), patch(
+            "scripts.harness_runner._rules_pin", return_value="sha256:contract"
+        ), patch(
+            "scripts.harness_runner._run_task",
+            side_effect=[("passed", 0), ("passed", 0)],
+        ) as run_task:
+            code, stdout, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
+        self.assertIn("Task python-unittest: passed", stdout)
+        self.assertIn("Task semantic-review: passed", stdout)
+        calls = [call.args[0] for call in run_task.call_args_list]
+        self.assertEqual(calls[0], [
+            sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"
+        ])
+        self.assertEqual(calls[1], [
+            sys.executable,
+            str(self.root / "scripts" / "ai_semantic_review.py"),
+            "--input", str(self.root / "review-input.json"),
+            "--output", str(self.root / "artifacts" / "review.json"),
+        ])
+        report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["status"], "passed")
+        self.assertEqual(
+            report["tests"],
+            {"python-unittest": "passed", "semantic-review": "passed"},
+        )
+
     def test_rejects_output_outside_artifacts_before_running_tasks(self):
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner("--report-output", "scripts/ai_semantic_review.py")
