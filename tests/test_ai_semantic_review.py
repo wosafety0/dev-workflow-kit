@@ -506,5 +506,47 @@ class SemanticReviewValidationTests(unittest.TestCase):
             validate_review(payload, self.pass_review())
 
 
+    def test_rejects_zero_old_start_with_nonzero_count(self):
+        payload = dict(self.payload)
+        payload["diff"] = payload["diff"].replace(
+            "@@ -1 +1 @@",
+            "@@ -0,1 +1 @@",
+        )
+        with self.assertRaisesRegex(ReviewError, "Malformed diff hunk header"):
+            validate_review(payload, self.pass_review())
+
+    def test_rejects_zero_new_start_with_nonzero_count(self):
+        payload = dict(self.payload)
+        payload["diff"] = payload["diff"].replace(
+            "@@ -1 +1 @@",
+            "@@ -1 +0,1 @@",
+        )
+        with self.assertRaisesRegex(ReviewError, "Malformed diff hunk header"):
+            validate_review(payload, self.pass_review())
+
+    def test_accepts_zero_count_ranges_for_new_and_deleted_files(self):
+        new_payload = dict(self.payload)
+        new_payload["diff"] = (
+            "diff --git a/new.txt b/new.txt\n"
+            "--- /dev/null\n"
+            "+++ b/new.txt\n"
+            "@@ -0,0 +1 @@\n"
+            "+first line\n"
+        )
+        new_payload["changed_files"] = ["new.txt"]
+        self.assertEqual(validate_review(new_payload, self.pass_review())["status"], "PASS")
+
+        deleted_payload = dict(self.payload)
+        deleted_payload["diff"] = (
+            "diff --git a/old.txt b/old.txt\n"
+            "--- a/old.txt\n"
+            "+++ /dev/null\n"
+            "@@ -1 +0,0 @@\n"
+            "-old line\n"
+        )
+        deleted_payload["changed_files"] = ["old.txt"]
+        self.assertEqual(validate_review(deleted_payload, self.pass_review())["status"], "PASS")
+
+
 if __name__ == "__main__":
     unittest.main()
