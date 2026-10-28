@@ -45,7 +45,8 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 ## Next steps
 
 1. Review the successful Node.js consumer pilot evidence and decide whether to revise the consumer PR; keep it draft until separately reviewed.
-2. Run a controlled failure-path smoke test against the updated multi-runtime workflow SHA, then record the evidence.
+2. Review the completed independent consumer pilot evidence; keep the consumer PR draft/unmerged until separately authorized.
+3. Begin controlled real-model validation with strict quotas and no production actions, then define 0.x release criteria from the accumulated evidence.
 3. Define objective 0.x release criteria after the independent pilot evidence is available.
 4. Conduct controlled real-model validation after offline and hosted reliability boundaries are documented.
 5. Keep the Artifact-service-outage boundary explicitly unverified; do not let this hard-to-reproduce scenario block a low-risk independent consumer pilot.
@@ -138,3 +139,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Verified steps: runtime allowlist accepted `node`; Node.js 26 setup succeeded; pnpm 11.4.0 installed; frozen-lockfile install succeeded; the existing `pnpm check` command passed; redacted report uploaded; final gate passed.
 - Artifact ID `12828925328`, digest `sha256:ab0642ac0f7590352cabc08d504b21c75a3b8612e14b6be72ac6fd33f23c938d`.
 - The independent consumer pilot is technically green for its normal path, but its PR remains draft/unmerged pending review. It is not a release or deployment.
+
+
+### Updated multi-runtime Node failure-path validation
+
+- Temporary draft PR #11: https://github.com/wosafety0/dev-workflow-kit/pull/11 (closed, not merged).
+- Tested head: `e353f34d314aff450801a1108e00dd2a409166f2`; reusable workflow pinned to candidate SHA `65544e290fd875bb6c4e30f6525b238200037bba`.
+- Run [40715636382](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715636382) completed with the expected failure after Node.js 26 setup succeeded.
+- The consumer command exited 23; the report recorded `status: failed`; artifact upload succeeded (artifact ID `12828236019`); the final gate exited 1 and named `tests` as the failed required stage.
+- Run logs verified `TEST_OUTCOME=failure`, `REPORT_OUTCOME=success`, and `ARTIFACT_OUTCOME=success`. The temporary PR was closed after evidence capture and was never merged.
