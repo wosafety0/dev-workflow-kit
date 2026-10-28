@@ -1,7 +1,7 @@
 # Developer Workflow Toolkit
 
-Early development (0.x). A reusable, provider-agnostic toolkit for validating AI-assisted software changes. The repository includes an evidence-checked semantic-review module, offline contract tests, versioned configuration validation, deterministic acceptance reports, and a minimal reusable acceptance workflow.
+Early development (0.x). A reusable, provider-agnostic toolkit for validating AI-assisted software changes. The current development branch includes an evidence-checked semantic-review module, offline contract tests, versioned configuration validation, deterministic acceptance reports, and a minimal reusable acceptance workflow.
 
-No credentials are committed. Offline tests do not establish live model behavior or guarantee complete defect detection.
+No credentials are committed. Offline tests do not establish live model behavior or guarantee complete defect detection. This branch is still under review; features here are not considered merged into `main` until the relevant pull requests are merged.
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for staged acceptance criteria, [docs/STABLE_ACCEPTANCE_CONTRACT.md](docs/STABLE_ACCEPTANCE_CONTRACT.md) for the current 0.x semantic-review contract, and [docs/REUSABLE_ACCEPTANCE_WORKFLOW.md](docs/REUSABLE_ACCEPTANCE_WORKFLOW.md) for immutable SHA pinning, security boundaries, and upgrades.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for staged acceptance criteria, [docs/STABLE_ACCEPTANCE_CONTRACT.md](docs/STABLE_ACCEPTANCE_CONTRACT.md) for the current 0.x semantic-review contract, [docs/REUSABLE_ACCEPTANCE_WORKFLOW.md](docs/REUSABLE_ACCEPTANCE_WORKFLOW.md) for immutable SHA pinning, security boundaries, and upgrades, and [docs/DOCUMENT_PRECEDENCE.md](docs/DOCUMENT_PRECEDENCE.md) for resolving documentation conflicts and correcting stale content.
