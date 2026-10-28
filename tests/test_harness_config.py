@@ -1,4 +1,6 @@
+import json
 import unittest
+from pathlib import Path
 
 from scripts.harness_config import (
     ALLOWED_COMMAND_IDS,
