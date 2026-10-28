@@ -15,6 +15,11 @@ class HarnessConfigValidationTests(unittest.TestCase):
             "commands": ["python-unittest", "semantic-review"],
         }
 
+    def test_checked_in_example_config_is_valid(self):
+        example = Path(__file__).resolve().parents[1] / "examples" / "harness-config.json"
+        config = json.loads(example.read_text(encoding="utf-8"))
+        self.assertEqual(validate_harness_config(config)["commands"], ["python-unittest"])
+
     def test_accepts_known_task_ids_offline(self):
         config = self.valid_config()
         self.assertEqual(validate_harness_config(config), config)
