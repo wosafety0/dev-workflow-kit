@@ -44,8 +44,8 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 
 ## Next steps
 
-1. Complete the Node.js consumer pilot in `wosafety0/AI-Worker-Proxy` and inspect the exact run, report artifact, and existing checks.
-2. If the pilot passes, record the cross-repository setup effort and any consumer-specific limitations; keep the PR draft until separately reviewed.
+1. Review the successful Node.js consumer pilot evidence and decide whether to revise the consumer PR; keep it draft until separately reviewed.
+2. Run a controlled failure-path smoke test against the updated multi-runtime workflow SHA, then record the evidence.
 3. Define objective 0.x release criteria after the independent pilot evidence is available.
 4. Conduct controlled real-model validation after offline and hosted reliability boundaries are documented.
 5. Keep the Artifact-service-outage boundary explicitly unverified; do not let this hard-to-reproduce scenario block a low-risk independent consumer pilot.
@@ -119,13 +119,22 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added contract tests for the runtime allowlist, conditional setup steps, immutable Node action pin, and disabled package-manager cache.
 - Latest PR #8 head: `65544e290fd875bb6c4e30f6525b238200037bba`.
 - Hosted Harness CI run [40715196026](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715196026), run number 126, completed successfully for that exact head; the 93-test suite, report, artifact upload, and final gate succeeded. Artifact ID: `12827137999`.
-- The Node runtime itself still required independent consumer validation at the time of this log update.
+- The Node runtime was subsequently verified by the independent consumer pilot below.
 
 ### Independent Node.js consumer pilot
 
 - Draft consumer PR: https://github.com/wosafety0/AI-Worker-Proxy/pull/1
 - Branch: `test/dev-workflow-kit-pilot-20261028`; tested head: `642c627bdb8f2e3c791835ec78f837a258c3eb97`.
 - Added `.github/workflows/dev-workflow-kit-pilot.yml`, pinned to Harness SHA `65544e290fd875bb6c4e30f6525b238200037bba`, using Node.js 26 and the consumer's existing `pnpm check` after a frozen-lockfile install.
-- The pilot job verified the runtime allowlist and completed Node.js setup successfully. The consumer command, report upload, and final gate were still in progress; no final outcome or report artifact was available yet.
-- The consumer's existing `Lint and Type Check` run [40715308397](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/40715308397) completed successfully. The Harness pilot remains separately tracked and unverified until its own run completes.
-- The PR is draft and unmerged. It adds only a read-only acceptance workflow and does not deploy the Cloudflare Worker or modify `main`.
+- Consumer workflow run [40715309593](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/40715309593) completed successfully for exact head `642c627bdb8f2e3c791835ec78f837a258c3eb97`. Node.js 26 setup succeeded; `pnpm install --frozen-lockfile` installed 236 packages; `pnpm check` passed (`tsc --noEmit && eslint src`); redacted report generation, artifact upload, and final gate succeeded.
+- Consumer artifact `consumer-acceptance-report` ID: `12828925328`; digest: `sha256:ab0642ac0f7590352cabc08d504b21c75a3b8612e14b6be72ac6fd33f23c938d`.
+- The consumer's existing `Lint and Type Check` run [40715308397](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/40715308397) also completed successfully.
+- This verifies cross-repository Node runtime consumption on the exact tested Harness SHA. The PR is draft and unmerged; it adds only a read-only acceptance workflow and does not deploy the Cloudflare Worker or modify `main`.
+
+
+### Updated multi-runtime workflow: independent consumer pilot result
+
+- Pilot workflow run [40715309593](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/40715309593) succeeded on consumer head `642c627bdb8f2e3c791835ec78f837a258c3eb97`, calling Harness commit `65544e290fd875bb6c4e30f6525b238200037bba`.
+- Verified steps: runtime allowlist accepted `node`; Node.js 26 setup succeeded; pnpm 11.4.0 installed; frozen-lockfile install succeeded; the existing `pnpm check` command passed; redacted report uploaded; final gate passed.
+- Artifact ID `12828925328`, digest `sha256:ab0642ac0f7590352cabc08d504b21c75a3b8612e14b6be72ac6fd33f23c938d`.
+- The independent consumer pilot is technically green for its normal path, but its PR remains draft/unmerged pending review. It is not a release or deployment.
