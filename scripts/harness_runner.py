@@ -207,6 +207,18 @@ def main(argv: list[str] | None = None) -> int:
             if path is not None and path == report_path:
                 raise HarnessRunnerError(f"report-output must not overwrite {label}")
 
+        # Invalidate previous successful artifacts before config validation or task
+        # execution. Otherwise a blocked run can leave a stale PASS for consumers.
+        _require_artifact_path(root, report_path, "report-output")
+        if review_output is not None:
+            _require_artifact_path(root, review_output, "review-output")
+        for output in (report_path, review_output):
+            if output is not None:
+                try:
+                    output.unlink()
+                except FileNotFoundError:
+                    pass
+
         try:
             raw_config = json.loads(config_path.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError):
@@ -222,9 +234,6 @@ def main(argv: list[str] | None = None) -> int:
             raise HarnessRunnerError(
                 "--review-input and --review-output are only valid when semantic-review is configured"
             )
-        _require_artifact_path(root, report_path, "report-output")
-        if review_output is not None:
-            _require_artifact_path(root, review_output, "review-output")
         if review_input is not None and not review_input.is_file():
             raise HarnessRunnerError("review-input must identify an existing file")
         if review_output is not None:
