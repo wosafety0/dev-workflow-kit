@@ -146,11 +146,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 ### Local inference endpoint transport hardening
 
 - Draft PR #12: https://github.com/wosafety0/dev-workflow-kit/pull/12
-- Branch: `fix/local-loopback-model-endpoint-20261028`; tested head: `0b86ce1066e84c6056ec3eb5daa5329ce746c99a`.
+- Branch: `fix/local-loopback-model-endpoint-20261028`; latest tested head: `c0df7982e1b1767450199ee42ff17395f3573ae4`.
 - Changed `validate_model_config` to allow HTTPS for remote providers and HTTP only for literal loopback IPs (IPv4/IPv6). Hostname-based `localhost`, non-loopback HTTP, embedded URL credentials, query strings, fragments, malformed ports, and control characters remain rejected.
-- Added offline tests for `http://127.0.0.1:1235/v1` and `http://[::1]:1235/v1`, and retained negative tests for unsafe HTTP endpoints. Updated `docs/STABLE_ACCEPTANCE_CONTRACT.md`.
-- Hosted CI run [40716125120](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40716125120), run number 144, succeeded on the exact tested head. 90 offline tests passed, the acceptance report uploaded (artifact ID `12829135525`), and the final gate passed.
-- This validates configuration parsing and security boundaries only. It does not constitute a live model request or prove that the user's local LM Studio endpoint is reachable from this environment. PR #12 remains draft and unmerged.
+- Loopback HTTP requests use a request-scoped opener with proxy handling disabled, without changing global/system proxy settings.
+- Added offline config tests and a local mock-server request test with proxy environment variables deliberately set. The test proves a real loopback HTTP request succeeds without routing through the configured proxy. Updated `docs/STABLE_ACCEPTANCE_CONTRACT.md`.
+- Hosted CI run [40717962173](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40717962173), run number 187, succeeded on the exact tested head. 91 offline tests passed, including the loopback request test; the acceptance report uploaded (artifact ID `12829482177`), and the final gate passed.
+- This does not constitute a live model request or prove that the user's local LM Studio endpoint is reachable from this environment. PR #12 remains draft and unmerged.
 
 
 ### Safe allowlisted task runner
