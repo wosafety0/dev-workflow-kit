@@ -27,8 +27,8 @@
 
 ## Stage 3 — versioned distribution
 
-- [ ] Add a reusable workflow or package entry point.
-- [ ] Document immutable SHA pinning and upgrade procedure.
+- [x] Add a minimal reusable acceptance workflow with read-only repository permissions and an explicit consumer-owned test command (`.github/workflows/reusable-acceptance.yml`).
+- [x] Document immutable 40-character SHA pinning, security boundaries, and upgrade/rollback procedure (`docs/REUSABLE_ACCEPTANCE_WORKFLOW.md`).
 - [ ] Tag an initial 0.x release only after acceptance criteria pass.
 
 ## Stage 4 — consumer integration
