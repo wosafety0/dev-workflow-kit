@@ -71,4 +71,4 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Run: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40712433963
 - Result: 89 offline tests passed; report generation passed; upload step failed as deliberately configured because the requested artifact path did not exist; final gate failed with `ARTIFACT_OUTCOME=failure` and named `artifact` as the unsuccessful required stage.
 - This proves the hosted workflow closes the gate on an upload-step failure. It does **not** simulate a GitHub artifact-service outage or validate service-level behavior.
-- The test-only PR was closed after evidence collection and was never merged. No changes were made to `main`.
+- The test-only PR was closed after evidence collection and was never merged. Its workflow was restored to the normal artifact path in cleanup commit `9254c3058196a192227bb56a1d6c634ecefbc72d`. The temporary branch remains for auditability; no changes were made to `main`.
