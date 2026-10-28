@@ -25,6 +25,12 @@ Example input:
 }
 ```
 
+## CI integration
+
+The GitHub Actions workflow supplies the actual workflow commit SHA, computes a SHA-256 content pin for `docs/STABLE_ACCEPTANCE_CONTRACT.md`, and identifies the tested toolkit revision as `dev-workflow-kit@<commit SHA>`. It records the offline contract-test step outcome, writes `artifacts/acceptance-report.json`, and uploads that file as the `acceptance-report` artifact for 14 days.
+
+The test step uses `continue-on-error` only so the report can still be produced when tests fail. A final gate explicitly fails the job unless the test step outcome is `success`. The report is not a replacement for the job conclusion.
+
 ## Output and fail-closed behavior
 
 The report contains only `schema_version`, `commit_sha`, `rules_pin`, `tool_version`, normalized `tests`, and overall `status`. Test names are sorted for deterministic output and the commit SHA is normalized to lowercase.
@@ -33,7 +39,7 @@ Overall status is `passed` only when every declared test status is exactly `pass
 
 ## Boundaries
 
-- The module does not discover the commit SHA, rules pin, tool version, or test results itself; the calling workflow must provide verified values.
-- It does not run tests, inspect repository state, verify that a rules pin actually refers to the intended policy, or authenticate the evidence.
-- A syntactically valid report is not proof that its supplied test statuses are true.
+- The workflow supplies the current commit SHA, the content hash of the acceptance contract, the toolkit revision label, and the test step outcome. These values are traceable but do not constitute a cryptographic attestation of every runtime action.
+- The module does not run tests, inspect repository state, or authenticate arbitrary caller-supplied test evidence.
+- The report reflects the offline contract-test step only; it does not claim live model validation or complete defect detection.
 - Never pass secrets, raw logs, or environment dumps as report metadata. Do not use this report as an authorization to write remotely or merge a pull request.
