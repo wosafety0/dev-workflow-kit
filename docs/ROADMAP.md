@@ -30,13 +30,17 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [x] Verify PR-head CI run [40691689194](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40691689194) succeeded for tested commit `4fa5f05316876cefa39bd8cdbe4187f63ee0757a`. This establishes the result for that exact PR head only; it does not independently verify the later merge commit `9b236112d4d6f07e15480b5b0ae6e9a3ef5c8aea`.
 - [x] Add failure-injection tests for model-provider fail-closed behavior.
 - [x] Add an orchestration fault matrix and test that test, report-generation, and artifact-upload outcomes must all be exactly successful before the final gate opens (`docs/ORCHESTRATION_FAULT_MATRIX.md`, `tests/test_ci_gate.py`).
-- [ ] Exercise real hosted-workflow failure injection (including an actual artifact-upload failure) and verify the resulting run evidence.
+- [x] Verify hosted missing-artifact-input and consumer-test-failure paths close the gate; neither simulates an Artifact service outage.
 
 ## Stage 3 — versioned distribution
 
-- [x] Add a minimal reusable acceptance workflow with read-only repository permissions and an explicit consumer-owned test command (`.github/workflows/reusable-acceptance.yml`).
-- [x] Document immutable 40-character SHA pinning, security boundaries, and upgrade/rollback procedure (`docs/REUSABLE_ACCEPTANCE_WORKFLOW.md`).
+- [x] Add a reusable acceptance workflow with read-only repository permissions, explicit consumer-owned test command, runtime allowlist (`python` or `node`), redacted status report, artifact upload, and fail-closed final gate.
+- [x] Document immutable 40-character SHA pinning, runtime selection, security boundaries, and upgrade/rollback procedure (`docs/REUSABLE_ACCEPTANCE_WORKFLOW.md`).
 - [x] Define a document precedence and stale-content maintenance policy (`docs/DOCUMENT_PRECEDENCE.md`).
+- [x] Verify the normal and consumer-test-failure paths through real hosted `workflow_call` smoke runs on the previous Python-only workflow version.
+- [x] Verify the updated multi-runtime version's normal path with an independent Node.js consumer pilot on the exact candidate SHA.
+- [x] Verify the updated multi-runtime Node.js failure path: test command failed, report generation and artifact upload succeeded, and the final gate closed. Evidence: [run 40715636382](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715636382).
+- [x] Validate the updated multi-runtime workflow on exact candidate SHA `65544e290fd875bb6c4e30f6525b238200037bba`, including Node.js 26 setup, frozen-lockfile install, consumer check command, report upload, and final gate. Evidence: [consumer run 40715309593](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/40715309593).
 - [ ] Tag an initial 0.x release only after acceptance criteria pass on the exact release candidate and the release scope is reviewed.
 
 ## Stage 4 — consumer integration
