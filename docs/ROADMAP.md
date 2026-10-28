@@ -20,8 +20,9 @@
 - [x] Define a versioned project configuration schema (`docs/HARNESS_CONFIG_V1.md`; validation-only, no runner).
 - [x] Validate model-provider configuration without requiring a model API.
 - [x] Define a safe, explicit task-ID allowlist; unknown IDs fail closed and configuration does not execute commands.
-- [ ] Emit a redacted, traceable report with commit SHA, rules pin, tool version, and test status.
+- [x] Build a deterministic, strict-allowlist acceptance report with commit SHA, rules pin, tool version, and test status (`docs/ACCEPTANCE_REPORT_V1.md`); report builder does not run tests or authenticate supplied evidence.
 - [x] Add failure-injection tests for the current model-provider fail-closed paths; broader orchestration paths remain pending.
+- [ ] Verify the acceptance-report contract and all offline tests in GitHub Actions after this change.
 
 ## Stage 3 — versioned distribution
 
