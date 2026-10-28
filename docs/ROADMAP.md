@@ -11,6 +11,7 @@
 - [x] Port the provider-agnostic semantic-review client.
 - [x] Port offline contract tests.
 - [x] Document inputs, secrets, status semantics, and limitations.
+- [x] Publish the initial 0.x stable acceptance contract in `docs/STABLE_ACCEPTANCE_CONTRACT.md`.
 - [ ] Expand tests for malformed input, missing configuration, provider errors, and malformed provider responses.
 - [ ] Confirm CI is green on this repository.
 
