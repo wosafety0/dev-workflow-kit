@@ -30,7 +30,7 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [x] Verify PR-head CI run [40691689194](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40691689194) succeeded for tested commit `4fa5f05316876cefa39bd8cdbe4187f63ee0757a`. This establishes the result for that exact PR head only; it does not independently verify the later merge commit `9b236112d4d6f07e15480b5b0ae6e9a3ef5c8aea`.
 - [x] Add failure-injection tests for model-provider fail-closed behavior.
 - [x] Add an orchestration fault matrix and test that test, report-generation, and artifact-upload outcomes must all be exactly successful before the final gate opens (`docs/ORCHESTRATION_FAULT_MATRIX.md`, `tests/test_ci_gate.py`).
-- [ ] Exercise real hosted-workflow failure injection (including an actual artifact-upload failure) and verify the resulting run evidence.
+- [x] Exercise hosted failure injection for missing artifact input and consumer test-command failure; see PR #6 run 40712433963 and PR #10 run 40714856655. A real GitHub Artifact service outage remains unverified.
 
 ## Stage 3 — versioned distribution
 
@@ -43,7 +43,7 @@ When current-facing documents conflict, follow the latest applicable, verified p
 
 - [ ] Integrate a consumer through a separate PR pinned to a tested toolkit SHA.
 - [ ] Preserve each consumer's project-specific tests, safety constraints, and archive paths.
-- [ ] Pilot with a second, unrelated repository without copying the core.
+- [x] Pilot the reusable workflow in an unrelated Node.js repository without copying the core: draft AI-Worker-Proxy PR #1, exact-head run 40715309593 succeeded. This is a cross-repository pilot only; the consumer PR remains unmerged.
 - [ ] Publish a reusable-MVP decision based on actual evidence.
 
 ## Non-negotiable acceptance rules
