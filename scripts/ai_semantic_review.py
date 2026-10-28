@@ -19,6 +19,8 @@ from typing import Any
 
 STATUSES = {"PASS", "NEEDS_CHANGES", "INCONCLUSIVE"}
 SEVERITIES = {"critical", "high", "medium", "low", "info"}
+MAX_CHANGED_FILE_PATH_LENGTH = 4096
+MAX_DIFF_LINE_NUMBER = 2_147_483_647
 
 
 class ReviewError(ValueError):
@@ -39,6 +41,8 @@ def validate_input(payload: dict[str, Any]) -> None:
     ):
         raise ReviewError("changed_files must be a list of non-empty paths")
     for path in payload["changed_files"]:
+        if len(path) > MAX_CHANGED_FILE_PATH_LENGTH:
+            raise ReviewError("changed_files path is too long")
         parts = path.split("/")
         if (
             path.startswith("/")
@@ -78,6 +82,14 @@ def _validate_hunk_integrity(section: str) -> None:
             new_start == 0 and new_expected != 0
         ):
             raise ReviewError("Malformed diff hunk header")
+        if any(
+            value > MAX_DIFF_LINE_NUMBER
+            for value in (old_start, new_start, old_expected, new_expected)
+        ) or any(
+            start + count > MAX_DIFF_LINE_NUMBER
+            for start, count in ((old_start, old_expected), (new_start, new_expected))
+        ):
+            raise ReviewError("Diff hunk line range exceeds supported limits")
         old_seen = new_seen = 0
         index += 1
         while index < len(lines) and not lines[index].startswith("@@"):
