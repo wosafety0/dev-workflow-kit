@@ -14,15 +14,24 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         self.assertIn("permissions:\n  contents: read", self.source)
         self.assertIn("actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09", self.source)
         self.assertIn("actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1", self.source)
+        self.assertIn("actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e", self.source)
         self.assertIn("actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02", self.source)
+        self.assertIn("package-manager-cache: false", self.source)
         self.assertNotIn("secrets.", self.source)
+
+    def test_runtime_is_explicitly_allowlisted_and_provisioned_conditionally(self):
+        self.assertIn('default: "python"', self.source)
+        self.assertIn('default: "26"', self.source)
+        self.assertIn("python|node)", self.source)
+        self.assertIn("runtime must be either python or node.", self.source)
+        self.assertIn("if: inputs.runtime == 'python'", self.source)
+        self.assertIn("if: inputs.runtime == 'node'", self.source)
 
     def test_test_failure_is_recorded_and_does_not_skip_reporting(self):
         self.assertIn("id: tests", self.source)
         self.assertIn("continue-on-error: true", self.source)
         self.assertIn("id: report\n        if: always()", self.source)
         self.assertIn("id: artifact\n        if: always()", self.source)
-        self.assertIn("id: artifact", self.source)
 
     def test_report_uses_an_allowlisted_metadata_shape(self):
         for field in (
