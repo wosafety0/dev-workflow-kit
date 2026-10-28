@@ -334,7 +334,7 @@ def build_messages(payload: dict[str, Any]) -> list[dict[str, str]]:
 def validate_model_config(environ: dict[str, str] | None = None) -> tuple[str, str, str]:
     """Validate provider configuration without performing any network request."""
     env = os.environ if environ is None else environ
-    base = env.get("AI_REVIEW_API_BASE", "").strip()
+    base = env.get("AI_REVIEW_API_BASE", "")
     api_key = env.get("AI_REVIEW_API_KEY", "")
     model = env.get("AI_REVIEW_MODEL", "").strip()
     if not base or not api_key or not model:
@@ -367,6 +367,19 @@ def validate_model_config(environ: dict[str, str] | None = None) -> tuple[str, s
     return endpoint, api_key, model
 
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Refuse HTTP redirects so credentials and review payloads stay on the configured endpoint."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _open_model_request(request: urllib.request.Request):
+    """Open a model request without following HTTP redirects."""
+    opener = urllib.request.build_opener(_NoRedirectHandler())
+    return opener.open(request, timeout=60)
+
+
 def call_model(payload: dict[str, Any]) -> Any:
     endpoint, api_key, model = validate_model_config()
     body = json.dumps({
@@ -382,7 +395,7 @@ def call_model(payload: dict[str, Any]) -> Any:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with _open_model_request(request) as response:
             response_data = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ReviewError(f"Model request failed ({type(exc).__name__}); review cannot pass") from None
