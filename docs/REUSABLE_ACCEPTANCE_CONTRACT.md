@@ -29,4 +29,4 @@ The report contains no raw test output, environment dump, credentials, or logs. 
 
 ## Validation boundaries
 
-The verifier establishes report shape, status, and agreement with expected GitHub context values. It does not independently prove the trustworthiness of GitHub itself, the semantic correctness of the consumer tests, or provenance of a report copied outside its originating workflow run. Consumers must retain the workflow run and commit association.
+The inline workflow verifier and standalone Harness verifier must enforce the same report schema. The standalone verifier requires `--expected-harness-workflow-ref` and `--expected-harness-workflow-sha` in addition to caller identity arguments, and checks both against the report. The verifier establishes report shape, status, and agreement with expected GitHub context values. It does not independently prove the trustworthiness of GitHub itself, the semantic correctness of the consumer tests, or provenance of a report copied outside its originating workflow run. Consumers must retain the workflow run and commit association.
