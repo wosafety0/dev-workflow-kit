@@ -328,3 +328,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Follow-up PR #32 adds the guard before cleanup, a byte-preservation regression, and a security-boundary note. It is stacked on PR #18 (`fix/runner-commit-provenance-20261029`), not on the reusable-workflow PR #31 chain; do not treat it as merged into the current consumer-report verifier line.
 - PR #32 code head `8c02d63aea03a3705cb75783b57182f713eb2185` passed Push CI [run 40821391073](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40821391073), 108 offline tests. Its subsequent progress-archive head `8223a68ece83fbaf1d92e01aa2146016aee54284` also passed exact-head Push CI [run 40821497469](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40821497469), 108 offline tests.
 - PR #32 remains Draft/unmerged; PR #19 remains a separate Draft line. No PR merge, rebase, retarget, consumer pin change, live model call, game operation, deployment, or release was performed.
+
+
+## 2026-10-29 — reject duplicate JSON keys in acceptance reports
+
+- Review of the standalone report verifier and reusable consumer workflow found that Python's default JSON decoder silently accepts duplicate object keys, keeping the last value. The report producers currently emit ordinary JSON, but strict verification should reject ambiguous input rather than rely on producer behavior.
+- Added duplicate-key rejection to both the standalone verifier and the inline consumer workflow verifier; added CLI regressions for duplicate top-level and nested `tests` keys; updated the reusable acceptance contract.
+- Exact-head hosted CI pending at archive time. This is an offline verifier-hardening change only; no live model calls, game actions, deployment, release, or merge.

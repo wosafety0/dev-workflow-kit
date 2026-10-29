@@ -11,6 +11,15 @@ _PIN = re.compile(r"^sha256:[0-9a-f]{64}$")
 _KEYS = {"schema_version", "commit_sha", "rules_pin", "tool_version", "tests", "status"}
 
 
+def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON object key")
+        result[key] = value
+    return result
+
+
 def verify_report(report: object, expected_sha: str, expected_rules_pin: str) -> bool:
     if not isinstance(report, dict) or set(report) != _KEYS:
         return False
@@ -41,8 +50,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--expected-rules-pin", required=True)
     args = parser.parse_args(argv)
     try:
-        report = json.loads(Path(args.report).read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError):
+        report = json.loads(
+            Path(args.report).read_text(encoding="utf-8"),
+            object_pairs_hook=_reject_duplicate_keys,
+        )
+    except (OSError, UnicodeError, ValueError):
         print("Acceptance report verification failed")
         return 1
     if not verify_report(report, args.expected_sha, args.expected_rules_pin):

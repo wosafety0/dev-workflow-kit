@@ -15,7 +15,7 @@ The workflow writes `artifacts/consumer-acceptance-report.json` with exactly the
 - `tests`: exactly `runtime-validation` and `consumer-acceptance-command`, each set to `passed`, `failed`, or `not_run`
 - `status`: `passed` only when runtime validation and the consumer command both passed; otherwise `failed`
 
-The report contains no raw test output, environment dump, credentials, or logs. The workflow verifies the report against the trusted GitHub context values and rejects missing or malformed reports, unknown fields, identity mismatches, and any non-passing test status. The final gate separately requires runtime validation, the consumer command, report generation, artifact upload, and report verification to succeed.
+The report contains no raw test output, environment dump, credentials, or logs. The workflow verifies the report against the trusted GitHub context values and rejects missing or malformed reports, unknown fields, duplicate JSON object keys, identity mismatches, and any non-passing test status. The final gate separately requires runtime validation, the consumer command, report generation, artifact upload, and report verification to succeed.
 
 ## Consumer responsibility
 

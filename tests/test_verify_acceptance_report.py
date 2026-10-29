@@ -65,6 +65,26 @@ class AcceptanceReportVerifierTests(unittest.TestCase):
             self.assertEqual(failed.returncode, 1)
             self.assertNotIn("Traceback", failed.stderr)
 
+    def test_cli_rejects_duplicate_json_object_keys(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "duplicate.json"
+            command = [sys.executable, "scripts/verify_acceptance_report.py",
+                       "--report", str(path), "--expected-sha", SHA,
+                       "--expected-rules-pin", PIN]
+            for raw in (
+                '{"schema_version":1,"schema_version":1}',
+                '{"schema_version":1,"commit_sha":"' + SHA
+                + '","rules_pin":"' + PIN
+                + '","tool_version":"v1","tests":{"unit":"failed","unit":"passed"},'
+                + '"status":"passed"}',
+            ):
+                with self.subTest(raw=raw):
+                    path.write_text(raw, encoding="utf-8")
+                    result = subprocess.run(command, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn("verification failed", result.stdout)
+                    self.assertNotIn("Traceback", result.stderr)
+
     def test_cli_fails_closed_for_missing_or_corrupt_report(self):
         with tempfile.TemporaryDirectory() as tmp:
             missing = str(Path(tmp) / "missing.json")
