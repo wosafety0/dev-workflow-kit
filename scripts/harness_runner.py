@@ -180,15 +180,21 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        root = Path(args.project_root).resolve()
+        if not root.is_dir():
+            raise HarnessRunnerError("project-root must be an existing directory")
+        report_path = _resolve_inside_root(root, args.report_output, "report-output")
+        _require_artifact_path(root, report_path, "report-output")
+        # Invalidate a prior PASS before validating other arguments or inputs.
+        try:
+            report_path.unlink()
+        except FileNotFoundError:
+            pass
         if not 1 <= args.timeout_seconds <= _MAX_TIMEOUT_SECONDS:
             raise HarnessRunnerError(
                 f"timeout-seconds must be between 1 and {_MAX_TIMEOUT_SECONDS}"
             )
-        root = Path(args.project_root).resolve()
-        if not root.is_dir():
-            raise HarnessRunnerError("project-root must be an existing directory")
         config_path = _resolve_inside_root(root, args.config, "config")
-        report_path = _resolve_inside_root(root, args.report_output, "report-output")
         review_input = (
             _resolve_inside_root(root, args.review_input, "review-input")
             if args.review_input is not None else None
@@ -208,14 +214,6 @@ def main(argv: list[str] | None = None) -> int:
         ):
             if path is not None and path == report_path:
                 raise HarnessRunnerError(f"report-output must not overwrite {label}")
-
-        # Remove a prior report before config preflight. A blocked run must not leave
-        # a previous PASS artifact available for downstream report-only consumers.
-        _require_artifact_path(root, report_path, "report-output")
-        try:
-            report_path.unlink()
-        except FileNotFoundError:
-            pass
 
         try:
             raw_config = json.loads(config_path.read_text(encoding="utf-8"))
