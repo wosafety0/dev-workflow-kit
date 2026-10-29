@@ -127,12 +127,53 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
           EXPECTED_WORKFLOW_REF: ${{ github.workflow_ref }}
           EXPECTED_WORKFLOW_SHA: ${{ github.workflow_sha }}
-        run: >-
-          python3 scripts/verify_consumer_acceptance_report.py
-          --report artifacts/consumer-acceptance-report.json
-          --expected-sha "$EXPECTED_SHA"
-          --expected-workflow-ref "$EXPECTED_WORKFLOW_REF"
-          --expected-workflow-sha "$EXPECTED_WORKFLOW_SHA"
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          expected_sha = os.environ.get("EXPECTED_SHA", "")
+          expected_ref = os.environ.get("EXPECTED_WORKFLOW_REF", "")
+          expected_workflow_sha = os.environ.get("EXPECTED_WORKFLOW_SHA", "")
+          sha_pattern = re.compile(r"^[0-9a-f]{40}$")
+          expected_keys = {
+              "schema_version", "consumer_commit_sha", "caller_workflow_ref",
+              "caller_workflow_sha", "tests", "status",
+          }
+          try:
+              report = json.loads(
+                  Path("artifacts/consumer-acceptance-report.json").read_text(encoding="utf-8")
+              )
+          except (OSError, UnicodeError, json.JSONDecodeError):
+              report = None
+
+          valid = (
+              isinstance(report, dict)
+              and set(report) == expected_keys
+              and type(report.get("schema_version")) is int
+              and report.get("schema_version") == 1
+              and bool(sha_pattern.fullmatch(expected_sha))
+              and bool(expected_ref.strip())
+              and bool(sha_pattern.fullmatch(expected_workflow_sha))
+              and report.get("consumer_commit_sha") == expected_sha
+              and report.get("caller_workflow_ref") == expected_ref
+              and report.get("caller_workflow_sha") == expected_workflow_sha
+              and report.get("status") == "passed"
+              and isinstance(report.get("tests"), dict)
+              and bool(report["tests"])
+              and all(
+                  isinstance(name, str) and bool(name.strip()) and status == "passed"
+                  for name, status in report["tests"].items()
+              )
+          )
+          if not valid:
+              print("Consumer acceptance report verification failed")
+              raise SystemExit(1)
+          print("Consumer acceptance report verified")
+          PY
       - name: Fail job unless all required stages succeeded
         if: always()
         shell: bash
