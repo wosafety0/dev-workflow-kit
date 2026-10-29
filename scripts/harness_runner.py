@@ -314,8 +314,6 @@ def main(argv: list[str] | None = None) -> int:
                 raise HarnessRunnerError(f"report-output must not overwrite {label}")
         if review_output is not None and review_output == config_path:
             raise HarnessRunnerError("review-output must not overwrite config")
-        _require_tracked_config(root, config_path)
-
         # Invalidate previous successful artifacts before config validation or task
         # execution. Otherwise a blocked run can leave a stale PASS for consumers.
         _require_artifact_path(root, report_path, "report-output")
@@ -327,6 +325,8 @@ def main(argv: list[str] | None = None) -> int:
                     output.unlink()
                 except FileNotFoundError:
                     pass
+
+        _require_tracked_config(root, config_path)
 
         try:
             raw_config = json.loads(
