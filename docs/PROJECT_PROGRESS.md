@@ -216,3 +216,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The live source branch name `fix/semantic-review-no-redirect-20261029` currently resolves to the same `scripts/ai_semantic_review.py` blob as base head `071c168bc9532ba8d8c6a9f4708046e164879568`; compare also reports those refs identical. This conflicts with the PR body/history that records a later implementation head.
 - No source-branch restoration, force update, retarget, closure, or merge was performed. Recovery branch exact-SHA comparison verified identical to `c37ad36019a9bf6504e6e3be7450ddb27db1e73d`. Restoring the original PR branch requires an explicit branch-ref change and is paused pending user decision.
 - CI evidence boundary unchanged: PR #22's successful run is not evidence for PR #33's preserved implementation head; exact-head CI for the preserved PR #33 revision remains unverified.
+
+
+## 2026-10-30 — Correction: PR #33 head/base refs were previously conflated
+
+- Re-fetched PR #33 metadata directly. The actual PR head ref is `fix/runner-loopback-bounded-response-20261029` at `c37ad36019a9bf6504e6e3be7450ddb27db1e73d`; the PR base ref is `fix/semantic-review-no-redirect-20261029`, whose recorded base SHA is `f71025d2303737dafe18ae823f93cad9cdd1249d`.
+- Exact-ref comparisons confirm the PR head branch equals its recorded head SHA. The earlier “source branch identical to base” check had compared the PR's *base branch* name to the newer live base head, not the PR head branch. Therefore the prior branch-reference-discrepancy conclusion was incorrect; this is a correction to the investigation record, not evidence of lost code.
+- The PR diff is supported by exact commit comparison: recorded base SHA `f71025d...` to PR head `c37ad36...` is ahead by 12 commits and reports the expected five changed files. The base branch has advanced to `071c168bc9532ba8d8c6a9f4708046e164879568`; comparing that live base to the PR head reports divergence with the PR head 3 commits behind. This stacked-branch/base drift and `mergeable=false` remain genuine issues to resolve.
+- Rescue branch `rescue/pr-33-last-known-head-20261029` remains preserved as an additional snapshot at the recorded `c37ad360...` plus its archive commit. No original PR ref, base, review state, or consumer integration was changed.
+- Validation boundary: PR #22's successful Harness CI run validates PR #22's head only. Current-head PR-context CI for PR #33 is not established by this check. No tests or CI were run in this step.
