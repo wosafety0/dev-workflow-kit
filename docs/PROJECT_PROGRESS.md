@@ -171,3 +171,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Fixed two Windows-only test expectation mismatches by resolving expected paths, and adjusted the loopback test to preserve OS-required environment variables while explicitly setting upper/lowercase proxy variables and clearing `NO_PROXY`. This is test portability only; no machine-wide proxy or environment setting was changed.
 - Verification: `python -m compileall -q scripts tests` passed; `python -m unittest discover -s tests -v` passed **107 tests**; `git diff --check` passed. The loopback HTTP test used only an ephemeral local server and disposable test token. No real model provider call, credential, game action, merge, release, or deployment occurred.
 - Exact-head Push CI for the code-bearing commit `92f975ddbef582f692592b7a861271bf7fe60af9` passed [run 40822632816](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40822632816), including compile, offline tests, report generation, artifact upload, and final gate. Draft follow-up PR #33 is open against PR #22 branch: https://github.com/wosafety0/dev-workflow-kit/pull/33. The PR remains Draft and unmerged; this progress update is documentation-only.
+
+
+## 2026-10-29 — reject duplicate JSON keys throughout semantic review pipeline (PR #33)
+
+- Cross-branch audit found that the bounded-response/redirect-protected Runner integration branch still used default last-key-wins parsing for the provider response envelope, model-produced review JSON, and CLI input JSON. The active Harness development branch already rejects duplicate object keys, but this protection had not been carried into PR #33's branch.
+- Added `_reject_duplicate_json_keys` and applied it to all three JSON parsing boundaries. Provider-envelope parsing now converts duplicate-key `ValueError` into a fail-closed `ReviewError`; malformed model-produced review JSON is likewise rejected.
+- Added regression cases for duplicate keys in the provider envelope, duplicate keys inside model content, and duplicate keys in the input file; updated `docs/STABLE_ACCEPTANCE_CONTRACT.md` to make this behavior explicit.
+- Implementation commit: `2ce63cb3029b024ebcbdc64ad1fe570e94475922`; tests: `bcf960e451520dab8aa9b3db70f6d7375615724a`; contract update: `44188cf9b1d8d78887b66e660e7a86128fce14ef`.
+- Verification boundary: hosted CI for this code-and-archive head remains pending. PR #33 remains Draft/unmerged; no PR was merged, rebased, retargeted, or closed; no consumer pin was changed.
