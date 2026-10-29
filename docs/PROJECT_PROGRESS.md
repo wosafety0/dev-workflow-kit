@@ -402,3 +402,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Replaced those fixtures with otherwise-valid reports containing duplicate top-level `status` keys and duplicate nested test-status keys. Either fixture would pass verification if Python's default last-key-wins parser were used, so the tests now specifically prove duplicate-key rejection.
 - Exact code head `78c6cb326c08dc482c60337a2a771e34ab2939c9` passed Push CI [run 40825814199](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825814199) and PR CI [run 40825821246](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825821246). Both passed 146 offline tests; report verification and the final orchestration gate succeeded.
 - PR #31 remains Draft/open/unmerged. No live model-provider request, game action, merge, release, or deployment occurred.
+
+## 2026-10-29 - Exact-head Windows verification after semantic-review hardening
+
+- Re-ran the complete offline suite on exact head `e3c457717d1524383c037dc3ec901fedb4e9f5d4`, covering duplicate JSON-key rejection in reports, runner config, and semantic-review inputs/responses; bounded 1 MiB provider response reads; redirect rejection; and reusable consumer-report identity checks. Python compilation passed, **146 tests passed**, and `git diff --check` passed.
+- Exact-head Push CI [40825902357](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825902357) and PR-context CI [40825907701](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825907701) both succeeded, including report generation, artifact upload, strict report verification, and the final gate.
+- This is offline/local-loopback validation only; no external model-provider request was made. PR #31 remains Draft/open/unmerged; no merge, release, deployment, or game action occurred.
