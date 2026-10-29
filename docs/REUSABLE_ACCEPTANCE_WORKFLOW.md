@@ -39,7 +39,7 @@ Replace the placeholder with a real, reviewed commit SHA from this repository. D
 
 ## Security boundaries
 
-- The reusable workflow has only `contents: read` permissions and does not receive secrets by default.
+- The reusable workflow has only `contents: read` permissions and does not receive secrets by default. The checkout step sets `persist-credentials: false`, so the consumer-supplied test command cannot read a persisted checkout token from `.git/config`.
 - `test-command` is executable shell supplied by the consuming repository. Treat it as code, review it, and do not populate it from untrusted PR text, issue comments, model output, or other untrusted data.
 - This workflow checks out and executes code from the consuming repository. Use it only for repositories and events where executing that code is appropriate.
 - The reusable workflow does not install project dependencies, access model-provider APIs, publish releases/packages, merge PRs, or perform project business actions. It does upload one redacted acceptance-report artifact for CI inspection, with a 14-day retention period.
