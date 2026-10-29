@@ -177,3 +177,15 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 
 - PR #32 exact head `8c02d63aea03a3705cb75783b57182f713eb2185` passed hosted Push CI: [run 40821391073](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40821391073). The job ran 108 offline tests (`OK`), built and uploaded the redacted acceptance report, and passed the final gate.
 - This is evidence for the exact #32 head only. PR #32 remains Draft/unmerged and stacked on PR #18; the independent PR #19 remains a separate branch. No branch was merged or retargeted.
+
+
+## 2026-10-29 runner config ambiguity hardening (PR #32)
+
+- Reviewed runner report generation and the fail-closed report verifier. The report builder derives overall status from every declared task status; the runner's process exit code remains a separate required signal, and consumers must independently validate report identity/provenance.
+- Found a remaining ambiguity at the Harness config boundary: Python's default JSON decoder silently accepts duplicate object keys (including nested keys), so two syntactically valid-looking configs could be interpreted by last-value-wins behavior.
+- Updated `scripts/harness_runner.py` to reject duplicate keys at every JSON object nesting level using `object_pairs_hook`; parser failures fail closed before any task executes.
+- Added regression coverage for duplicate top-level `schema_version` and duplicate `commands` keys. Both cases return blocked exit code 2 and assert no task execution.
+- Documented strict duplicate-key rejection in `docs/HARNESS_RUNNER_V1.md`.
+- Exact branch head: `10a091c086bfa8de9557f329d6f121cbbaddb796`.
+- Exact-head Push CI: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40822592220 — success; offline suite ran 109 tests, including the new duplicate-config regression.
+- PR #32 remains open and unmerged, stacked on `fix/runner-commit-provenance-20261029`. No rebase, retarget, merge, release, live model call, or game action was performed.
