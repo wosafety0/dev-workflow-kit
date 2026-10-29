@@ -6,7 +6,7 @@ Status: initial contract for the current semantic-review core. This is not a sta
 
 This contract defines the minimum acceptance behavior for the provider-agnostic semantic-review module in this repository. It is intended to be reusable by unrelated projects without replacing their project-specific instructions, tests, safety constraints, or archive requirements.
 
-The current contract covers input validation, diff integrity, evidence-grounded review output, fail-closed behavior, and CI evidence. It does not define the future orchestration/configuration schema.
+The current contract covers input validation, diff integrity, evidence-grounded review output, fail-closed behavior, and CI evidence. It does not define the future orchestration/configuration schema. JSON parsing for review inputs, provider response envelopes, and model-produced review content must reject duplicate object keys; accepting last-key-wins JSON can make the validated meaning differ from the submitted representation.
 
 ## 2. Required inputs
 
