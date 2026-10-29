@@ -211,3 +211,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Updated the pull-request branch filter to include `fix/**`, so stacked fix PRs receive the same offline test/report/final-gate workflow in PR context.
 - Workflow-filter change commit: `41c997a49ef9b4d75d1be60e9db0877a8ddd8238`.
 - Verification boundary: this commit should trigger both branch Push CI and PR-context CI, but neither run is claimed passed until an exact-head result is observed. PR #32 remains Draft/unmerged; no rebase, retarget, merge, consumer pin update, live model call, or game action occurred.
+
+
+## 2026-10-29 — close in-repository ignored-path symlink provenance gap (PR #32)
+
+- Follow-up threat review found that checking only “inside repository root” and “outside artifacts/” was insufficient: a trusted-source path could be a symlink into an ignored in-repository location such as `.venv/`. Git cleanliness does not attest to mutable ignored targets, so such a link could still make a clean commit execute content that was not pinned by the commit.
+- Updated `_resolve_trusted_source` to reject symlinked path components and, for directory sources such as `tests/`, any nested symlink entry. This supplements the existing outside-root and generated-artifact rejection.
+- Added regression tests for a semantic-review entrypoint symlink into an ignored in-repository directory and a nested symlink inside `tests/`. Existing external-symlink and generated-artifact cases remain in place.
+- Code commit: `38e8dfd9b0386345ea34c892744263e2edd99642`; test commit: `f2bca798744de56a052597a3a62add6541e52160`; documentation commit: `7dccb4fc5b82655c6d53424c3fc6aea943af0392`.
+- Verification boundary: hosted CI for the final code-and-archive head remains unconfirmed through the currently available run/status retrieval interface. The workflow filter now includes `fix/**` for PR-context checks; do not mark this branch validated until exact-head Push and PR-context results are independently observed. PR #32 remains Draft/unmerged and no consumer pin was changed.
