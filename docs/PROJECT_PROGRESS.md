@@ -178,3 +178,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The workflow trigger correction at `6fc5e5f8a8a41f6bace8585c3932d807cc9446c1` received a successful Harness CI run: [run 40858808116](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40858808116).
 - The hosted job completed Python compilation, offline tests, acceptance-report generation/upload, and the final orchestration gate. The run was retrieved through the PR-context run listing for this branch; it is not treated as separate Push CI evidence.
 - This branch is the base of PR #32, so the workflow filter correction here is what enables downstream stacked fix PRs to receive PR-context CI. PR #18 remains Draft/unmerged; no branch topology change or consumer pin update occurred.
+
+
+## 2026-10-30 — Candidate reconstruction on current base (PR #32)
+
+- Created isolated candidate branch `reconcile/pr-32-on-current-base-20261030` from current recorded base SHA `e4be499e36ed9d8e22ff45065d95f92e0876df34`; original PR and rescue refs remain unchanged.
+- Applied the source branch's runner implementation and regression suite, plus the three non-progress documentation files. Applied the PR-context branch-filter/gate logging changes as targeted edits to the current base CI workflow so other current workflow content is preserved.
+- Candidate head after these file updates: to be verified from GitHub ref metadata and compare output. This is a reconstruction candidate, not a validated replacement for PR #32.
+- Tests and exact-head CI have not yet been confirmed. Do not merge or retarget the original PR based on this candidate alone.
