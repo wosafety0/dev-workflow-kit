@@ -31,6 +31,15 @@ _SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 _MAX_TIMEOUT_SECONDS = 3600
 
 
+def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON object key")
+        result[key] = value
+    return result
+
+
 def _resolve_inside_root(root: Path, value: str, field: str) -> Path:
     if not isinstance(value, str) or not value.strip() or value != value.strip():
         raise HarnessRunnerError(f"{field} must be a non-empty trimmed repository-relative path")
@@ -246,8 +255,11 @@ def main(argv: list[str] | None = None) -> int:
                     pass
 
         try:
-            raw_config = json.loads(config_path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeError, json.JSONDecodeError):
+            raw_config = json.loads(
+                config_path.read_text(encoding="utf-8"),
+                object_pairs_hook=_reject_duplicate_json_keys,
+            )
+        except (OSError, UnicodeError, ValueError):
             raise HarnessRunnerError("Could not read a valid JSON Harness config") from None
         config = validate_harness_config(raw_config)
 
