@@ -220,3 +220,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added regression tests for a semantic-review entrypoint symlink into an ignored in-repository directory and a nested symlink inside `tests/`. Existing external-symlink and generated-artifact cases remain in place.
 - Code commit: `38e8dfd9b0386345ea34c892744263e2edd99642`; test commit: `f2bca798744de56a052597a3a62add6541e52160`; documentation commit: `7dccb4fc5b82655c6d53424c3fc6aea943af0392`.
 - Verification boundary: hosted CI for the final code-and-archive head remains unconfirmed through the currently available run/status retrieval interface. The workflow filter now includes `fix/**` for PR-context checks; do not mark this branch validated until exact-head Push and PR-context results are independently observed. PR #32 remains Draft/unmerged and no consumer pin was changed.
+
+
+## 2026-10-29 — PR-context CI result for symlink provenance hardening
+
+- PR #32 PR-context Harness CI completed successfully for branch head `b59f83a1d4c394eade420ce4eadced7897f2a92a`: [run 40858714785](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40858714785).
+- The hosted job ran all **115 offline tests**, including both new regressions for symlinks into ignored in-repository paths and nested symlinks under `tests/`; Python compilation, redacted acceptance-report generation/upload (artifact `12889309542`), and the final orchestration gate all passed.
+- This is PR-context CI evidence; the report's `github.sha` is the PR merge commit, as expected for that event. A separate exact branch Push CI result is not exposed by the currently available commit-run retrieval wrapper, so it is not claimed here.
+- The workflow filter was added to the PR #32 head and its base branch so stacked fix PRs can trigger PR-context CI. PR #32 remains Draft/unmerged; no consumer pin change or topology operation occurred.
