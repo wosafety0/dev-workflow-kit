@@ -237,3 +237,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added regression tests for a config symlink into an ignored `.venv/` location and for an acceptance-report output symlink, asserting the latter's target content is preserved and no task executes on the blocked config case.
 - Code commit: `4fdff5b416ba62e848eee2bdfa7a3da04b6d07d6`; regression tests: `bcdf017020c1766a036426c7a203c43b808c043d`; runner documentation: `436a656a42591de9287dc29cf12bcb423ab66a64`.
 - Validation boundary: no local test runtime is available through this GitHub-only workflow, so hosted CI is required. Prior PR-context CI passed on earlier code head `b59f83a1d4c394eade420ce4eadced7897f2a92a` (115 tests), but does not validate these new changes. Exact-head CI must be observed before calling this revision validated. PR #32 remains Draft/unmerged; no consumer pin change or branch topology change occurred.
+
+
+## 2026-10-29 — require committed Harness runner configuration (PR #32)
+
+- Follow-up provenance review found the runner's config path was containment-checked and symlink-checked, but was not required to exist in the current Git HEAD. Since generated `artifacts/` and ignored paths are outside the cleanliness gate, a mutable ignored/untracked config could affect task selection without being bound to the reported commit.
+- Added a fail-closed config provenance check before stale-artifact invalidation and config reads: reject config paths under `artifacts/`, then require the exact repository-relative path to be present in `git ls-tree HEAD`. Existing clean-worktree checks bind the tracked file contents to the reported commit before task execution.
+- Added regression coverage for config under `artifacts/`, an ignored untracked config under `.venv/`, and acceptance of a normal HEAD-tracked config. Existing symlink and report-contract protections remain unchanged.
+- Code commit: `6c3dea5372a8c233a59990c428c08288c71df602`; regression tests commit: `b9097574e2f84ee2880176f3fd7ab3996c11645e`; documentation commit: `cabcd885e6b53a176532cffb8e3910ce41a7430d`.
+- Validation boundary: changes are committed to the existing PR #32 branch; hosted exact-head Push CI and PR-context CI must be observed for the final code-and-archive head before treating this follow-up as validated. PR #32 remains Draft/unmerged; no consumer pin, PR target, branch topology, release, or deployment changed.
