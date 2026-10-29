@@ -244,3 +244,5 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The correction is in commit `a7045103c4213e90d8a622dbe5918c6b15aa8f0a`; hosted Push and PR CI for the corrected final head is pending. The previously selected immutable pin `07b8000ab8c2a1dad0f91bd29e2d84028bec2c93` is known to contain the defect and must not be reused by consumers.
 
 - The first test of the inline verifier extractor failed because its test helper rejected blank lines in the YAML block; the production verifier itself passed the matching-report case and rejected stale/failed reports. Fixed the extractor to preserve blank lines in commit `ef7aebb7875bcd2dedf4e49fed68404150e1722c`. CI for the corrected test and final archive head is pending.
+
+- A second hosted test run showed the extractor still included the shell heredoc launcher instead of only its embedded Python source. Corrected the test helper to begin after `python3 - <<'PY'` in commit `01c60a4bcf2dff0ee143a93bdd5062aa475a4e74`; the workflow's inline verifier itself had succeeded on the valid and invalid report cases. Re-run final-head CI before selecting a new consumer pin.
