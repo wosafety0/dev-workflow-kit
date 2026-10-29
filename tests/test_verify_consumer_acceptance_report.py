@@ -104,7 +104,12 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
                 "--expected-workflow-sha", WORKFLOW_SHA,
             ]
             duplicate_top_level = (
-                '{"schema_version":1,"schema_version":1}'
+                '{"schema_version":1,"consumer_commit_sha":"' + SHA
+                + '","caller_workflow_ref":"' + WORKFLOW_REF
+                + '","caller_workflow_sha":"' + WORKFLOW_SHA
+                + '","tests":{"runtime-validation":"passed",'
+                + '"consumer-acceptance-command":"passed"},'
+                + '"status":"failed","status":"passed"}'
             )
             duplicate_nested = (
                 '{"schema_version":1,"consumer_commit_sha":"' + SHA
