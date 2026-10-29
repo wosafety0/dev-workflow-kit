@@ -387,3 +387,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added a regression proving oversized responses are read only up to the configured bound and cannot produce a passing review.
 - Code head `2546705be0c14d38f831934f3491306baf6abf1d` passed exact-head Push CI [run 40824844700](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824844700) and PR CI [run 40824850667](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824850667). Both passed 146 offline tests; report verification and the final orchestration gate succeeded.
 - This restores the response-size guard without merging or rewriting the separate PR #15/#17 branches. PR #31 remains Draft/open/unmerged. No live model-provider requests, game actions, deployment, release, or merge; local working-tree synchronization remains unverified.
+
+## 2026-10-29 - Windows-safe semantic-review test execution
+
+- Normalized expected temporary-file paths with `Path.resolve()` in runner tests so assertions match Windows long-path/short-path normalization. Updated the local loopback HTTP test to preserve required OS environment (including `SystemRoot`) while explicitly clearing upper/lowercase proxy and `NO_PROXY` variables inside the test only. No machine-wide proxy or environment setting was changed.
+- Exact code head `bb1e41be7937ea253a38aa16f3369d8f7d1ec67e` passed the full local Windows suite: **146 tests**, Python compilation, and `git diff --check`.
+- Exact-head Push CI [40825108944](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825108944) and PR CI [40825113981](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825113981) both passed **146 offline tests**, report generation, artifact upload, strict report verification, and the final gate.
+- PR #31 remains Draft/open/unmerged. No live model-provider call, game action, merge, release, or deployment occurred.
