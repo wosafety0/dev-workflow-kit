@@ -207,3 +207,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Draft PR #28 resolves config path and checks report/config equality before deleting the old report. Invalid config path still invalidates a safely resolved report, and timeout validation still occurs after invalidation.
 - Added an offline regression that verifies the config file remains byte-for-byte unchanged and no task runs. Updated the runner contract documentation.
 - Pre-archive code/docs head: `7cbc16cd63f8125dbd2b25c40f31f8292f32d198`. CI result not yet asserted. No live model calls, game actions, merge, or deployment.
+
+## 2026-10-29 — acceptance report consumer identity verifier (PR #29)
+
+- Verified PR #28 archived head `026b0d4d31bc22f2b46fe1f05a7e09e1909ab126` had successful push run `40811076003` and PR run `40811082217`.
+- Added `scripts/verify_acceptance_report.py` and offline tests for expected commit SHA, reviewed contract pin, all-passed tasks, strict schema, and malformed identity. Consumer must independently check runner exit code and use trusted expected SHA/pin; report-content verification does not prove artifact provenance.
+- Documentation updated. Code/docs head before this archive: `11d48221b27daa128b931410442bb86e3b1c3163`; CI not yet asserted for that head. No live provider requests, game actions, merge, or deployment.
+
+- Follow-up validation: added subprocess-level CLI tests covering successful matching report verification, stale expected SHA, missing report, and malformed JSON. This verifies the actual command-line exit behavior, not only the pure validation function. CI pending for the new test commit.
