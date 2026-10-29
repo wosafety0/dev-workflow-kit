@@ -171,6 +171,26 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("review-output must be inside the artifacts/", stderr)
         run_task.assert_not_called()
 
+    def test_review_output_cannot_overwrite_config_inside_artifacts(self):
+        self.config_path = self.root / "artifacts" / "harness.json"
+        self.write_config(["semantic-review"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            stdout = StringIO()
+            stderr = StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = harness_runner.main([
+                    "--project-root", str(self.root),
+                    "--config", "artifacts/harness.json",
+                    "--report-output", "artifacts/report.json",
+                    "--review-input", "review-input.json",
+                    "--review-output", "artifacts/harness.json",
+                ])
+        self.assertEqual(code, 2)
+        self.assertIn("review-output must not overwrite config", stderr.getvalue())
+        run_task.assert_not_called()
+        self.assertEqual(json.loads(self.config_path.read_text(encoding="utf-8"))["commands"], ["semantic-review"])
+
     def test_rejects_path_traversal_before_running_tasks(self):
         with patch("scripts.harness_runner._run_task") as run_task:
             stdout = StringIO()
