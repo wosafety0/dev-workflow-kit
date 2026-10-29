@@ -209,6 +209,14 @@ def main(argv: list[str] | None = None) -> int:
             if path is not None and path == report_path:
                 raise HarnessRunnerError(f"report-output must not overwrite {label}")
 
+        # Remove a prior report before config preflight. A blocked run must not leave
+        # a previous PASS artifact available for downstream report-only consumers.
+        _require_artifact_path(root, report_path, "report-output")
+        try:
+            report_path.unlink()
+        except FileNotFoundError:
+            pass
+
         try:
             raw_config = json.loads(config_path.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError):
