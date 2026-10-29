@@ -129,6 +129,21 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertFalse(report_path.exists())
         run_task.assert_not_called()
 
+    def test_duplicate_config_keys_fail_closed_before_running_tasks(self):
+        self.config_path.write_text(
+            '{"schema_version":1,"project":"test-project",'
+            '"commands":["not-allowed"],"commands":["python-unittest"]}',
+            encoding="utf-8",
+        )
+        report_path = self.root / "artifacts" / "report.json"
+        report_path.write_text('{"status":"passed"}', encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("Could not read a valid JSON Harness config", stderr)
+        self.assertFalse(report_path.exists())
+        run_task.assert_not_called()
+
     def test_invalid_config_invalidates_prior_passed_report(self):
         report_path = self.root / "artifacts" / "report.json"
         report_path.write_text('{"status":"passed"}', encoding="utf-8")
