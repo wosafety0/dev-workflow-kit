@@ -378,3 +378,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Latest observed PR-context runs associated with PR #32 are older than the current head; do not treat Push CI as PR-context evidence. The branch filter currently matches the target branch name, so the missing current-head PR-context run is not explained by a presently missing `fix/**` filter alone.
 - No PR base retarget, rebase, merge, close/reopen, consumer pin change, or workflow-dispatch claim was made. Next safe validation is to obtain a genuine PR-context run from a natural PR event or a supported dispatch path, without creating an empty progress-only commit.
 - Artifact-service outage remains unverified. Existing hosted failure injection deliberately makes the upload step fail due to missing artifact input; this is not a real GitHub Artifact service outage.
+
+## 2026-10-29 — PR #32 dependency drift and current-head CI boundary
+
+- Fresh PR metadata confirms PR #32 is open/Draft/unmerged, with recorded base SHA `b402101ef41d3f9d4f9533545ea83128ba5843a6` and head SHA `bc91a49cbeb3c6994ff76e70161184ec0e4a2514`. Its base branch PR #18 currently points to `e4be499e36ed9d8e22ff45065d95f92e0876df34`; comparison reports the downstream branch diverged and is 3 commits behind that current base. GitHub reports PR #32 `mergeable=false`.
+- PR #32 body lists successful historical Push CI for earlier code/archive commits, but the current head `bc91a49cbeb3c6994ff76e70161184ec0e4a2514` has no run returned by the connector's PR-triggered-run lookup and no commit status checks returned. Because the lookup only returns PR-triggered runs, push-triggered CI may be outside this lookup; current exact-head validation is unverified.
+- No rebase, retarget, force-push, merge, or closure was performed. Preserve Draft/unmerged state until the stacked dependency is reconciled and current-head CI is tied to the exact SHA.
