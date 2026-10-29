@@ -399,5 +399,42 @@ class HarnessRunnerTests(unittest.TestCase):
             )
 
 
+    def test_trusted_source_resolver_rejects_in_root_symlink_to_ignored_directory(self):
+        ignored = self.root / ".venv"
+        ignored.mkdir()
+        target = ignored / "mutable-source.py"
+        target.write_text("# mutable ignored source\\n", encoding="utf-8")
+        source = self.root / "scripts" / "ai_semantic_review.py"
+        source.unlink()
+        try:
+            source.symlink_to(target)
+        except (OSError, NotImplementedError):
+            source.write_text("# test fixture\\n", encoding="utf-8")
+            self.skipTest("file symlink creation is unavailable")
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError,
+            "semantic-review script must not use symlinked source paths",
+        ):
+            harness_runner._resolve_trusted_source(
+                self.root, "scripts/ai_semantic_review.py", "semantic-review script"
+            )
+
+    def test_trusted_source_resolver_rejects_nested_symlink_in_tests_directory(self):
+        ignored = self.root / ".venv"
+        ignored.mkdir()
+        target = ignored / "mutable_test.py"
+        target.write_text("import unittest\\n", encoding="utf-8")
+        source = self.root / "tests" / "test_mutable.py"
+        try:
+            source.symlink_to(target)
+        except (OSError, NotImplementedError):
+            self.skipTest("file symlink creation is unavailable")
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError,
+            "tests directory must not contain symlinked source paths",
+        ):
+            harness_runner._resolve_trusted_source(self.root, "tests", "tests directory")
+
+
 if __name__ == "__main__":
     unittest.main()
