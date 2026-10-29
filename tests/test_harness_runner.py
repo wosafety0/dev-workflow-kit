@@ -76,6 +76,7 @@ class HarnessRunnerTests(unittest.TestCase):
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["status"], "passed")
         self.assertEqual(report["tests"], {"python-unittest": "passed"})
+        self.assertEqual(report["tool_version"], "dev-workflow-kit/harness-runner@" + "a" * 40)
         self.assertEqual(
             set(report),
             {"schema_version", "commit_sha", "rules_pin", "tool_version", "tests", "status"},
@@ -125,6 +126,21 @@ class HarnessRunnerTests(unittest.TestCase):
             code, _, stderr = self.run_runner("--config", "../outside.json")
         self.assertEqual(code, 2)
         self.assertIn("safe repository-relative path", stderr)
+        self.assertFalse(report_path.exists())
+        run_task.assert_not_called()
+
+    def test_duplicate_config_keys_fail_closed_before_running_tasks(self):
+        self.config_path.write_text(
+            '{"schema_version":1,"project":"test-project",'
+            '"commands":["not-allowed"],"commands":["python-unittest"]}',
+            encoding="utf-8",
+        )
+        report_path = self.root / "artifacts" / "report.json"
+        report_path.write_text('{"status":"passed"}', encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("Could not read a valid JSON Harness config", stderr)
         self.assertFalse(report_path.exists())
         run_task.assert_not_called()
 
@@ -249,9 +265,9 @@ class HarnessRunnerTests(unittest.TestCase):
         ])
         self.assertEqual(calls[1], [
             sys.executable,
-            str(self.root / "scripts" / "ai_semantic_review.py"),
-            "--input", str(self.root / "review-input.json"),
-            "--output", str(self.root / "artifacts" / "review.json"),
+            str((self.root / "scripts" / "ai_semantic_review.py").resolve()),
+            "--input", str((self.root / "review-input.json").resolve()),
+            "--output", str((self.root / "artifacts" / "review.json").resolve()),
         ])
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["status"], "passed")
@@ -333,7 +349,7 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(stderr, "")
         self.assertEqual(run_task.call_count, 2)
         self.assertEqual(run_task.call_args_list[1].args[0][1], str(
-            self.root / "scripts" / "ai_semantic_review.py"
+            (self.root / "scripts" / "ai_semantic_review.py").resolve()
         ))
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["tests"]["semantic-review"], "failed")
@@ -371,6 +387,35 @@ class HarnessRunnerTests(unittest.TestCase):
             )
         self.assertEqual((status, exit_code), ("failed", None))
 
+
+    def test_git_commit_sha_rejects_dirty_or_untracked_worktree(self):
+        for status_output in (" M scripts/harness_runner.py\n", "?? untracked-input.json\n"):
+            with self.subTest(status_output=status_output), patch(
+                "scripts.harness_runner.subprocess.run",
+                return_value=type("Result", (), {
+                    "returncode": 0, "stdout": status_output
+                })(),
+            ) as run:
+                with self.assertRaisesRegex(
+                    harness_runner.HarnessRunnerError, "worktree must be clean"
+                ):
+                    harness_runner._git_commit_sha(self.root)
+                self.assertEqual(run.call_count, 1)
+                self.assertEqual(
+                    run.call_args.args[0],
+                    ["git", "status", "--porcelain", "--untracked-files=all"],
+                )
+
+    def test_git_commit_sha_accepts_clean_worktree_and_returns_head(self):
+        with patch(
+            "scripts.harness_runner.subprocess.run",
+            side_effect=[
+                type("Result", (), {"returncode": 0, "stdout": ""})(),
+                type("Result", (), {"returncode": 0, "stdout": "a" * 40 + "\n"})(),
+            ],
+        ) as run:
+            self.assertEqual(harness_runner._git_commit_sha(self.root), "a" * 40)
+        self.assertEqual(run.call_count, 2)
 
 if __name__ == "__main__":
     unittest.main()

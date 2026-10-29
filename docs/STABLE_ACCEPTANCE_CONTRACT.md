@@ -48,6 +48,7 @@ The following conditions must never yield an accepted passing review:
 - Invalid output schema or unsupported status/severity.
 - Findings whose file, line range, rule quote, or evidence cannot be verified.
 - Missing required provider configuration, network/provider errors, or malformed provider responses.
+- Model-provider response bodies larger than 1 MiB; the client reads at most 1 MiB plus one sentinel byte before failing closed.
 
 The caller must treat validation/provider failures as failure or inconclusive outcomes, not as approval to merge or perform project actions.
 
@@ -60,6 +61,8 @@ The caller must treat validation/provider failures as failure or inconclusive ou
 - A green offline test suite establishes only that the tested offline contract cases pass. It does not establish live provider behavior, completeness of defect detection, or production readiness.
 
 ## 7. CI evidence and acceptance procedure
+
+The local Harness runner records a commit-bound acceptance report only when `git status --porcelain --untracked-files=all` confirms a clean worktree. A HEAD SHA alone does not identify modified or untracked files that may affect the tested result. Commit or otherwise remove source changes and untracked inputs before using the runner to produce acceptance evidence; ordinary direct test commands may still be used during development.
 
 A change to this contract or its implementation is accepted only when:
 

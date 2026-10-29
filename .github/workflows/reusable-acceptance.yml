@@ -3,11 +3,21 @@ name: Reusable Acceptance Gate
 on:
   workflow_call:
     inputs:
+      runtime:
+        description: Consumer runtime to provision (python or node)
+        required: false
+        type: string
+        default: "python"
       python-version:
-        description: Python version requested by the consuming repository
+        description: Python version requested by the consuming repository when runtime is python
         required: false
         type: string
         default: "3.12"
+      node-version:
+        description: Node.js version requested by the consuming repository when runtime is node
+        required: false
+        type: string
+        default: "26"
       test-command:
         description: Explicit test command owned and reviewed by the consuming repository
         required: true
@@ -23,11 +33,32 @@ jobs:
     steps:
       - name: Check out consuming repository
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Validate requested runtime
+        id: runtime
+        shell: bash
+        env:
+          REQUESTED_RUNTIME: ${{ inputs.runtime }}
+        run: |
+          case "$REQUESTED_RUNTIME" in
+            python|node) echo "Requested runtime is supported." ;;
+            *) echo "runtime must be either python or node." >&2; exit 2 ;;
+          esac
       - name: Set up Python
+        if: inputs.runtime == 'python'
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ inputs.python-version }}
+      - name: Set up Node.js
+        if: inputs.runtime == 'node'
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          package-manager-cache: false
       - name: Run consumer-owned acceptance command
+        id: tests
+        continue-on-error: true
         shell: bash
         env:
           ACCEPTANCE_COMMAND: ${{ inputs.test-command }}
@@ -37,3 +68,172 @@ jobs:
             exit 2
           fi
           bash -euo pipefail -c "$ACCEPTANCE_COMMAND"
+      - name: Build redacted consumer acceptance report
+        id: report
+        if: always()
+        shell: bash
+        env:
+          CONSUMER_COMMIT_SHA: ${{ github.sha }}
+          CALLER_WORKFLOW_REF: ${{ github.workflow_ref }}
+          CALLER_WORKFLOW_SHA: ${{ github.workflow_sha }}
+          HARNESS_WORKFLOW_REF: ${{ job.workflow_ref }}
+          HARNESS_WORKFLOW_SHA: ${{ job.workflow_sha }}
+          RUNTIME_OUTCOME: ${{ steps.runtime.outcome }}
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import tempfile
+          from pathlib import Path
+
+          def status_for(outcome):
+              return {
+                  "success": "passed",
+                  "failure": "failed",
+                  "cancelled": "not_run",
+                  "skipped": "not_run",
+              }.get(outcome, "not_run")
+
+          tests = {
+              "runtime-validation": status_for(os.environ.get("RUNTIME_OUTCOME", "skipped")),
+              "consumer-acceptance-command": status_for(os.environ.get("TEST_OUTCOME", "skipped")),
+          }
+          report = {
+              "schema_version": 1,
+              "consumer_commit_sha": os.environ["CONSUMER_COMMIT_SHA"],
+              "caller_workflow_ref": os.environ["CALLER_WORKFLOW_REF"],
+              "caller_workflow_sha": os.environ["CALLER_WORKFLOW_SHA"],
+              "harness_workflow_ref": os.environ["HARNESS_WORKFLOW_REF"],
+              "harness_workflow_sha": os.environ["HARNESS_WORKFLOW_SHA"],
+              "tests": tests,
+              "status": "passed" if all(value == "passed" for value in tests.values()) else "failed",
+          }
+          output_dir = Path("artifacts")
+          if output_dir.is_symlink():
+              raise SystemExit("Unsafe acceptance report output directory")
+          if output_dir.exists() and not output_dir.is_dir():
+              raise SystemExit("Unsafe acceptance report output directory")
+          output_dir.mkdir(parents=True, exist_ok=True)
+          output = output_dir / "consumer-acceptance-report.json"
+          descriptor, temporary_name = tempfile.mkstemp(
+              prefix=".consumer-acceptance-report-", suffix=".tmp", dir=output_dir
+          )
+          try:
+              with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                  handle.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
+              # Atomic replacement prevents a consumer-created symlink or hard link
+              # at the output path from redirecting the report write.
+              os.replace(temporary_name, output)
+          finally:
+              try:
+                  os.unlink(temporary_name)
+              except FileNotFoundError:
+                  pass
+          print("Redacted consumer acceptance report written.")
+          print("Acceptance status: " + report["status"])
+          PY
+      - name: Upload consumer acceptance report
+        id: artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: consumer-acceptance-report
+          path: artifacts/consumer-acceptance-report.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Verify consumer report identity and passing status
+        id: verification
+        if: always()
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_WORKFLOW_REF: ${{ github.workflow_ref }}
+          EXPECTED_WORKFLOW_SHA: ${{ github.workflow_sha }}
+          EXPECTED_HARNESS_WORKFLOW_REF: ${{ job.workflow_ref }}
+          EXPECTED_HARNESS_WORKFLOW_SHA: ${{ job.workflow_sha }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          expected_sha = os.environ.get("EXPECTED_SHA", "")
+          expected_ref = os.environ.get("EXPECTED_WORKFLOW_REF", "")
+          expected_workflow_sha = os.environ.get("EXPECTED_WORKFLOW_SHA", "")
+          expected_harness_ref = os.environ.get("EXPECTED_HARNESS_WORKFLOW_REF", "")
+          expected_harness_sha = os.environ.get("EXPECTED_HARNESS_WORKFLOW_SHA", "")
+          sha_pattern = re.compile(r"^[0-9a-f]{40}$")
+          expected_keys = {
+              "schema_version", "consumer_commit_sha", "caller_workflow_ref",
+              "caller_workflow_sha", "harness_workflow_ref",
+              "harness_workflow_sha", "tests", "status",
+          }
+          def reject_duplicate_keys(pairs):
+              result = {}
+              for key, value in pairs:
+                  if key in result:
+                      raise ValueError("duplicate JSON object key")
+                  result[key] = value
+              return result
+
+          try:
+              report = json.loads(
+                  Path("artifacts/consumer-acceptance-report.json").read_text(encoding="utf-8"),
+                  object_pairs_hook=reject_duplicate_keys,
+              )
+          except (OSError, UnicodeError, ValueError):
+              report = None
+
+          valid = (
+              isinstance(report, dict)
+              and set(report) == expected_keys
+              and type(report.get("schema_version")) is int
+              and report.get("schema_version") == 1
+              and bool(sha_pattern.fullmatch(expected_sha))
+              and bool(expected_ref.strip())
+              and bool(sha_pattern.fullmatch(expected_workflow_sha))
+              and bool(expected_harness_ref.strip())
+              and bool(sha_pattern.fullmatch(expected_harness_sha))
+              and report.get("consumer_commit_sha") == expected_sha
+              and report.get("caller_workflow_ref") == expected_ref
+              and report.get("caller_workflow_sha") == expected_workflow_sha
+              and report.get("harness_workflow_ref") == expected_harness_ref
+              and report.get("harness_workflow_sha") == expected_harness_sha
+              and report.get("status") == "passed"
+              and isinstance(report.get("tests"), dict)
+              and set(report["tests"]) == {
+                  "runtime-validation", "consumer-acceptance-command"
+              }
+              and all(
+                  isinstance(name, str) and bool(name.strip()) and status == "passed"
+                  for name, status in report["tests"].items()
+              )
+          )
+          if not valid:
+              print("Consumer acceptance report verification failed")
+              raise SystemExit(1)
+          print("Consumer acceptance report verified")
+          PY
+      - name: Fail job unless all required stages succeeded
+        if: always()
+        shell: bash
+        env:
+          RUNTIME_OUTCOME: ${{ steps.runtime.outcome }}
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+          REPORT_OUTCOME: ${{ steps.report.outcome }}
+          ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
+          VERIFICATION_OUTCOME: ${{ steps.verification.outcome }}
+        run: |
+          failed=()
+          [[ "$RUNTIME_OUTCOME" == "success" ]] || failed+=("runtime")
+          [[ "$TEST_OUTCOME" == "success" ]] || failed+=("tests")
+          [[ "$REPORT_OUTCOME" == "success" ]] || failed+=("report")
+          [[ "$ARTIFACT_OUTCOME" == "success" ]] || failed+=("artifact")
+          [[ "$VERIFICATION_OUTCOME" == "success" ]] || failed+=("verification")
+          if (( ${#failed[@]} > 0 )); then
+            printf 'Acceptance gate closed; unsuccessful required stage(s): %s\n' "$(IFS=', '; echo "${failed[*]}")" >&2
+            exit 1
+          fi
+          echo "Acceptance orchestration gate passed."

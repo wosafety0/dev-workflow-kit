@@ -31,6 +31,15 @@ _SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 _MAX_TIMEOUT_SECONDS = 3600
 
 
+def _reject_duplicate_json_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON object key")
+        result[key] = value
+    return result
+
+
 def _resolve_inside_root(root: Path, value: str, field: str) -> Path:
     if not isinstance(value, str) or not value.strip() or value != value.strip():
         raise HarnessRunnerError(f"{field} must be a non-empty trimmed repository-relative path")
@@ -61,6 +70,27 @@ def _require_artifact_path(root: Path, path: Path, field: str) -> None:
 
 
 def _git_commit_sha(root: Path) -> str:
+    # A HEAD SHA alone does not identify dirty or untracked source files. Refuse to
+    # publish a commit-bound acceptance report unless the tested tree is reproducible.
+    try:
+        status = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise HarnessRunnerError("Could not verify the project Git worktree status") from None
+    if status.returncode != 0:
+        raise HarnessRunnerError("Could not verify the project Git worktree status")
+    if status.stdout:
+        raise HarnessRunnerError(
+            "Project Git worktree must be clean before acceptance can be recorded"
+        )
+
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -228,8 +258,11 @@ def main(argv: list[str] | None = None) -> int:
             )
 
         try:
-            raw_config = json.loads(config_path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeError, json.JSONDecodeError):
+            raw_config = json.loads(
+                config_path.read_text(encoding="utf-8"),
+                object_pairs_hook=_reject_duplicate_json_keys,
+            )
+        except (OSError, UnicodeError, ValueError):
             raise HarnessRunnerError("Could not read a valid JSON Harness config") from None
         config = validate_harness_config(raw_config)
 

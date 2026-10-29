@@ -227,3 +227,276 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - PRs remain draft/unmerged. No model-provider calls, game actions, releases, or deployments were performed.
 
 - First hosted run on intermediate commit `26685fc91aed5809bd43dc642899a37300ca32a1` correctly exposed a test-loop indexing error (the new four-stage gate test iterated seven invalid values as stage indices). The implementation gate stayed closed. Fixed the test to exercise every invalid outcome at each of the four stages in commit `b329a5c3fbf3a6f4e1c163a9cafaecffe1debb4f`; final-head CI is pending.
+
+
+### 2026-10-29: reusable consumer report identity verification
+
+- Follow-up branch: `feat/reusable-consumer-report-verifier-20261029`, stacked on PR #30.
+- Added `scripts/verify_consumer_acceptance_report.py` and offline tests for strict schema, consumer commit SHA, caller workflow ref/SHA, failed/skipped stages, missing/corrupt JSON, and subprocess CLI failure behavior.
+- Updated `.github/workflows/reusable-acceptance.yml` to support the `python` and `node` runtimes, include runtime validation in the redacted report, verify the report against trusted caller GitHub context, and require runtime, command, report, artifact upload, and verification outcomes all to succeed.
+- Added `docs/REUSABLE_ACCEPTANCE_CONTRACT.md` describing the consumer report schema, immutable pin requirement, and the limits of report-only evidence.
+- This does not change Clamp PR #14's existing immutable workflow pin. The updated reusable workflow applies only to consumers that explicitly pin a commit containing this implementation.
+- Exact implementation/documentation head `07b8000ab8c2a1dad0f91bd29e2d84028bec2c93` passed Push CI [40813229844](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40813229844) and PR CI [40813238148](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40813238148). This validates the verifier tests and Python source compilation in hosted CI. The immutable reusable-workflow commit selected for consumer trial is this verified head; a documentation-only archive follow-up will have its own CI run.
+
+
+- Consumer integration exposed a real workspace-boundary bug: the reusable job checks out the consumer repository, so it cannot execute the verifier script stored only in the Harness repository. The first Clamp run on the new pin failed closed at verification for that reason; consumer tests themselves passed.
+- Corrected `.github/workflows/reusable-acceptance.yml` to run the fail-closed report check inline in the reusable workflow job, avoiding a nonexistent consumer-workspace script path. Added `tests/test_reusable_acceptance_workflow.py`, which extracts and executes the actual inline verifier and checks matching-report success plus stale-SHA/failed-report rejection.
+- The correction is in commit `a7045103c4213e90d8a622dbe5918c6b15aa8f0a`; hosted Push and PR CI for the corrected final head is pending. The previously selected immutable pin `07b8000ab8c2a1dad0f91bd29e2d84028bec2c93` is known to contain the defect and must not be reused by consumers.
+
+- The first test of the inline verifier extractor failed because its test helper rejected blank lines in the YAML block; the production verifier itself passed the matching-report case and rejected stale/failed reports. Fixed the extractor to preserve blank lines in commit `ef7aebb7875bcd2dedf4e49fed68404150e1722c`. CI for the corrected test and final archive head is pending.
+
+- A second hosted test run showed the extractor still included the shell heredoc launcher instead of only its embedded Python source. Corrected the test helper to begin after `python3 - <<'PY'` in commit `01c60a4bcf2dff0ee143a93bdd5062aa475a4e74`; the workflow's inline verifier itself had succeeded on the valid and invalid report cases. Re-run final-head CI before selecting a new consumer pin.
+
+- Final corrected/archive head `0173c597e82364a91e50f9817a9c8d40876dc04c` passed Push CI [40813501693](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40813501693) and PR CI [40813508518](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40813508518). The tests execute the exact inline verifier code extracted from the reusable workflow; the matching report passes and stale identity/failed status are rejected. This is the first verified candidate pin after correcting the consumer workspace boundary.
+
+
+## 2026-10-29 — reusable consumer report verifier edge-case coverage
+
+- Extended `tests/test_reusable_acceptance_workflow.py` to execute the exact inline verifier from `.github/workflows/reusable-acceptance.yml` against mismatched caller workflow ref/SHA, empty test maps, unknown fields, boolean schema version, blank test names, skipped status, missing report, and malformed JSON.
+- This is static/offline validation only; it does not execute consumer project actions. Test commit `fa7740e05af7b411ddce186d860434981bddda8a` passed hosted Push CI [40814889244](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40814889244) and PR CI [40814894902](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40814894902). These checks cover the exact code/test commit; progress-only archive commits followed at `8be6cb62c59ec355ca42ad32b1d193bba0dc68d0` and final archive head `ce91ef51f18f4a8c4aeb162f5e956e244e051874`.
+- Keep all stacked PRs Draft/unmerged. No model calls, game actions, release, or deployment.
+
+
+## 2026-10-29 — consumer contract review and Clamp trial metadata reconciliation
+
+- Reviewed the reusable consumer-report contract end-to-end: report generation derives consumer commit and caller workflow identity from GitHub context; the inline verifier compares all three identity values, enforces exact schema, requires a non-empty all-passed test map, and rejects missing/corrupt JSON. The final orchestration gate independently requires runtime validation, consumer command, report generation, artifact upload, and verification to succeed.
+- Kept the reusable workflow's verifier self-contained. It must not invoke a verifier script from the consumer checkout; that integration pattern previously failed because the helper is not present in the consumer repository. The helper script remains separately unit-tested, while workflow tests execute the actual inline verifier source.
+- Clamp PR #14 description was reconciled to the current immutable pin `0173c597e82364a91e50f9817a9c8d40876dc04c` and exact-head CI evidence. Clamp exact-head Push CI [40813942417](https://github.com/wosafety0/wosafety0clamp/actions/runs/40813942417) and PR CI [40813945988](https://github.com/wosafety0/wosafety0clamp/actions/runs/40813945988) passed for head `887eb1ff23fd04207f52707fa7323f7bf93a2b0e`.
+- Current Harness PR #29, #30, and #31, plus Clamp PR #14, remain Draft/unmerged. No live model calls, game actions, release, or deployment.
+
+## 2026-10-29 — reusable workflow documentation consistency review
+
+- Reviewed the consumer-facing reusable workflow guide against the actual `.github/workflows/reusable-acceptance.yml` implementation.
+- Corrected two documentation mismatches: the workflow uploads a redacted acceptance-report artifact with 14-day retention (it does not publish releases/packages), and the current third-party actions are pinned to full commit SHAs rather than version tags.
+- This is documentation-only; runtime behavior is unchanged. Exact-head CI must be checked after this archive commit. PR #31 remains Draft/unmerged; no live model calls, game actions, release, or deployment.
+
+
+## 2026-10-29 — stacked runner and verifier CI reconciliation
+
+- Re-checked current PR metadata and exact-head check runs for the runner/report-verifier stack. PR #27 head `072f8cd042f3069a2e2b31b9e9eff5368a77d4f8`, PR #28 head `026b0d4d31bc22f2b46fe1f05a7e09e1909ab126`, PR #29 head `514f4f979a470c77b5a55ee699cbedd435e4857a`, PR #30 head `8b2d33d2c2dddaf4134ec335b9dfb43d0f443d24`, and PR #31 head `0a21cb642d8bbb94223d7ae21b6e5ddc17f27f71` all remain open, Draft, and unmerged; each current head has successful hosted offline-tests check runs.
+- PR #27 exact-head push/PR-context runs include [40811019802](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40811019802) and [40810916386](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40810916386). PR #28 exact-head push/PR-context runs [40811457560](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40811457560) and [40811082217](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40811082217) both passed. PR #28 description was updated to reflect the verified results.
+- PR #29 exact-head push/PR-context runs [40812225939](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40812225939) and [40811638223](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40811638223) passed. PR #30 exact-head push/PR-context runs [40812364189](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40812364189) and [40812371458](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40812371458) passed. PR #31 current exact-head push/PR-context runs [40815828525](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40815828525) and [40815832720](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40815832720) passed.
+- Static review of the runner's current preflight confirms it checks config/report and review input/output collisions before stale-report unlinking; the collision regression checks byte-for-byte config preservation and asserts no task runs. The runner returns distinct codes for passed tasks/report (0), task failure (1), and blocked/preflight/report-write failure (2). Downstream callers must still check that process exit code independently of report JSON.
+- Stack relationship remains intentional: #27 → #28 → #29 → #30 → #31. PR #31's self-contained inline verifier remains necessary because the reusable job checks out the consumer workspace, not the Harness repository. Clamp PR #14 stays on its previously validated immutable pin; no pin change is needed from this review.
+- Validation boundary: hosted CI establishes offline tests and workflow checks only. No real model request, game operation, deployment, release, or merge was performed. Local working-tree synchronization remains unverified.
+
+
+## 2026-10-29 — open-PR dependency graph audit
+
+- Re-read current open PR metadata for Harness PRs #13–#31 and checked current branch head/base SHAs. The repository is a dependency graph, not one simple linear stack: #13 is the safe-runner foundation; #14 and #18 form one runner-artifact/provenance line; #19 and #20 are separate branches based on #13; #15 → #17 is a model-response/redirect line; #20 → #22 → #23 → #24 → #25 → #26 → #27 → #28 → #29 → #30 → #31 is the loopback/transport, fail-fast, stale-artifact and report-verification line. All inspected PRs remain Draft and unmerged, and GitHub reports them mergeable at the time of review.
+- Exact-head offline-tests checks were confirmed successful for PR #13 head `8dd0e4b58cdf7384ebe703b8fd076ec97e98fd72`, #14 `b0da9892f393f5219ef7f445327af7da893cd827`, #15 `3fff9561088d720cbea2223f69355de3b70f474e`, #17 `703a344f271dda5f304272c615c320943aabba2d`, #18 `b402101ef41d3f9d4f9533545ea83128ba5843a6`, #19 `956b43939dc010f7a62561d8e1f7ceb766b61b68`, #20 `827bb99d2eb97ac61909979094f68471f081150b`, and #22 `f71025d2303737dafe18ae823f93cad9cdd1249d`. Latest #23–#31 dependency SHAs were also rechecked; #31 archive head `0dcde172bd4573ad9e8e81279b0e91611fa52f50` has successful Push CI [40818091542](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40818091542) and PR CI [40818096294](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40818096294).
+- Integration risk found: PR #17 and PR #22 independently implement the same semantic-review redirect rejection contract in different branches. #17 is stacked on #15 (response-size limit), while #22 is stacked on #20 (loopback runner integration). Before merging either line into the same target, reconcile the overlapping redirect-handler implementation/tests to avoid duplicate or conflicting edits; do not treat all open PRs as a single serial merge queue.
+- Other parallel branches (#19 output alias, #18 commit provenance, #14 stale artifacts) depend on different bases. Merge order must follow the actual DAG and each PR's current base SHA; do not bulk-merge solely by PR number.
+- This was a metadata/diff/CI review and documentation-only archive. No merge, provider request, game operation, release, or deployment occurred. Local working-tree synchronization remains unverified.
+
+
+## 2026-10-29 — follow-up exact-head audit and PR status correction
+
+- Re-read GitHub PR metadata and commit check-runs for the current Harness runner/verifier branches. Exact current heads with successful `offline-tests` checks: #18 `b402101ef41d3f9d4f9533545ea83128ba5843a6`, #19 `956b43939dc010f7a62561d8e1f7ceb766b61b68`, #20 `827bb99d2eb97ac61909979094f68471f081150b`, #22 `f71025d2303737dafe18ae823f93cad9cdd1249d`, #23 `7962697d273e04716e71fcf95536154b03704032`, #24 `58702b8ba7e7fde2c384671677aec8784f216c97`, #25 `80c1be685de2ca521418aa5622da02eb62911ad1`, #26 `06436a9ca9636565cd0d0dbb3abb233dd95227c7`, #27 `072f8cd042f3069a2e2b31b9e9eff5368a77d4f8`, #28 `026b0d4d31bc22f2b46fe1f05a7e09e1909ab126`, #29 `514f4f979a470c77b5a55ee699cbedd435e4857a`, #30 `8b2d33d2c2dddaf4134ec335b9dfb43d0f443d24`, and #31 `b1a3eb67d014a362115db3f9dfc4db31096bd486`. PR #31's exact-head checks are Push CI [40818564511](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40818564511) and PR CI [40818570117](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40818570117). These are offline/hosted workflow checks, not live-provider validation.
+- PR #21 (`test: verify reusable workflow rejects empty consumer command`) is **closed and unmerged**, unlike the open Draft PRs in the dependency graph. The earlier broad wording that all PRs #13–#31 were open is too broad; evaluate state per PR. PR #13–#20 and #22–#31 remain open/Draft/unmerged at this audit, subject to later changes.
+- Dependency graph remains non-linear: #13 is the safe-runner foundation; #14 and #18 form a runner artifact/provenance line; #19 and #20 branch from #13; #15 → #17 is a response-size/redirect line; #20 → #22 → #23 → #24 → #25 → #26 → #27 → #28 → #29 → #30 → #31 is the loopback transport, fail-fast, stale-artifact, and report-verification line. PR #17 and #22 overlap on redirect rejection and must be reconciled if their lines converge; no topology changes were made.
+- Regression chain review: #25 invalidates stale acceptance reports before config preflight; #26 invalidates stale semantic-review PASS artifacts when review is skipped; #27 moves report invalidation earlier to cover additional preflight failures; #28 prevents the report output from deleting a colliding config; #29 verifies report identity/status/schema; #30 makes verification a required CI gate; #31 keeps the reusable workflow verifier inline because the consumer checkout does not contain the Harness helper script.
+- No PR was merged or closed by this audit. No model-provider request, game action, release, or deployment occurred. Local working-tree synchronization remains unverified.
+
+
+## 2026-10-29 — redirect-fix convergence review and foundation CI refresh
+
+- Rechecked current exact-head offline-tests runs for PRs #13–#20. Successful checks are recorded for #13 `8dd0e4b58cdf7384ebe703b8fd076ec97e98fd72`, #14 `b0da9892f393f5219ef7f445327af7da893cd827`, #15 `3fff9561088d720cbea2223f69355de3b70f474e`, #16 `4b6349469c7c5a3fe55da43b27092348435a86c3`, #17 `703a344f271dda5f304272c615c320943aabba2d`, #18 `b402101ef41d3f9d4f9533545ea83128ba5843a6`, #19 `956b43939dc010f7a62561d8e1f7ceb766b61b68`, and #20 `827bb99d2eb97ac61909979094f68471f081150b`.
+- Reviewed the actual redirect patches in #17 and #22. Both fail closed by returning `None` from a `urllib.request.HTTPRedirectHandler`, but they implement the opener path differently: #17 centralizes endpoint-specific opener setup in `_open_model_request(request, endpoint)` and keeps the response-size limit from its #15 ancestry; #22 adds the redirect handler directly in `call_model` on the #20 loopback branch. Both have a local two-server regression test proving the redirect destination is not contacted. Their security intent is equivalent, but their helper/mocking edits overlap.
+- Non-destructive convergence recommendation for a future shared branch: retain one endpoint-aware request-opening helper (the #17 structure is easier to test and keeps proxy handling localized), carry forward #22's explicit two-listener credential-forwarding regression and contract text, and rerun the complete offline suite against the combined final head. This is a review recommendation only; no branch was rebased, retargeted, merged, or closed.
+- Current status remains Draft/unmerged. CI proves offline tests only; no live provider request, game operation, release, or deployment occurred. Local working-tree synchronization remains unverified.
+
+
+## 2026-10-29 — require the complete consumer report stage set
+
+- Static contract review found that the inline report verifier accepted any non-empty all-passed test map, even if a required stage was omitted or an unknown stage substituted. The final workflow gate separately checked both actual stage outcomes, so this did not bypass the execution gate, but the report verifier was weaker than its documented contract.
+- Tightened the inline verifier to require exactly `runtime-validation` and `consumer-acceptance-command`; added regressions for a missing required stage and an unexpected stage, and clarified the report contract.
+- This is an offline contract-hardening change only. No provider requests, game actions, deployment, release, or merge.
+
+
+## 2026-10-29 — parallel reusable-workflow branch compatibility review
+
+- Reviewed open Draft PR #8 at exact head `ed9fccc0f510a1d4c0656589ae57e0a3ff6a4586`; its exact-head `offline-tests` check passed: [run 40801233092](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801233092).
+- Static contract comparison found that PR #8 emits a report with only `consumer-acceptance-command` and has no `runtime-validation` report stage, while current PR #31 verifier requires exactly `runtime-validation` and `consumer-acceptance-command`. Therefore these report/workflow revisions are not contract-compatible as-is; passing PR #8 CI proves its offline tests, not compatibility with the newer PR #31 verifier.
+- PR #8 and PR #31 are separate open Draft branches with different ancestry. Do not combine their workflow files without reconciling the schema and stage semantics. No retarget, rebase, close, merge, or consumer pin change was performed.
+- The current PR #31 chain remains the newer report-verification path for the consumer pilot. Keep PR #8 as an explicitly unresolved parallel candidate until its intended role is decided through the normal review/integration plan.
+
+
+## 2026-10-29 — cross-branch runner safety finding (#32)
+
+- Separate review of the runner branch chain found that PR #14 → #18 did not inherit PR #19's review-output/config alias guard. This was material because stale-artifact cleanup can delete the output path before config parsing; if both paths alias inside `artifacts/`, it could delete the config and block the run.
+- Follow-up PR #32 adds the guard before cleanup, a byte-preservation regression, and a security-boundary note. It is stacked on PR #18 (`fix/runner-commit-provenance-20261029`), not on the reusable-workflow PR #31 chain; do not treat it as merged into the current consumer-report verifier line.
+- PR #32 code head `8c02d63aea03a3705cb75783b57182f713eb2185` passed Push CI [run 40821391073](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40821391073), 108 offline tests. Its subsequent progress-archive head `8223a68ece83fbaf1d92e01aa2146016aee54284` also passed exact-head Push CI [run 40821497469](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40821497469), 108 offline tests.
+- PR #32 remains Draft/unmerged; PR #19 remains a separate Draft line. No PR merge, rebase, retarget, consumer pin change, live model call, game operation, deployment, or release was performed.
+
+
+## 2026-10-29 — reject duplicate JSON keys in acceptance reports
+
+- Review of the standalone report verifier and reusable consumer workflow found that Python's default JSON decoder silently accepts duplicate object keys, keeping the last value. The report producers currently emit ordinary JSON, but strict verification should reject ambiguous input rather than rely on producer behavior.
+- Added duplicate-key rejection to both the standalone verifier and the inline consumer workflow verifier; added CLI and extracted-inline-workflow regressions for duplicate top-level and nested `tests` keys; updated the reusable acceptance contract.
+- Code commit `c989f2e75a0960aae16468c7afc6f9365cda6495` passed exact-head Push CI [run 40821977266](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40821977266) and PR CI [run 40821983450](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40821983450); both ran 138 offline tests successfully, including the standalone verifier and extracted inline-workflow regressions. The subsequent progress-only archive commit has its own CI run in progress at archive time. No live model calls, game actions, deployment, release, or merge.
+
+
+## 2026-10-29 — bind acceptance report tool identity and normalize report names
+
+- Follow-up review found that the standalone runner report verifier accepted any non-empty `tool_version` and accepted test names with surrounding whitespace. Tightened it to require `tool_version` to equal `dev-workflow-kit@<expected commit SHA>` and to reject empty or untrimmed test names.
+- The first strict-verifier run correctly failed because the CI report producer used `dev-workflow-kit@<SHA>` while the runner emitted `dev-workflow-kit/harness-runner@<SHA>`. This exposed a producer-contract inconsistency; the fix was not to weaken verification, but to standardize the runner on the CI report's commit-bound identity and add an explicit runner regression assertion.
+- Final code head `d9eb1df62a7e0c8b9a5d956dfa72fb17302078f7` passed exact-head Push CI [run 40822974635](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40822974635) and PR CI [run 40822982587](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40822982587). Push logs confirm 140 offline tests passed, the acceptance report verified, and the orchestration gate passed.
+- The progress-only archive update that follows must also pass exact-head CI before this archive is considered fully validated. PR #31 remains Draft/unmerged. No live model calls, game actions, deployment, release, or merge occurred; local working-tree synchronization remains unverified.
+
+
+## 2026-10-29 — revalidated strict report tool identity after branch-head drift
+
+- A later branch-head audit found the CI producer and verifier identity strings had drifted again: the verifier's active contract requires `dev-workflow-kit/harness-runner@<expected SHA>`. The CI producer and contract documentation were realigned to that exact form, and the workflow regression asserts the producer string.
+- Exact latest code head: `4743a0f762c34d59cb46763bc651e14993a8520f`.
+- Exact-head Push CI passed: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823472625.
+- Exact-head PR CI passed: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823479931.
+- Both checks passed the 141-test offline suite and final report-verification gate. Earlier failing runs are retained as evidence of the contract mismatch; they are not counted as passing validation.
+- PR #31 remains Draft/open/unmerged. No branch topology changes, live model calls, game actions, deployment, release, or merge.
+
+
+## 2026-10-29 — align standalone consumer verifier with inline workflow
+
+- A consistency audit found that `scripts/verify_consumer_acceptance_report.py` was weaker than the actual reusable workflow: its CLI accepted duplicate JSON keys, and its verifier accepted any non-empty test map instead of requiring exactly `runtime-validation` and `consumer-acceptance-command`.
+- Hardened the standalone helper to reject duplicate object keys during JSON parsing, require the exact two-stage set, and reject blank/untrimmed test names. Added regressions for missing/extra stages and duplicate top-level/nested keys. The reusable workflow remains self-contained; it does not call this helper from the consumer checkout.
+- Exact code head `ce76a71d5378ffdcf2be38ac109e3143738f11ae` passed Push CI [run 40823748577](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823748577) and PR CI [run 40823754559](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823754559). Both passed 143 offline tests; logs confirm the report verification and final orchestration gate succeeded.
+- Follow-up test-quality review changed the duplicate top-level-key fixture into an otherwise-valid report with two `status` keys, so the test proves duplicate-key rejection rather than merely failing schema validation. Final code head `3bdb1bd0f1cd9546bd26b5b8472fc349e7c26a7b` passed Push CI [run 40823913329](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823913329) and PR CI [run 40823918724](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823918724).
+- The report identity contract is currently aligned on `dev-workflow-kit/harness-runner@<commit SHA>` across the CI report producer, runner, verifier, and regression tests.
+- Fresh local targeted verification passed 28 tests across the standalone report verifier, consumer verifier helper, and extracted inline reusable-workflow verifier; git diff --check passed. PR #31 remains Draft/open/unmerged. No live model calls, game actions, deployment, release, or merge; local working-tree synchronization remains unverified.
+
+
+## 2026-10-29 — reject duplicate keys in Harness runner configuration
+
+- The runner parsed `harness.json` with Python's default JSON decoder, which silently keeps the last occurrence of duplicate object keys. A crafted config could therefore contain ambiguous command declarations and still be accepted.
+- Added duplicate-key rejection at config parsing time and a regression with duplicate `commands` keys where the last value would otherwise be valid. The test confirms the runner fails closed, invalidates any stale PASS report, and executes no task.
+- Code head `329103d26c5a57ab3f2c6b9df8b5d9e0f1b6c133` passed exact-head Push CI [run 40824152546](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824152546) and PR CI [run 40824160320](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824160320). Both passed 144 offline tests; logs confirm report verification and the final orchestration gate succeeded.
+- PR #31 remains Draft/open/unmerged. No live model calls, game actions, deployment, release, or merge; local working-tree synchronization remains unverified.
+
+
+## 2026-10-29 — reject duplicate JSON keys in semantic review inputs and responses
+
+- Extended fail-closed duplicate-key handling to the semantic-review client. Review input files, the provider's outer chat-completions JSON, and the model's JSON review content now reject duplicate object keys instead of silently keeping the last value.
+- Added regressions for duplicate input fields (verifying the model is not called and stale PASS output is removed), duplicate provider response keys, and duplicate model-review fields.
+- Final code head `89a7254e45494476665ea50fc5187d0b0ae1c111` passed exact-head Push CI [run 40824547635](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824547635) and PR CI [run 40824552875](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824552875). Both passed 145 offline tests; report verification and the final orchestration gate succeeded.
+- PR #31 remains Draft/open/unmerged. No live model-provider requests were made by these tests, no game actions, deployment, release, or merge occurred; local working-tree synchronization remains unverified.
+
+
+## 2026-10-29 — restore bounded model-provider response reads on the report-verifier branch
+
+- Cross-branch comparison confirmed PR #15 had introduced a 1 MiB model-response cap, but the independent #20 → #22 → #31 line did not inherit it. Added the same bound to the current branch: read at most 1 MiB plus one sentinel byte, then fail closed if oversized. Kept duplicate-key rejection for both provider-envelope JSON and model review JSON, and documented the limit in the stable acceptance contract.
+- Added a regression proving oversized responses are read only up to the configured bound and cannot produce a passing review.
+- Code head `2546705be0c14d38f831934f3491306baf6abf1d` passed exact-head Push CI [run 40824844700](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824844700) and PR CI [run 40824850667](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824850667). Both passed 146 offline tests; report verification and the final orchestration gate succeeded.
+- This restores the response-size guard without merging or rewriting the separate PR #15/#17 branches. PR #31 remains Draft/open/unmerged. No live model-provider requests, game actions, deployment, release, or merge; local working-tree synchronization remains unverified.
+
+## 2026-10-29 - Windows-safe semantic-review test execution
+
+- Normalized expected temporary-file paths with `Path.resolve()` in runner tests so assertions match Windows long-path/short-path normalization. Updated the local loopback HTTP test to preserve required OS environment (including `SystemRoot`) while explicitly clearing upper/lowercase proxy and `NO_PROXY` variables inside the test only. No machine-wide proxy or environment setting was changed.
+- Exact code head `bb1e41be7937ea253a38aa16f3369d8f7d1ec67e` passed the full local Windows suite: **146 tests**, Python compilation, and `git diff --check`.
+- Exact-head Push CI [40825108944](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825108944) and PR CI [40825113981](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825113981) both passed **146 offline tests**, report generation, artifact upload, strict report verification, and the final gate.
+- PR #31 remains Draft/open/unmerged. No live model-provider call, game action, merge, release, or deployment occurred.
+
+
+## 2026-10-29 — make duplicate-key verifier regressions decisive
+
+- Review found that the standalone Harness report verifier's duplicate-key tests also contained unrelated invalid fields, so they could pass even if duplicate-key rejection regressed.
+- Replaced those fixtures with otherwise-valid reports containing duplicate top-level `status` keys and duplicate nested test-status keys. Either fixture would pass verification if Python's default last-key-wins parser were used, so the tests now specifically prove duplicate-key rejection.
+- Exact code head `78c6cb326c08dc482c60337a2a771e34ab2939c9` passed Push CI [run 40825814199](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825814199) and PR CI [run 40825821246](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825821246). Both passed 146 offline tests; report verification and the final orchestration gate succeeded.
+- PR #31 remains Draft/open/unmerged. No live model-provider request, game action, merge, release, or deployment occurred.
+
+## 2026-10-29 - Exact-head Windows verification after semantic-review hardening
+
+- Re-ran the complete offline suite on exact head `e3c457717d1524383c037dc3ec901fedb4e9f5d4`, covering duplicate JSON-key rejection in reports, runner config, and semantic-review inputs/responses; bounded 1 MiB provider response reads; redirect rejection; and reusable consumer-report identity checks. Python compilation passed, **146 tests passed**, and `git diff --check` passed.
+- Exact-head Push CI [40825902357](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825902357) and PR-context CI [40825907701](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825907701) both succeeded, including report generation, artifact upload, strict report verification, and the final gate.
+- This is offline/local-loopback validation only; no external model-provider request was made. PR #31 remains Draft/open/unmerged; no merge, release, deployment, or game action occurred.
+
+
+## 2026-10-29 — require a clean worktree for commit-bound runner reports
+
+- Audit found that `git rev-parse HEAD` alone does not prove the tested source matches the reported commit: tracked edits and untracked inputs could affect task outcomes while the report still claimed the unchanged HEAD SHA.
+- Updated `scripts/harness_runner.py` to require a successful, empty `git status --porcelain --untracked-files=all` result before accepting the HEAD SHA. Dirty or untracked worktrees now fail closed before any configured task executes; the previous acceptance report has already been invalidated by runner preflight.
+- Added offline regressions for modified tracked files, untracked files, and clean-worktree SHA resolution; documented the rule in the stable acceptance contract.
+- Exact code head `12a85f4cfee8a3e004827233ca63dc5d268e1f7c` passed Push CI [run 40826215546](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40826215546) and PR CI [run 40826223599](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40826223599). Both passed **148 offline tests**, compiled the Python sources, uploaded the redacted acceptance report, verified report identity, and passed the final orchestration gate.
+- The guard intentionally rejects untracked review inputs too: a commit SHA cannot truthfully identify an acceptance run whose input file is outside the committed tree. Developers can still run ordinary test commands during active edits; only commit-bound Harness acceptance reporting requires a clean tree. This is an offline validation change only; no live model-provider request, game action, deployment, release, or merge occurred.
+
+
+## 2026-10-29 — bind consumer reports to the actual reusable Harness workflow
+
+- Audit of GitHub Actions context semantics found that `github.workflow_ref` and `github.workflow_sha` identify the caller context inside a reusable workflow, not the reusable workflow implementation itself. The previous report therefore bound consumer/caller identity but did not explicitly record which Harness workflow definition actually ran.
+- Added `harness_workflow_ref` and `harness_workflow_sha` to the consumer report using GitHub's `job.workflow_ref` and `job.workflow_sha` contexts. The inline verifier now compares both fields with those trusted context values and rejects missing, malformed, or mismatched Harness workflow identity.
+- Extended exact-inline-verifier tests to cover wrong Harness workflow ref/SHA, and updated the consumer report contract. This uses GitHub.com-specific `job.workflow_*` context fields; GitHub documents these fields as unavailable on GitHub Enterprise Server.
+- Exact code head `af86451fc1b56b1f58af765c4a902b268910d243` passed Push CI [run 40826479485](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40826479485) and PR CI [run 40826485217](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40826485217). Both passed **148 offline tests**, including execution of the exact inline verifier with mismatched Harness workflow ref/SHA; report generation, artifact upload, strict verification, and final gate succeeded.
+- The change updates only the reusable workflow source and its contract on the Harness feature branch. It does not change Clamp PR #14's existing immutable pin or activate the new contract in consumer repositories. PR #31 remains Draft/unmerged; no merge, deployment, release, live model request, or game action occurred.
+
+
+## 2026-10-29 — Harness debugging ownership transferred from Clamp to Harness
+
+- User directive: take over Harness debugging associated with the Clamp consumer pilot; do not let the Clamp project perform Harness-related development.
+- Recorded the ownership boundary in `docs/REUSABLE_ACCEPTANCE_WORKFLOW.md`: reusable workflow implementation, report schema/verifier, provenance and identity checks, runtime orchestration, artifact handling, gate logic, Harness regression tests, root-cause fixes, and their CI evidence belong in `wosafety0/dev-workflow-kit`.
+- Consumer responsibility is limited to its immutable Harness SHA pin, Clamp-owned acceptance command/tests, and minimal consumer integration configuration/documentation. A failing Clamp run is evidence to reproduce and fix in Harness first; only after exact-head Harness Push/PR CI passes should the consumer pin be updated and Clamp CI rerun.
+- Posted this explicit boundary to Clamp Draft PR #14: https://github.com/wosafety0/wosafety0clamp/pull/14#issuecomment-6489307339. No Harness implementation changes were made in Clamp, and no Clamp branch or PR was modified by this policy change.
+- Policy-doc commit `78370e75aa5e273167f172d718b3079f2d55bf59` passed Push CI [40827106930](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40827106930) and PR CI [40827111916](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40827111916). The progress-archive commit `b2f399cd3dd350c40b1504d501f4f7c909b411a5` also passed Push CI [40827124173](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40827124173) and PR CI [40827129200](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40827129200). All four exact-head runs passed **148 offline tests**, report generation/upload, strict report verification, and the final orchestration gate. PR #31 remains Draft/unmerged; no merge, deployment, release, live model request, or game action.
+
+## 2026-10-29 — align standalone consumer report verifier with Harness workflow identity
+
+- Harness-owned audit confirmed a contract mismatch: `.github/workflows/reusable-acceptance.yml` produces `harness_workflow_ref` and `harness_workflow_sha`, and its inline verifier requires them, while `scripts/verify_consumer_acceptance_report.py` rejected those fields as unknown. This was a standalone verifier/schema inconsistency; the reusable workflow does not invoke the helper from the consumer checkout.
+- Updated the standalone verifier to require and validate both Harness workflow identity fields against explicit expected values. Added required CLI arguments `--expected-harness-workflow-ref` and `--expected-harness-workflow-sha`.
+- Updated verifier fixtures/regressions for valid Harness identity, mismatched Harness ref/SHA, duplicate-key inputs, and CLI invocation. Updated the reusable acceptance contract to state that standalone and inline verifiers must enforce the same schema.
+- Commits created directly on `feat/reusable-consumer-report-verifier-20261029`: verifier `c4a642d1b4b066ded40fcc9cacadc7ce0d6e91f1`; tests `ec8173e3c2e5508a761b804fad872ee55ea449a5` then fixture/CLI completion `04e100f06d385d25e10e4479c99aa6f30af3f5de`; contract documentation `06ec6540a6ff059780daa548176fbb560cd1dd7b`.
+- Validation status at archive time: source and tests were updated remotely, but the final branch-head CI result and local test execution have not yet been verified. Do not treat this fix as accepted or update any consumer pin until exact-head Push and PR CI pass.
+- Ownership remains Harness-only for implementation/debugging; consumers provide failure evidence and own their acceptance command/configuration. PR #31 remains Draft/unmerged; no consumer files, PR topology, deployment, release, or game actions were changed.
+
+- Test-quality follow-up: made the duplicate top-level and nested JSON-key fixtures otherwise valid under the expanded Harness identity schema, so those cases specifically exercise duplicate-key rejection rather than failing first on missing fields. Added explicit malformed expected Harness ref/SHA cases. Test commit: `611e209b505e45c540b2d2ec3ba47b58d10790a3`.
+- The progress archive is updated in this commit. Exact current-head Push/PR CI must finish successfully before this work is marked validated; consumer pins remain unchanged.
+
+- First hosted exact-head Push CI exposed a test harness omission, not a production verifier failure: the duplicate-key subprocess cases had not been given the two newly required expected-Harness-identity CLI arguments, so argparse exited with code 2 before parsing their fixtures. Added those arguments in test commit `fa6e8f957c7d7856af4a7affeaab089e508fe529`. The run correctly stayed red; rerun exact-head Push and PR CI after this correction.
+- Final code+archive head `adb17a7f712d40f088b9bfcd104b1efe360f23e0` passed exact-head Push CI [40828082019](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40828082019) and PR CI [40828087972](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40828087972). Both ran **148 offline tests**, including the decisive duplicate-key fixtures; report generation/upload, strict report verification, and the final orchestration gate passed. No consumer pin was changed.
+
+## 2026-10-29 — prevent future drift between inline and standalone consumer verifiers
+
+- Follow-up audit confirmed both verifiers currently reject duplicate JSON object keys and require the same exact root fields, trusted caller/Harness identity, passing status, and exact required stage set.
+- Added a parity regression in `tests/test_reusable_acceptance_workflow.py` that runs the actual inline verifier and the standalone verifier against the same valid and invalid report cases, asserting identical accept/reject decisions. This targets the class of drift that caused the previous schema mismatch.
+- Test commit: `240f2779174dff84a49f6af842f7d53f0a154a0f`. The code+test head `526b512da6c6f346d6147dd7489abcfb8c518af3` passed exact-head Push CI [40828708410](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40828708410) and PR CI [40828714880](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40828714880); both completed successfully with the 149-test offline suite, report generation/upload, strict verification, and final gate. No consumer pin changes; PR #31 remains Draft/unmerged.
+
+
+## 2026-10-29 — cross-branch security-control audit (Harness-owned)
+
+- Audited the active reusable-consumer branch against the independent semantic-review security branches before changing PR topology. The active branch's `scripts/ai_semantic_review.py` contains the 1 MiB bounded response read, redirect rejection, HTTPS-or-literal-loopback-HTTP endpoint validation, request-scoped proxy bypass for loopback, and duplicate-key rejection for both the provider envelope and model-produced JSON.
+- Confirmed the active branch's `tests/test_ai_semantic_review.py` includes regressions for bounded responses, loopback-only cleartext HTTP, local loopback requests without proxies, redirect-handler installation, and redirect rejection without forwarding authorization. These protections are present on this branch; no duplicate patch was added.
+- PR #17 and PR #22 remain independent open Draft branches with overlapping redirect-related history; PR #33 separately adds bounded-response integration on a related branch. Their branch ancestry is not a linear merge queue. Do not merge, rebase, retarget, close, or otherwise change PR topology without explicit authorization. Continue checking ancestry and combined test coverage before proposing integration.
+- Revalidated the current PR #31 exact head `05b115660b24e17072180cd64536ad47ec7f0be1`: Push CI `40828787359` and PR-context CI `40828793849` both passed the 149-test offline suite, report generation/upload, strict report verification, and final orchestration gate. This is a read-only audit checkpoint; no Harness code, consumer pin, or PR topology changed.
+
+
+## 2026-10-29 — prevent checkout-token exposure to consumer test commands
+
+- Security audit found that the reusable consumer workflow checked out repository code with the checkout action's default `persist-credentials: true`. Because the workflow deliberately executes a consumer-owned `test-command`, that code could inspect `.git/config` and recover the job's read-only checkout token. Read-only scope limits impact but does not justify exposing the credential to executed repository code.
+- Hardened `.github/workflows/reusable-acceptance.yml` by setting `persist-credentials: false` on the consuming-repository checkout. Added a regression test that extracts the checkout step and requires this setting, and documented the boundary in `docs/REUSABLE_ACCEPTANCE_WORKFLOW.md`.
+- Workflow commit: `e4c476f775c0fa3ea363b7dbfe0020d2c03d5565`; regression-test commit: `0caf718f63cc86425417ca9b7624d854b112444c`; documentation commit: `f7c906691c212e36cac4897435feaf067367ee12`.
+- This is a security hardening change only. No consumer pin was changed, no PR was merged, and no PR topology was changed. Exact-head Push and PR-context CI must pass before this fix is marked validated.
+
+## 2026-10-29 - exact-head Windows offline verification
+
+- At `bfca11d049915eaf185256f2eb1a37d3d11056e4`, Windows `python -m compileall -q scripts tests` passed, all 150 offline unittest cases passed, and `git diff --check` passed. This includes the consumer checkout credential-hardening regression. No live provider or game calls. Hosted CI remains a separate acceptance gate.
+
+
+## 2026-10-29 — reusable-workflow identity and redirect-branch ancestry audit
+
+- Verified the reusable acceptance workflow's `job.workflow_ref` and `job.workflow_sha` expressions against the current GitHub Actions context reference. These are documented properties for jobs defined in reusable workflows and identify the called workflow; replacing them with `github.workflow_ref` / `github.workflow_sha` would instead use caller-workflow identity. No unnecessary workflow change was made.
+- Compared the independent redirect-fix branches: PR #17 head `703a344f271dda5f304272c615c320943aabba2d` and PR #22 head `f71025d2303737dafe18ae823f93cad9cdd1249d` have diverged (40 commits ahead / 12 behind in the comparison). PR #33 is a two-commit descendant of PR #22's head `f71025d2303737dafe18ae823f93cad9cdd1249d`. This confirms they are not a linear merge queue; no rebase, retarget, merge, closure, or branch-topology change was performed.
+- Rechecked PR #31 at exact head `982a84782db825689bd3b84c13cc168934375e44`; its PR-context Harness CI run [40841140380](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40841140380) completed successfully. PR #31 remains Draft/unmerged, consumer pins remain unchanged, and no consumer workflow was executed by this audit.
+- Reference: [GitHub Actions contexts](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts) documents `job.workflow_ref`, `job.workflow_sha`, and `job.workflow_repository`; [reusable workflow configuration](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations) clarifies that the `github` context belongs to the caller.
+
+
+## 2026-10-29 — prevent consumer acceptance report path redirection (PR #31)
+
+- Static security review found the reusable workflow writes its report after executing consumer-owned test code. That command can leave a symlinked `artifacts/` directory or a symlink/hard link at the report filename; a direct `Path.write_text` could then write the report through that path, modifying an unintended workspace target.
+- Hardened the inline report producer to reject a symlinked/non-directory `artifacts/` path and write via a same-directory temporary file plus `os.replace`. This replaces an output symlink/hard link itself rather than following it. No credentials are exposed, and consumer workflow pins remain unchanged.
+- Added tests that execute the actual report-producer heredoc: a symlinked artifacts directory must fail without writing outside the workspace, and a hard-linked report path must be replaced without modifying its linked target. Existing inline verifier parity tests remain.
+- Workflow implementation commit: `7cad0b1d3d2bea8b2bf22c6302dc8b16021af7fb`; tests commit: `79db0e6f9d92b7783298db9843b45c71023e31a3`; extractor newline correction: `4b225c5bedb69d5fe8bf6b3e1bc918d49fd6876c`; documentation commit: `b9e3d7a8a759e05d9e60dad29f97c93182dfb959`.
+- Hosted exact-head Push CI and PR-context CI are pending for this security follow-up. PR #31 remains Draft/unmerged; no consumer pin, PR topology, release, or deployment changed.
+
+
+### Validation update — safe consumer report output
+
+- The initial test revisions exposed two test/implementation issues before acceptance: the extracted report-builder test initially emitted literal `\\n` in its generated source, then the workflow writer itself emitted a literal backslash-n after JSON. These were corrected; the earlier failed runs are retained as failed evidence and are not counted as validation.
+- Final workflow commit `fe6e77a3c22a0cdccf81c9bd96bbf610f044d5a2` passed exact-head Push CI [40862243915](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40862243915) and PR-context CI [40862251636](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40862251636). The 152-test suite passed, including both report-output redirection regressions; source compilation, report generation/upload, standalone report verification, and the final gate all passed.
+- This is offline workflow/source validation only. It does not claim a new external consumer integration or change any consumer's immutable pin. PR #31 remains Draft/unmerged.
