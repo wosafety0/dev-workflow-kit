@@ -265,3 +265,20 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added regression coverage that pre-seeds a passing report, then verifies both `artifacts/harness.json` and ignored `.venv/harness.json` are rejected and the stale report is removed; the task executor is never called.
 - Implementation commit: `7a57238b56a3443624d86fa84bcb3dcf1e774096`; regression-test commit: `a7384851b96dcfcc850f6e66b11915b9ecb128af`; documentation commit: `74c369c9175681af93f0527e9eedad66b90f9c19`.
 - Exact-head Push CI passed for the code commit `7a57238b56a3443624d86fa84bcb3dcf1e774096` ([run 40861667123](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40861667123)), the regression-test commit `a7384851b96dcfcc850f6e66b11915b9ecb128af` ([run 40861684438](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40861684438)), the documentation commit `74c369c9175681af93f0527e9eedad66b90f9c19` ([run 40861706360](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40861706360)), and the archive commit `ee9a853b66c15afb3300cba01d5f04f97eafa826` ([run 40861716196](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40861716196)). All runs passed the 120-test offline suite, Python compilation, redacted report generation/upload, and final gate. PR-context CI for this newer head remains unconfirmed; the latest PR-context run predates these changes. PR #32 remains Draft/unmerged; no consumer pin, target branch, branch topology, release, or deployment changed.
+
+## 2026-10-29 — revalidate generated output paths after task execution (PR #32)
+
+- Continued adversarial review found that caller output paths were checked before task execution, but the runner intentionally excludes `artifacts/` from Git cleanliness checks. A task could replace the `artifacts/` directory with a symlink after the preflight checks, potentially redirecting the final report write outside the worktree.
+- Updated `scripts/harness_runner.py` to recheck report-output and review-output symlink components after all tasks complete and immediately before report emission; it also revalidates that outputs remain inside the generated-artifacts boundary.
+- Added a regression that moves the original artifacts directory outside the worktree, replaces it with a directory symlink during the task, and asserts the run is blocked and no report is written to the symlink target.
+- Updated `docs/HARNESS_RUNNER_V1.md` with the post-task output-path boundary.
+- Runner implementation commit: `43449b15cb00adbcfe39ad7097b2de8c729c566d`.
+- Regression-test commit: `e9613efeacba83971153064651bcb7d25be13906`.
+- Documentation commit: `68b6589ff0336115ea51dc91c32bba426483f526`.
+- Validation boundary: these commits have been pushed to the existing PR #32 branch; exact-head Push CI and PR-context CI must be checked for the final code-and-archive head before the change is treated as validated. PR #32 remains Draft/unmerged; no rebase, retarget, merge, or consumer pin change occurred.
+
+## 2026-10-29 — PR #32 PR-context trigger metadata discrepancy
+
+- Current branch ref API reports target branch `fix/runner-commit-provenance-20261029` at `e4be499e36ed9d8e22ff45065d95f92e0876df34`, and its `.github/workflows/ci.yml` includes `fix/**` in the `pull_request.branches` filter.
+- The PR #32 API payload and workflow-run metadata still report the base SHA as `b402101ef41d3f9d4f9533545ea83128ba5843a6`, and no PR-context run has been recorded for the latest head `92b7ed9d45429a1d4cedee0cc1907e1880690d86`. Latest known exact-head Push CI passed at [run 40861810273](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40861810273).
+- This is an observed GitHub PR/base metadata and trigger-evidence discrepancy, not proof that the new PR-context gate passed. Do not change PR topology or use older PR-context results as a substitute. Continue by checking exact-head Push CI for the new output-path fix and investigating whether GitHub updates the PR base metadata/trigger behavior; keep the PR Draft/unmerged.
