@@ -256,3 +256,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Follow-up run-history query by exact head SHA `827bb99d2eb97ac61909979094f68471f081150b` found the previously unreported PR-context run [40797681816](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40797681816), conclusion `success`, in addition to push run [40801168010](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801168010).
 - The earlier note that PR-context evidence was unavailable was correct at the time of inspection but is superseded by this finding. PR #20's exact head has both successful push and PR-triggered CI evidence.
 - Updated PR #20's body accordingly. It remains draft/unmerged pending review of the combined runner/loopback diff; no live model call, main merge, or release.
+
+
+### Hosted empty-command negative-path smoke test passed (2026-10-29)
+
+- Temporary Draft PR #21: https://github.com/wosafety0/dev-workflow-kit/pull/21; closed unmerged after evidence capture.
+- Used the reusable acceptance workflow at exact SHA `65544e290fd875bb6c4e30f6525b238200037bba` with a whitespace-only consumer command.
+- Push smoke run [40801501467](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801501467) and PR smoke run [40801513726](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801513726) both produced the expected failure. Logs confirm the guard emitted `test-command must not be empty.` and exited 2; the report status was `failed`; artifact upload succeeded (artifact ID `12866536255`); the final gate exited 1 and named `tests` as the unsuccessful required stage.
+- Harness CI for the same candidate head passed in [run 40801513713](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801513713).
+- This is direct hosted evidence that an empty/whitespace consumer command fails closed. No live model request, external provider call, game operation, main merge, release, or deployment occurred.
