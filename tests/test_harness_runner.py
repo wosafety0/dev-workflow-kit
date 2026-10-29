@@ -171,6 +171,58 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("review-output must be inside the artifacts/", stderr)
         run_task.assert_not_called()
 
+    def test_review_output_cannot_overwrite_config_inside_artifacts(self):
+        self.config_path = self.root / "artifacts" / "harness.json"
+        self.write_config(["semantic-review"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            stdout = StringIO()
+            stderr = StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = harness_runner.main([
+                    "--project-root", str(self.root),
+                    "--config", "artifacts/harness.json",
+                    "--report-output", "artifacts/report.json",
+                    "--review-input", "review-input.json",
+                    "--review-output", "artifacts/harness.json",
+                ])
+        self.assertEqual(code, 2)
+        self.assertIn("review-output must not overwrite config", stderr.getvalue())
+        run_task.assert_not_called()
+        self.assertEqual(json.loads(self.config_path.read_text(encoding="utf-8"))["commands"], ["semantic-review"])
+
+    def test_loopback_semantic_review_task_is_preflighted_without_network(self):
+        from scripts.ai_semantic_review import validate_model_config
+
+        self.write_config(["python-unittest", "semantic-review"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        endpoint, key, model = validate_model_config({
+            "AI_REVIEW_API_BASE": "http://127.0.0.1:1235/v1",
+            "AI_REVIEW_API_KEY": "fixture-key",
+            "AI_REVIEW_MODEL": "fixture-model",
+        })
+        self.assertEqual(endpoint, "http://127.0.0.1:1235/v1/chat/completions")
+        self.assertEqual((key, model), ("fixture-key", "fixture-model"))
+        with patch("scripts.harness_runner._git_commit_sha", return_value="e" * 40), patch(
+            "scripts.harness_runner._rules_pin", return_value="sha256:contract"
+        ), patch(
+            "scripts.harness_runner._run_task",
+            side_effect=[("passed", 0), ("failed", 1)],
+        ) as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 1)
+        self.assertEqual(stderr, "")
+        self.assertEqual(run_task.call_count, 2)
+        self.assertEqual(run_task.call_args_list[1].args[0][1], str(
+            self.root / "scripts" / "ai_semantic_review.py"
+        ))
+        report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["tests"]["semantic-review"], "failed")
+        self.assertEqual(report["status"], "failed")
+
     def test_rejects_path_traversal_before_running_tasks(self):
         with patch("scripts.harness_runner._run_task") as run_task:
             stdout = StringIO()

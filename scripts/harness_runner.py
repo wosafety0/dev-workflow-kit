@@ -199,6 +199,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         if review_input is not None and review_output is not None and review_input == review_output:
             raise HarnessRunnerError("review-input and review-output must be different paths")
+        if review_output is not None and review_output == config_path:
+            raise HarnessRunnerError("review-output must not overwrite config")
         for label, path in (
             ("config", config_path),
             ("review-input", review_input),
