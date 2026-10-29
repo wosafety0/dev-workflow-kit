@@ -400,6 +400,37 @@ class HarnessRunnerTests(unittest.TestCase):
                 run_task.assert_not_called()
 
 
+    def test_runner_rejects_ignored_python_test_module_before_execution(self):
+        # An ignored test module must not execute under a report attributed to HEAD.
+        ignored_test = self.root / "tests" / "test_ignored.py"
+        (self.root / ".gitignore").write_text(
+            "tests/test_ignored.py\\n", encoding="utf-8"
+        )
+        ignored_test.write_text(
+            "import unittest\\nclass Hidden(unittest.TestCase):\\n"
+            "    def test_hidden(self): self.assertTrue(True)\\n",
+            encoding="utf-8",
+        )
+        subprocess.run(
+            ["git", "add", ".gitignore"], cwd=self.root, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test",
+             "-c", "user.email=harness-test@example.invalid",
+             "commit", "-qm", "ignore hidden test"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        report_path = self.root / "artifacts" / "report.json"
+        report_path.write_text('{"status":"passed"}', encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("ignored Python test source", stderr)
+        self.assertFalse(report_path.exists())
+        run_task.assert_not_called()
+
     def test_runner_rejects_tests_directory_symlink_outside_root(self):
         outside = tempfile.TemporaryDirectory()
         self.addCleanup(outside.cleanup)
