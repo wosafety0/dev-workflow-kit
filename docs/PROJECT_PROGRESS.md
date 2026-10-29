@@ -476,3 +476,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 ## 2026-10-29 - exact-head Windows offline verification
 
 - At `bfca11d049915eaf185256f2eb1a37d3d11056e4`, Windows `python -m compileall -q scripts tests` passed, all 150 offline unittest cases passed, and `git diff --check` passed. This includes the consumer checkout credential-hardening regression. No live provider or game calls. Hosted CI remains a separate acceptance gate.
+
+
+## 2026-10-29 — reusable-workflow identity and redirect-branch ancestry audit
+
+- Verified the reusable acceptance workflow's `job.workflow_ref` and `job.workflow_sha` expressions against the current GitHub Actions context reference. These are documented properties for jobs defined in reusable workflows and identify the called workflow; replacing them with `github.workflow_ref` / `github.workflow_sha` would instead use caller-workflow identity. No unnecessary workflow change was made.
+- Compared the independent redirect-fix branches: PR #17 head `703a344f271dda5f304272c615c320943aabba2d` and PR #22 head `f71025d2303737dafe18ae823f93cad9cdd1249d` have diverged (40 commits ahead / 12 behind in the comparison). PR #33 is a two-commit descendant of PR #22's head `f71025d2303737dafe18ae823f93cad9cdd1249d`. This confirms they are not a linear merge queue; no rebase, retarget, merge, closure, or branch-topology change was performed.
+- Rechecked PR #31 at exact head `982a84782db825689bd3b84c13cc168934375e44`; its PR-context Harness CI run [40841140380](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40841140380) completed successfully. PR #31 remains Draft/unmerged, consumer pins remain unchanged, and no consumer workflow was executed by this audit.
+- Reference: [GitHub Actions contexts](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts) documents `job.workflow_ref`, `job.workflow_sha`, and `job.workflow_repository`; [reusable workflow configuration](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations) clarifies that the `github` context belongs to the caller.
