@@ -32,6 +32,20 @@ class AcceptanceReportVerifierTests(unittest.TestCase):
     def test_rejects_wrong_contract_pin(self):
         self.assertFalse(verify_report(valid(), SHA, "sha256:" + "c" * 64))
 
+    def test_rejects_tool_version_not_bound_to_expected_commit(self):
+        for version in ("harness-runner@other", " ", "dev-workflow-kit/harness-runner@" + "c" * 40):
+            with self.subTest(version=version):
+                report = valid()
+                report["tool_version"] = version
+                self.assertFalse(verify_report(report, SHA, PIN))
+
+    def test_rejects_blank_or_untrimmed_test_names(self):
+        for name in ("", " ", " unit", "unit "):
+            with self.subTest(name=name):
+                report = valid()
+                report["tests"] = {name: "passed"}
+                self.assertFalse(verify_report(report, SHA, PIN))
+
     def test_rejects_failed_or_skipped_task(self):
         for status in ("failed", "not_run", "skipped"):
             with self.subTest(status=status):

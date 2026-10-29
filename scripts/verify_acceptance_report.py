@@ -33,14 +33,20 @@ def verify_report(report: object, expected_sha: str, expected_rules_pin: str) ->
         return False
     if report["status"] != "passed":
         return False
-    version = report["tool_version"]
-    if not isinstance(version, str) or not version.strip():
+    # Bind the tool identity to the same commit as the report.
+    # A non-empty arbitrary version string is insufficient provenance.
+    if report["tool_version"] != f"dev-workflow-kit/harness-runner@{expected_sha}":
         return False
     tests = report["tests"]
     if not isinstance(tests, dict) or not tests:
         return False
-    return all(isinstance(k, str) and bool(k.strip()) and v == "passed"
-               for k, v in tests.items())
+    return all(
+        isinstance(name, str)
+        and bool(name)
+        and name == name.strip()
+        and status == "passed"
+        for name, status in tests.items()
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
