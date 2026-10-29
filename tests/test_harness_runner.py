@@ -334,6 +334,34 @@ class HarnessRunnerTests(unittest.TestCase):
         run_task.assert_not_called()
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
+    def test_runner_rejects_artifacts_directory_replaced_by_symlink_during_task(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        outside_path = Path(outside.name)
+        artifacts = self.root / "artifacts"
+        saved_artifacts = outside_path / "saved-artifacts"
+
+        def replace_artifacts_directory(*_args):
+            artifacts.rename(saved_artifacts)
+            try:
+                artifacts.symlink_to(outside_path, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                saved_artifacts.rename(artifacts)
+                self.skipTest("directory symlinks are not supported on this platform")
+            return "passed", 0
+
+        with patch(
+            "scripts.harness_runner._run_task",
+            side_effect=replace_artifacts_directory,
+        ):
+            code, _, stderr = self.run_runner()
+
+        self.assertEqual(code, 2)
+        self.assertIn("report-output must not use symlinked paths", stderr)
+        self.assertFalse((outside_path / "report.json").exists())
+        self.assertTrue(saved_artifacts.is_dir())
+
+
     def test_runner_rejects_task_that_mutates_tracked_code(self):
         self.initialize_git_worktree()
         test_file = self.root / "tests" / "test_example.py"
