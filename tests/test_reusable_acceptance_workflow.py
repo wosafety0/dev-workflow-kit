@@ -23,6 +23,9 @@ def extract_inline_verifier():
     for line in lines[run_index + 1:]:
         if line == "          PY":
             break
+        if not line.strip():
+            code.append("")
+            continue
         if not line.startswith("          "):
             raise AssertionError("Unexpected YAML indentation in inline verifier")
         code.append(line[10:])
