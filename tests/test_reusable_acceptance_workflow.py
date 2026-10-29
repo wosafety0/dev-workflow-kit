@@ -145,6 +145,30 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 1)
                 self.assertNotIn("Traceback", result.stderr)
 
+    def test_actual_inline_verifier_rejects_duplicate_json_object_keys(self):
+        duplicate_top_level = (
+            '{"schema_version":1,"consumer_commit_sha":"' + SHA
+            + '","caller_workflow_ref":"' + WORKFLOW_REF
+            + '","caller_workflow_sha":"' + WORKFLOW_SHA
+            + '","tests":{"runtime-validation":"passed",'
+            + '"consumer-acceptance-command":"passed"},'
+            + '"status":"failed","status":"passed"}'
+        )
+        duplicate_nested = (
+            '{"schema_version":1,"consumer_commit_sha":"' + SHA
+            + '","caller_workflow_ref":"' + WORKFLOW_REF
+            + '","caller_workflow_sha":"' + WORKFLOW_SHA
+            + '","tests":{"runtime-validation":"failed",'
+            + '"runtime-validation":"passed",'
+            + '"consumer-acceptance-command":"passed"},"status":"passed"}'
+        )
+        for payload in (duplicate_top_level, duplicate_nested):
+            with self.subTest(payload=payload):
+                result = self.run_inline_verifier_payload(payload)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("verification failed", result.stdout.lower())
+                self.assertNotIn("Traceback", result.stderr)
+
     def test_actual_inline_verifier_fails_closed_for_missing_or_corrupt_report(self):
         missing = self.run_inline_verifier_payload()
         self.assertEqual(missing.returncode, 1)

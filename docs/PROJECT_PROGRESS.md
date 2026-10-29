@@ -333,5 +333,5 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 ## 2026-10-29 — reject duplicate JSON keys in acceptance reports
 
 - Review of the standalone report verifier and reusable consumer workflow found that Python's default JSON decoder silently accepts duplicate object keys, keeping the last value. The report producers currently emit ordinary JSON, but strict verification should reject ambiguous input rather than rely on producer behavior.
-- Added duplicate-key rejection to both the standalone verifier and the inline consumer workflow verifier; added CLI regressions for duplicate top-level and nested `tests` keys; updated the reusable acceptance contract.
+- Added duplicate-key rejection to both the standalone verifier and the inline consumer workflow verifier; added CLI and extracted-inline-workflow regressions for duplicate top-level and nested `tests` keys; updated the reusable acceptance contract.
 - Exact-head hosted CI pending at archive time. This is an offline verifier-hardening change only; no live model calls, game actions, deployment, release, or merge.
