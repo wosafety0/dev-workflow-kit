@@ -30,7 +30,7 @@ def _reject_duplicate_json_keys(pairs: list[tuple[str, object]]) -> dict[str, ob
     result: dict[str, object] = {}
     for key, value in pairs:
         if key in result:
-            raise ValueError("duplicate JSON object key")
+            raise ReviewError("duplicate JSON object key")
         result[key] = value
     return result
 
