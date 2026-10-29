@@ -42,7 +42,7 @@ def extract_inline_report_builder():
         code.append(line[10:])
     else:
         raise AssertionError("Report builder heredoc terminator not found")
-    return "\\n".join(code) + "\\n"
+    return "\n".join(code) + "\n"
 
 
 def extract_inline_verifier():
