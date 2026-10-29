@@ -240,6 +240,25 @@ class SemanticReviewValidationTests(unittest.TestCase):
                 self.assertEqual(main(), 2)
             self.assertFalse(output_path.exists())
 
+
+    def test_duplicate_input_json_keys_fail_closed_before_model_call(self):
+        with tempfile.TemporaryDirectory() as directory:
+            input_path = Path(directory) / "input.json"
+            output_path = Path(directory) / "review.json"
+            raw = json.dumps(self.payload).replace('"task":', '"task": "", "task":', 1)
+            input_path.write_text(raw, encoding="utf-8")
+            output_path.write_text('{"status":"PASS"}', encoding="utf-8")
+            argv = ["ai_semantic_review.py", "--input", str(input_path),
+                    "--output", str(output_path)]
+            with patch("sys.argv", argv), patch(
+                "scripts.ai_semantic_review.call_model"
+            ) as model, patch("sys.stderr", new_callable=StringIO) as stderr:
+                self.assertEqual(main(), 2)
+            self.assertIn("duplicate JSON object key", stderr.getvalue())
+            model.assert_not_called()
+            self.assertFalse(output_path.exists())
+
+
     def test_input_and_output_must_not_be_same_path(self):
         with tempfile.TemporaryDirectory() as directory:
             same_path = Path(directory) / "input.json"
@@ -746,6 +765,8 @@ class SemanticReviewValidationTests(unittest.TestCase):
             b'{"choices":[]}',
             b'{"choices":[{"message":{"content":"not-json"}}]}',
             b'{"choices":[{"message":{"content":null}}]}',
+            b'{"choices":[],"choices":[{"message":{"content":"{}"}}]}',
+            b'{"choices":[{"message":{"content":"{\\"status\\":\\"PASS\\",\\"status\\":\\"NEEDS_CHANGES\\"}"}}]}',
         ]
         for raw in responses:
             with self.subTest(raw=raw):
@@ -776,6 +797,27 @@ class SemanticReviewValidationTests(unittest.TestCase):
             self.assertEqual(call_model(self.payload)["status"], "PASS")
 
 
+
+    def test_model_response_size_is_bounded_and_fails_closed(self):
+        from unittest.mock import MagicMock
+        from scripts.ai_semantic_review import MAX_MODEL_RESPONSE_BYTES, call_model
+
+        config = {
+            "AI_REVIEW_API_BASE": "https://example.invalid/v1",
+            "AI_REVIEW_API_KEY": "test-key",
+            "AI_REVIEW_MODEL": "test-model",
+        }
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = b"x" * (MAX_MODEL_RESPONSE_BYTES + 1)
+        with patch.dict("os.environ", config, clear=True), patch(
+            "scripts.ai_semantic_review.urllib.request.build_opener"
+        ) as opener_builder:
+            opener_builder.return_value.open.return_value = response
+            with self.assertRaisesRegex(ReviewError, "size limit"):
+                call_model(self.payload)
+        response.__enter__.return_value.read.assert_called_once_with(
+            MAX_MODEL_RESPONSE_BYTES + 1
+        )
 
     def test_provider_config_validation_is_offline(self):
         from scripts.ai_semantic_review import validate_model_config
@@ -841,8 +883,15 @@ class SemanticReviewValidationTests(unittest.TestCase):
                 "AI_REVIEW_MODEL": "test-model",
                 "HTTP_PROXY": "http://127.0.0.1:1",
                 "HTTPS_PROXY": "http://127.0.0.1:1",
+                "http_proxy": "http://127.0.0.1:1",
+                "https_proxy": "http://127.0.0.1:1",
+                "ALL_PROXY": "http://127.0.0.1:1",
+                "all_proxy": "http://127.0.0.1:1",
+                "NO_PROXY": "",
+                "no_proxy": "",
             }
-            with patch.dict("os.environ", config, clear=True):
+            # Keep Windows-required environment such as SystemRoot for SSLContext setup.
+            with patch.dict("os.environ", config, clear=False):
                 review = call_model(self.payload)
             self.assertEqual(review["status"], "PASS")
             self.assertEqual(server.received_auth, "Bearer test-loopback-key")

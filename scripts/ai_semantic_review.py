@@ -23,6 +23,16 @@ STATUSES = {"PASS", "NEEDS_CHANGES", "INCONCLUSIVE"}
 SEVERITIES = {"critical", "high", "medium", "low", "info"}
 MAX_CHANGED_FILE_PATH_LENGTH = 4096
 MAX_DIFF_LINE_NUMBER = 2_147_483_647
+MAX_MODEL_RESPONSE_BYTES = 1024 * 1024  # 1 MiB; bounded provider response
+
+
+def _reject_duplicate_json_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON object key")
+        result[key] = value
+    return result
 
 
 class ReviewError(ValueError):
@@ -412,15 +422,23 @@ def call_model(payload: dict[str, Any]) -> Any:
         else:
             response_context = urllib.request.build_opener(_NoRedirectHandler()).open(request, timeout=60)
         with response_context as response:
-            response_data = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raw_response = response.read(MAX_MODEL_RESPONSE_BYTES + 1)
+            if len(raw_response) > MAX_MODEL_RESPONSE_BYTES:
+                raise ReviewError("Model response exceeds size limit; review cannot pass")
+            response_data = json.loads(
+                raw_response.decode("utf-8"),
+                object_pairs_hook=_reject_duplicate_json_keys,
+            )
+    except ReviewError:
+        raise
+    except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, ValueError) as exc:
         raise ReviewError(f"Model request failed ({type(exc).__name__}); review cannot pass") from None
     try:
         content = response_data["choices"][0]["message"]["content"]
         if not isinstance(content, str):
             raise TypeError
-        return json.loads(content)
-    except (KeyError, IndexError, TypeError, json.JSONDecodeError):
+        return json.loads(content, object_pairs_hook=_reject_duplicate_json_keys)
+    except (KeyError, IndexError, TypeError, ValueError):
         raise ReviewError("Model response was not valid JSON in the expected chat-completions shape") from None
 
 
@@ -438,7 +456,10 @@ def main() -> int:
             output_path.unlink()
         except FileNotFoundError:
             pass
-        payload = json.loads(input_path.read_text(encoding="utf-8"))
+        payload = json.loads(
+            input_path.read_text(encoding="utf-8"),
+            object_pairs_hook=_reject_duplicate_json_keys,
+        )
         if not isinstance(payload, dict):
             raise ReviewError("Input root must be a JSON object")
         validate_input(payload)
