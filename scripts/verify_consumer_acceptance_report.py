@@ -13,6 +13,8 @@ _KEYS = {
     "consumer_commit_sha",
     "caller_workflow_ref",
     "caller_workflow_sha",
+    "harness_workflow_ref",
+    "harness_workflow_sha",
     "tests",
     "status",
 }
@@ -23,6 +25,8 @@ def verify_report(
     expected_sha: str,
     expected_workflow_ref: str,
     expected_workflow_sha: str,
+    expected_harness_workflow_ref: str,
+    expected_harness_workflow_sha: str,
 ) -> bool:
     if not isinstance(report, dict) or set(report) != _KEYS:
         return False
@@ -32,6 +36,10 @@ def verify_report(
         return False
     if not isinstance(expected_workflow_sha, str) or not _SHA.fullmatch(expected_workflow_sha):
         return False
+    if not isinstance(expected_harness_workflow_ref, str) or not expected_harness_workflow_ref.strip():
+        return False
+    if not isinstance(expected_harness_workflow_sha, str) or not _SHA.fullmatch(expected_harness_workflow_sha):
+        return False
     if type(report["schema_version"]) is not int or report["schema_version"] != 1:
         return False
     if report["consumer_commit_sha"] != expected_sha:
@@ -39,6 +47,10 @@ def verify_report(
     if report["caller_workflow_ref"] != expected_workflow_ref:
         return False
     if report["caller_workflow_sha"] != expected_workflow_sha:
+        return False
+    if report["harness_workflow_ref"] != expected_harness_workflow_ref:
+        return False
+    if report["harness_workflow_sha"] != expected_harness_workflow_sha:
         return False
     if report["status"] != "passed":
         return False
@@ -69,6 +81,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--expected-sha", required=True)
     parser.add_argument("--expected-workflow-ref", required=True)
     parser.add_argument("--expected-workflow-sha", required=True)
+    parser.add_argument("--expected-harness-workflow-ref", required=True)
+    parser.add_argument("--expected-harness-workflow-sha", required=True)
     args = parser.parse_args(argv)
     try:
         report = json.loads(
@@ -83,6 +97,8 @@ def main(argv: list[str] | None = None) -> int:
         args.expected_sha,
         args.expected_workflow_ref,
         args.expected_workflow_sha,
+        args.expected_harness_workflow_ref,
+        args.expected_harness_workflow_sha,
     ):
         print("Consumer acceptance report verification failed")
         return 1
