@@ -242,3 +242,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Harness CI run [40801233092](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801233092) passed on exact candidate head `ed9fccc0f510a1d4c0656589ae57e0a3ff6a4586`; logs show 95 offline tests passed, including the new regression.
 - This is a static workflow-contract test, not a claim that a separate hosted consumer run was invoked with a blank input. The hosted command-failure path remains evidenced by [run 40715636382](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715636382).
 - PR #8 remains draft/unmerged; no release or main-branch change.
+
+
+### PR #20 integration candidate: head-tree CI evidence found (2026-10-29)
+
+- The prior entry correctly recorded that no PR-triggered run was visible at that inspection time. Subsequent API lookup found push-triggered Harness CI [run 40801168010](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801168010), conclusion `success`, on the exact head SHA `827bb99d2eb97ac61909979094f68471f081150b` used by Draft PR #20.
+- This provides CI evidence for the head tree, but it does not prove a PR merge-ref check against the current base; PR #20 remains draft/unmerged pending separate diff/base review.
+- Updated PR #20's description with this distinction. No merge, release, main change, or live model call.
