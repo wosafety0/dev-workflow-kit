@@ -27,7 +27,7 @@ Example input:
 
 ## CI integration
 
-The GitHub Actions workflow supplies the actual workflow commit SHA, computes a SHA-256 content pin for `docs/STABLE_ACCEPTANCE_CONTRACT.md`, and identifies the tested toolkit revision as `dev-workflow-kit@<commit SHA>`, matching the strict verifier's identity contract. It records the offline contract-test step outcome, writes `artifacts/acceptance-report.json`, and uploads that file as the `acceptance-report` artifact for 14 days.
+The GitHub Actions workflow supplies the actual workflow commit SHA, computes a SHA-256 content pin for `docs/STABLE_ACCEPTANCE_CONTRACT.md`, and identifies the tested runner revision as `dev-workflow-kit/harness-runner@<commit SHA>`, matching the strict verifier's identity contract. It records the offline contract-test step outcome, writes `artifacts/acceptance-report.json`, and uploads that file as the `acceptance-report` artifact for 14 days.
 
 The test step uses `continue-on-error` only so the report can still be produced when tests fail. A final gate explicitly fails the job unless the test step outcome is `success`. The report is not a replacement for the job conclusion.
 
