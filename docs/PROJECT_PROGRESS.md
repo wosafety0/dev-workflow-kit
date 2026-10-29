@@ -193,3 +193,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 
 - Follow-up coverage refinement: added a nested duplicate-key config case (`metadata.mode`) to verify the same strict parser hook rejects duplicate keys below the top level, not only duplicate root fields.
 - Exact-head Push CI for this added regression: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40822740014 — success at `7570b6b0a7ace791922fc9c4776e3f3017c0f314`.
+
+
+## 2026-10-29 — constrain runner provenance inputs to committed source paths (PR #32)
+
+- Runner provenance review found that a clean Git HEAD alone does not bind execution to committed content if a task entrypoint or acceptance-contract file resolves through a symlink. The existing cleanliness gate intentionally excludes generated `artifacts/`, so a source symlink targeting that directory would also bypass source-change detection.
+- Hardened `scripts/harness_runner.py`: the `tests/` directory, semantic-review entrypoint, and stable acceptance contract now resolve through a trusted-source path check. Targets outside the repository root and targets under generated `artifacts/` are rejected before task execution or rules hashing.
+- Added regressions for external symlinks targeting the test directory, semantic-review entrypoint, and acceptance contract, plus direct rejection of paths under `artifacts/`. Tests skip symlink-specific cases only when the platform cannot create symlinks; the generated-artifact path guard is tested independently.
+- Updated `docs/HARNESS_RUNNER_V1.md` to document the provenance boundary.
+- Implementation commit: `b9cba674b3697664cea9a65c7fa8a57c6f364714`; follow-up artifact-exclusion commit: `0286e2e930400b9d1c618c876971647a23459fcd`. Regression-test commits: `722398956021c4b875fc046485d14160d67d415d` and `748c7cf27121b9f346bcf6c2dae79174795708ff`. Documentation commits: `587d3ec6f3da1a95304c64c3f014ed322330b465` and `8e10cc9988cacbba503d52753b8ea2ea3371d503`.
+- Verification boundary: the code and tests are committed to the existing PR #32 branch. Exact-head hosted CI for the final code-and-archive head must be checked before this change is considered validated. PR #32 remains Draft/unmerged; no branch rebase, retarget, merge, release, live model request, or consumer action occurred.
