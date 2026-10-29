@@ -6,7 +6,7 @@ Last updated: 2026-10-28
 
 - Repository: `wosafety0/dev-workflow-kit`
 - Integration target branch: `feat/semantic-review-core-20261028`
-- This is the generic AI Development Harness project; it is not yet integrated into KancolleBot.
+- This is the generic AI Development Harness project. Its current consumer pilot is clamp (`wosafety0/wosafety0clamp`, Draft PR #14); KancolleBot is not a planned consumer. Additional consumers require explicit user direction.
 - No 0.x release has been created. The default branch `main` was not changed by this work round.
 
 ## Verified progress
@@ -44,12 +44,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 
 ## Next steps
 
-1. Review the successful Node.js consumer pilot evidence and decide whether to revise the consumer PR; keep it draft until separately reviewed.
-2. Review the completed independent consumer pilot evidence; keep the consumer PR draft/unmerged until separately authorized.
-3. Begin controlled real-model validation with strict quotas and no production actions, then define 0.x release criteria from the accumulated evidence.
-3. Define objective 0.x release criteria after the independent pilot evidence is available.
-4. Conduct controlled real-model validation after offline and hosted reliability boundaries are documented.
-5. Keep the Artifact-service-outage boundary explicitly unverified; do not let this hard-to-reproduce scenario block a low-risk independent consumer pilot.
+1. Keep clamp Draft PR #14 unmerged pending separate review/authorization; its updated report-producing reusable workflow passed runs [40801011771](https://github.com/wosafety0/wosafety0clamp/actions/runs/40801011771) and [40801081037](https://github.com/wosafety0/wosafety0clamp/actions/runs/40801081037).
+2. Continue validating the current clamp consumer workflow and improve actionable failure diagnostics only when evidence shows a gap.
+3. Resolve and test the existing non-main integration candidate for runner/loopback work; individual green branches do not prove combined compatibility.
+4. Define objective 0.x release criteria after current integration and consumer evidence is reviewed.
+5. Keep live model validation opt-in and separately controlled; offline tests do not establish live model behavior.
+6. Additional consumer pilots are out of scope unless explicitly requested by the user.
 
 ## Decision record
 
