@@ -39,24 +39,29 @@ def extract_inline_verifier():
 
 
 class ReusableAcceptanceWorkflowTests(unittest.TestCase):
-    def run_inline_verifier(self, report, expected_sha=SHA):
+    def run_inline_verifier_payload(self, payload=None, expected_sha=SHA,
+                                    expected_ref=WORKFLOW_REF,
+                                    expected_workflow_sha=WORKFLOW_SHA):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             artifacts = root / "artifacts"
             artifacts.mkdir()
-            (artifacts / "consumer-acceptance-report.json").write_text(
-                json.dumps(report), encoding="utf-8"
-            )
+            report_path = artifacts / "consumer-acceptance-report.json"
+            if payload is not None:
+                report_path.write_text(payload, encoding="utf-8")
             env = os.environ.copy()
             env.update({
                 "EXPECTED_SHA": expected_sha,
-                "EXPECTED_WORKFLOW_REF": WORKFLOW_REF,
-                "EXPECTED_WORKFLOW_SHA": WORKFLOW_SHA,
+                "EXPECTED_WORKFLOW_REF": expected_ref,
+                "EXPECTED_WORKFLOW_SHA": expected_workflow_sha,
             })
             return subprocess.run(
                 [sys.executable, "-c", extract_inline_verifier()],
                 cwd=root, env=env, capture_output=True, text=True, check=False,
             )
+
+    def run_inline_verifier(self, report, **kwargs):
+        return self.run_inline_verifier_payload(json.dumps(report), **kwargs)
 
     def test_actual_inline_verifier_accepts_matching_report(self):
         report = {
@@ -86,6 +91,59 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
         failed = self.run_inline_verifier(report)
         self.assertEqual(failed.returncode, 1)
         self.assertNotIn("Traceback", failed.stderr)
+
+
+    def test_actual_inline_verifier_rejects_workflow_identity_mismatches(self):
+        report = {
+            "schema_version": 1,
+            "consumer_commit_sha": SHA,
+            "caller_workflow_ref": WORKFLOW_REF,
+            "caller_workflow_sha": WORKFLOW_SHA,
+            "tests": {"runtime-validation": "passed"},
+            "status": "passed",
+        }
+        wrong_ref = self.run_inline_verifier(
+            report, expected_ref="another/repo/.github/workflows/ci.yml@refs/heads/main"
+        )
+        self.assertEqual(wrong_ref.returncode, 1)
+        wrong_workflow_sha = self.run_inline_verifier(
+            report, expected_workflow_sha="c" * 40
+        )
+        self.assertEqual(wrong_workflow_sha.returncode, 1)
+
+    def test_actual_inline_verifier_rejects_invalid_schema_and_test_sets(self):
+        base = {
+            "schema_version": 1,
+            "consumer_commit_sha": SHA,
+            "caller_workflow_ref": WORKFLOW_REF,
+            "caller_workflow_sha": WORKFLOW_SHA,
+            "tests": {"runtime-validation": "passed"},
+            "status": "passed",
+        }
+        cases = []
+        empty_tests = dict(base, tests={})
+        cases.append(empty_tests)
+        extra_key = dict(base, unexpected="not allowed")
+        cases.append(extra_key)
+        boolean_version = dict(base, schema_version=True)
+        cases.append(boolean_version)
+        blank_test_name = dict(base, tests={"   ": "passed"})
+        cases.append(blank_test_name)
+        unknown_test_status = dict(base, tests={"runtime-validation": "skipped"})
+        cases.append(unknown_test_status)
+        for report in cases:
+            with self.subTest(report=report):
+                result = self.run_inline_verifier(report)
+                self.assertEqual(result.returncode, 1)
+                self.assertNotIn("Traceback", result.stderr)
+
+    def test_actual_inline_verifier_fails_closed_for_missing_or_corrupt_report(self):
+        missing = self.run_inline_verifier_payload()
+        self.assertEqual(missing.returncode, 1)
+        self.assertNotIn("Traceback", missing.stderr)
+        corrupt = self.run_inline_verifier_payload("{not-json")
+        self.assertEqual(corrupt.returncode, 1)
+        self.assertNotIn("Traceback", corrupt.stderr)
 
     def test_workflow_does_not_require_verifier_script_from_consumer_checkout(self):
         source = WORKFLOW.read_text(encoding="utf-8")
