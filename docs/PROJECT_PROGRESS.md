@@ -227,3 +227,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - PRs remain draft/unmerged. No model-provider calls, game actions, releases, or deployments were performed.
 
 - First hosted run on intermediate commit `26685fc91aed5809bd43dc642899a37300ca32a1` correctly exposed a test-loop indexing error (the new four-stage gate test iterated seven invalid values as stage indices). The implementation gate stayed closed. Fixed the test to exercise every invalid outcome at each of the four stages in commit `b329a5c3fbf3a6f4e1c163a9cafaecffe1debb4f`; final-head CI is pending.
+
+
+### 2026-10-29: reusable consumer report identity verification
+
+- Follow-up branch: `feat/reusable-consumer-report-verifier-20261029`, stacked on PR #30.
+- Added `scripts/verify_consumer_acceptance_report.py` and offline tests for strict schema, consumer commit SHA, caller workflow ref/SHA, failed/skipped stages, missing/corrupt JSON, and subprocess CLI failure behavior.
+- Updated `.github/workflows/reusable-acceptance.yml` to support the `python` and `node` runtimes, include runtime validation in the redacted report, verify the report against trusted caller GitHub context, and require runtime, command, report, artifact upload, and verification outcomes all to succeed.
+- Added `docs/REUSABLE_ACCEPTANCE_CONTRACT.md` describing the consumer report schema, immutable pin requirement, and the limits of report-only evidence.
+- This does not change Clamp PR #14's existing immutable workflow pin. The updated reusable workflow applies only to consumers that explicitly pin a commit containing this implementation.
+- Validation pending hosted Push and PR CI for the final branch head. Keep all related PRs draft/unmerged; no live model requests, game actions, release, or deployment.
