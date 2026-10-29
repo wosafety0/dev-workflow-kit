@@ -6,6 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from scripts.verify_consumer_acceptance_report import verify_report as verify_standalone_report
+
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "reusable-acceptance.yml"
@@ -169,6 +171,52 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
                 result = self.run_inline_verifier(report)
                 self.assertEqual(result.returncode, 1)
                 self.assertNotIn("Traceback", result.stderr)
+
+    def test_inline_and_standalone_verifiers_enforce_same_contract(self):
+        valid = {
+            "schema_version": 1,
+            "consumer_commit_sha": SHA,
+            "caller_workflow_ref": WORKFLOW_REF,
+            "caller_workflow_sha": WORKFLOW_SHA,
+            "harness_workflow_ref": HARNESS_WORKFLOW_REF,
+            "harness_workflow_sha": HARNESS_WORKFLOW_SHA,
+            "tests": {
+                "runtime-validation": "passed",
+                "consumer-acceptance-command": "passed",
+            },
+            "status": "passed",
+        }
+        cases = [valid]
+        cases.append({key: value for key, value in valid.items() if key != "harness_workflow_sha"})
+        cases.append(dict(valid, unexpected="not allowed"))
+        cases.append(dict(valid, consumer_commit_sha="f" * 40))
+        cases.append(dict(valid, caller_workflow_ref="other/repo/workflow.yml@refs/heads/main"))
+        cases.append(dict(valid, harness_workflow_sha="f" * 40))
+        cases.append(dict(valid, tests={"runtime-validation": "passed"}))
+        cases.append(dict(valid, tests={
+            "runtime-validation": "passed",
+            "consumer-acceptance-command": "passed",
+            "unexpected-stage": "passed",
+        }))
+        cases.append(dict(valid, tests={
+            "runtime-validation": "passed",
+            "consumer-acceptance-command": "failed",
+        }, status="failed"))
+        cases.append(dict(valid, schema_version=True))
+
+        for report in cases:
+            with self.subTest(report=report):
+                standalone_valid = verify_standalone_report(
+                    report, SHA, WORKFLOW_REF, WORKFLOW_SHA,
+                    HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA,
+                )
+                inline = self.run_inline_verifier(report)
+                inline_valid = inline.returncode == 0
+                self.assertEqual(
+                    inline_valid, standalone_valid,
+                    "inline and standalone verifier contract drifted: "
+                    + inline.stdout + inline.stderr,
+                )
 
     def test_actual_inline_verifier_rejects_duplicate_json_object_keys(self):
         duplicate_top_level = (
