@@ -151,3 +151,29 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added offline tests for `http://127.0.0.1:1235/v1` and `http://[::1]:1235/v1`, and retained negative tests for unsafe HTTP endpoints. Updated `docs/STABLE_ACCEPTANCE_CONTRACT.md`.
 - Hosted CI run [40716125120](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40716125120), run number 144, succeeded on the exact tested head. 90 offline tests passed, the acceptance report uploaded (artifact ID `12829135525`), and the final gate passed.
 - This validates configuration parsing and security boundaries only. It does not constitute a live model request or prove that the user's local LM Studio endpoint is reachable from this environment. PR #12 remains draft and unmerged.
+
+### Semantic-review redirect credential-leak fix (2026-10-29)
+
+- During a local, isolated two-server reproduction, Python's default `urllib` behavior followed a model-endpoint HTTP 302 and forwarded the original `Authorization: Bearer ...` header to the redirect destination. The reproduction used only a disposable test token and local loopback listeners; no provider or user credential was involved.
+- Added `_NoRedirectHandler` to reject redirects for both HTTPS provider requests and literal-loopback HTTP requests. Loopback requests still use a request-scoped empty `ProxyHandler`; no global proxy settings are changed.
+- Updated `docs/STABLE_ACCEPTANCE_CONTRACT.md` to make redirect rejection an explicit fail-closed requirement; contract update commit: `50f814fce8cef6e9b3d9e10294255c06d5de44c3`.
+- Added an offline loopback regression test that returns a redirect to a second local listener and asserts the destination receives no request. Updated transport mocks to use the explicit opener.
+- PR #22: https://github.com/wosafety0/dev-workflow-kit/pull/22, Draft and unmerged. Tested source head before this archive update: `1443f15c578e4ea0862458d94aebdf77427701cd`.
+- Exact-head push CI [run 40803605132](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40803605132) and PR-context CI [run 40803630242](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40803630242) both completed successfully. The PR-context job passed Python compilation, the offline contract suite, report generation, artifact upload, and the final gate.
+- Verification boundary: this proves the redirect rejection behavior with local offline tests and the repo's CI. No real model provider request was made; no PR was merged and no release or deployment occurred.
+- Follow-up exact-head verification: commit `9586439a74cc8c7a25dbdac89308111ff7f32865` passed push CI [40803733451](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40803733451) and PR-context CI [40803740841](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40803740841); both succeeded with **106 offline tests passed**, report generation, artifact upload, and final gate. These runs include the updated contract and the progress archive as committed on that head.
+
+
+## 2026-10-29 — enable PR-context CI for stacked fix PRs (PR #22 base)
+
+- PR #33 is stacked on PR #22's `fix/semantic-review-no-redirect-20261029` branch. Inspection of the actual base commit workflow showed `pull_request.branches` included `main`, `feat/**`, and `test/**`, but not `fix/**`. Changing only the downstream PR head cannot make GitHub evaluate a new filter from the base branch.
+- Updated this branch's `.github/workflows/ci.yml` to include `fix/**`, so downstream PR #33 can receive PR-context CI. This follows the same trigger correction needed for other stacked fix branches.
+- Workflow commit: `f6bb3db6cf1c93a18a98bd844cd253a043fae38a`.
+- Validation boundary: the downstream PR-context run must be independently observed after the base-branch workflow update. PR #22 remains Draft/unmerged; no rebase, retarget, merge, or consumer pin update occurred.
+
+
+## 2026-10-29 — PR-context CI validates stacked-fix trigger correction
+
+- PR #22 head `46587adaf9160c4e0b8503dfe49dc779cd976a33` received a successful PR-context Harness CI run: [run 40859961406](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40859961406).
+- The run tested merge commit `e41cc9887e65ebd8f110761853261e0cadd02cf6`, ran **106 offline tests**, generated/uploaded acceptance-report artifact `12891346305`, and passed the final orchestration gate.
+- This verifies the CI workflow correction against PR #22's current merge context. It does not validate PR #33's duplicate-key implementation; PR #33 still needs its own exact-head PR-context CI run.

@@ -714,9 +714,9 @@ class SemanticReviewValidationTests(unittest.TestCase):
                   "AI_REVIEW_API_KEY": "SECRET_TEST_TOKEN",
                   "AI_REVIEW_MODEL": "test-model"}
         with patch.dict("os.environ", config, clear=True), patch(
-            "scripts.ai_semantic_review.urllib.request.urlopen",
-            side_effect=urllib.error.URLError("SECRET_TEST_TOKEN"),
-        ):
+            "scripts.ai_semantic_review.urllib.request.build_opener"
+        ) as opener_builder:
+            opener_builder.return_value.open.side_effect = urllib.error.URLError("SECRET_TEST_TOKEN")
             with self.assertRaises(ReviewError) as caught:
                 call_model(self.payload)
         self.assertIn("review cannot pass", str(caught.exception))
@@ -728,9 +728,9 @@ class SemanticReviewValidationTests(unittest.TestCase):
                   "AI_REVIEW_API_KEY": "test-key",
                   "AI_REVIEW_MODEL": "test-model"}
         with patch.dict("os.environ", config, clear=True), patch(
-            "scripts.ai_semantic_review.urllib.request.urlopen",
-            side_effect=TimeoutError("simulated timeout"),
-        ):
+            "scripts.ai_semantic_review.urllib.request.build_opener"
+        ) as opener_builder:
+            opener_builder.return_value.open.side_effect = TimeoutError("simulated timeout")
             with self.assertRaisesRegex(ReviewError, "review cannot pass"):
                 call_model(self.payload)
 
@@ -752,9 +752,9 @@ class SemanticReviewValidationTests(unittest.TestCase):
                 response = MagicMock()
                 response.__enter__.return_value.read.return_value = raw
                 with patch.dict("os.environ", config, clear=True), patch(
-                    "scripts.ai_semantic_review.urllib.request.urlopen",
-                    return_value=response,
-                ):
+                    "scripts.ai_semantic_review.urllib.request.build_opener"
+                ) as opener_builder:
+                    opener_builder.return_value.open.return_value = response
                     with self.assertRaises(ReviewError):
                         call_model(self.payload)
 
@@ -770,9 +770,9 @@ class SemanticReviewValidationTests(unittest.TestCase):
         response = MagicMock()
         response.__enter__.return_value.read.return_value = raw
         with patch.dict("os.environ", config, clear=True), patch(
-            "scripts.ai_semantic_review.urllib.request.urlopen",
-            return_value=response,
-        ):
+            "scripts.ai_semantic_review.urllib.request.build_opener"
+        ) as opener_builder:
+            opener_builder.return_value.open.return_value = response
             self.assertEqual(call_model(self.payload)["status"], "PASS")
 
 
@@ -850,6 +850,64 @@ class SemanticReviewValidationTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
             thread.join(timeout=2)
+
+
+    def test_call_model_rejects_redirect_without_forwarding_authorization(self):
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        from scripts.ai_semantic_review import call_model
+
+        destination_hits = []
+
+        class DestinationHandler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                destination_hits.append(self.headers.get("Authorization"))
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"{}")
+
+            def log_message(self, _format, *_args):
+                return
+
+        destination = ThreadingHTTPServer(("127.0.0.1", 0), DestinationHandler)
+
+        class RedirectHandler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                self.rfile.read(int(self.headers.get("Content-Length", "0")))
+                self.send_response(302)
+                self.send_header(
+                    "Location",
+                    f"http://127.0.0.1:{destination.server_port}/collect",
+                )
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
+            def log_message(self, _format, *_args):
+                return
+
+        source = ThreadingHTTPServer(("127.0.0.1", 0), RedirectHandler)
+        threads = [
+            threading.Thread(target=server.serve_forever, daemon=True)
+            for server in (destination, source)
+        ]
+        for thread in threads:
+            thread.start()
+        try:
+            config = {
+                "AI_REVIEW_API_BASE": f"http://127.0.0.1:{source.server_port}/v1",
+                "AI_REVIEW_API_KEY": "redirect-test-secret",
+                "AI_REVIEW_MODEL": "test-model",
+            }
+            with patch.dict("os.environ", config, clear=True):
+                with self.assertRaisesRegex(ReviewError, "Model request failed"):
+                    call_model(self.payload)
+            self.assertEqual(destination_hits, [])
+        finally:
+            for server in (source, destination):
+                server.shutdown()
+                server.server_close()
+            for thread in threads:
+                thread.join(timeout=2)
 
 
     def test_provider_config_rejects_unsafe_endpoints(self):

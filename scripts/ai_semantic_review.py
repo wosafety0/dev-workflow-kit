@@ -382,6 +382,13 @@ def validate_model_config(environ: dict[str, str] | None = None) -> tuple[str, s
     return endpoint, api_key, model
 
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Reject redirects so bearer credentials are never forwarded to another endpoint."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def call_model(payload: dict[str, Any]) -> Any:
     endpoint, api_key, model = validate_model_config()
     body = json.dumps({
@@ -400,10 +407,10 @@ def call_model(payload: dict[str, Any]) -> Any:
         if urlsplit(endpoint).scheme == "http":
             # HTTP is permitted only for literal loopback IPs; bypass configured proxies
             # for this request so local inference never depends on proxy/NO_PROXY settings.
-            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirectHandler())
             response_context = opener.open(request, timeout=60)
         else:
-            response_context = urllib.request.urlopen(request, timeout=60)
+            response_context = urllib.request.build_opener(_NoRedirectHandler()).open(request, timeout=60)
         with response_context as response:
             response_data = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
