@@ -417,3 +417,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added offline regressions for modified tracked files, untracked files, and clean-worktree SHA resolution; documented the rule in the stable acceptance contract.
 - Exact code head `12a85f4cfee8a3e004827233ca63dc5d268e1f7c` passed Push CI [run 40826215546](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40826215546) and PR CI [run 40826223599](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40826223599). Both passed **148 offline tests**, compiled the Python sources, uploaded the redacted acceptance report, verified report identity, and passed the final orchestration gate.
 - The guard intentionally rejects untracked review inputs too: a commit SHA cannot truthfully identify an acceptance run whose input file is outside the committed tree. Developers can still run ordinary test commands during active edits; only commit-bound Harness acceptance reporting requires a clean tree. This is an offline validation change only; no live model-provider request, game action, deployment, release, or merge occurred.
+
+
+## 2026-10-29 — bind consumer reports to the actual reusable Harness workflow
+
+- Audit of GitHub Actions context semantics found that `github.workflow_ref` and `github.workflow_sha` identify the caller context inside a reusable workflow, not the reusable workflow implementation itself. The previous report therefore bound consumer/caller identity but did not explicitly record which Harness workflow definition actually ran.
+- Added `harness_workflow_ref` and `harness_workflow_sha` to the consumer report using GitHub's `job.workflow_ref` and `job.workflow_sha` contexts. The inline verifier now compares both fields with those trusted context values and rejects missing, malformed, or mismatched Harness workflow identity.
+- Extended exact-inline-verifier tests to cover wrong Harness workflow ref/SHA, and updated the consumer report contract. This uses GitHub.com-specific `job.workflow_*` context fields; GitHub documents these fields as unavailable on GitHub Enterprise Server.
+- Code and archive CI results will be recorded after exact-head verification. PR #31 remains Draft/unmerged; no merge, deployment, release, live model request, or game action.

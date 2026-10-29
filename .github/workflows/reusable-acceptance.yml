@@ -74,6 +74,8 @@ jobs:
           CONSUMER_COMMIT_SHA: ${{ github.sha }}
           CALLER_WORKFLOW_REF: ${{ github.workflow_ref }}
           CALLER_WORKFLOW_SHA: ${{ github.workflow_sha }}
+          HARNESS_WORKFLOW_REF: ${{ job.workflow_ref }}
+          HARNESS_WORKFLOW_SHA: ${{ job.workflow_sha }}
           RUNTIME_OUTCOME: ${{ steps.runtime.outcome }}
           TEST_OUTCOME: ${{ steps.tests.outcome }}
         run: |
@@ -99,6 +101,8 @@ jobs:
               "consumer_commit_sha": os.environ["CONSUMER_COMMIT_SHA"],
               "caller_workflow_ref": os.environ["CALLER_WORKFLOW_REF"],
               "caller_workflow_sha": os.environ["CALLER_WORKFLOW_SHA"],
+              "harness_workflow_ref": os.environ["HARNESS_WORKFLOW_REF"],
+              "harness_workflow_sha": os.environ["HARNESS_WORKFLOW_SHA"],
               "tests": tests,
               "status": "passed" if all(value == "passed" for value in tests.values()) else "failed",
           }
@@ -127,6 +131,8 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
           EXPECTED_WORKFLOW_REF: ${{ github.workflow_ref }}
           EXPECTED_WORKFLOW_SHA: ${{ github.workflow_sha }}
+          EXPECTED_HARNESS_WORKFLOW_REF: ${{ job.workflow_ref }}
+          EXPECTED_HARNESS_WORKFLOW_SHA: ${{ job.workflow_sha }}
         shell: bash
         run: |
           python3 - <<'PY'
@@ -138,10 +144,13 @@ jobs:
           expected_sha = os.environ.get("EXPECTED_SHA", "")
           expected_ref = os.environ.get("EXPECTED_WORKFLOW_REF", "")
           expected_workflow_sha = os.environ.get("EXPECTED_WORKFLOW_SHA", "")
+          expected_harness_ref = os.environ.get("EXPECTED_HARNESS_WORKFLOW_REF", "")
+          expected_harness_sha = os.environ.get("EXPECTED_HARNESS_WORKFLOW_SHA", "")
           sha_pattern = re.compile(r"^[0-9a-f]{40}$")
           expected_keys = {
               "schema_version", "consumer_commit_sha", "caller_workflow_ref",
-              "caller_workflow_sha", "tests", "status",
+              "caller_workflow_sha", "harness_workflow_ref",
+              "harness_workflow_sha", "tests", "status",
           }
           def reject_duplicate_keys(pairs):
               result = {}
@@ -167,9 +176,13 @@ jobs:
               and bool(sha_pattern.fullmatch(expected_sha))
               and bool(expected_ref.strip())
               and bool(sha_pattern.fullmatch(expected_workflow_sha))
+              and bool(expected_harness_ref.strip())
+              and bool(sha_pattern.fullmatch(expected_harness_sha))
               and report.get("consumer_commit_sha") == expected_sha
               and report.get("caller_workflow_ref") == expected_ref
               and report.get("caller_workflow_sha") == expected_workflow_sha
+              and report.get("harness_workflow_ref") == expected_harness_ref
+              and report.get("harness_workflow_sha") == expected_harness_sha
               and report.get("status") == "passed"
               and isinstance(report.get("tests"), dict)
               and set(report["tests"]) == {

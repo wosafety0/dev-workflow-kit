@@ -12,6 +12,11 @@ WORKFLOW = ROOT / ".github" / "workflows" / "reusable-acceptance.yml"
 SHA = "a" * 40
 WORKFLOW_SHA = "b" * 40
 WORKFLOW_REF = "wosafety0/example/.github/workflows/ci.yml@refs/heads/main"
+HARNESS_WORKFLOW_SHA = "c" * 40
+HARNESS_WORKFLOW_REF = (
+    "wosafety0/dev-workflow-kit/.github/workflows/reusable-acceptance.yml@"
+    + HARNESS_WORKFLOW_SHA
+)
 
 
 def extract_inline_verifier():
@@ -41,7 +46,9 @@ def extract_inline_verifier():
 class ReusableAcceptanceWorkflowTests(unittest.TestCase):
     def run_inline_verifier_payload(self, payload=None, expected_sha=SHA,
                                     expected_ref=WORKFLOW_REF,
-                                    expected_workflow_sha=WORKFLOW_SHA):
+                                    expected_workflow_sha=WORKFLOW_SHA,
+                                    expected_harness_ref=HARNESS_WORKFLOW_REF,
+                                    expected_harness_sha=HARNESS_WORKFLOW_SHA):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             artifacts = root / "artifacts"
@@ -54,6 +61,8 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
                 "EXPECTED_SHA": expected_sha,
                 "EXPECTED_WORKFLOW_REF": expected_ref,
                 "EXPECTED_WORKFLOW_SHA": expected_workflow_sha,
+                "EXPECTED_HARNESS_WORKFLOW_REF": expected_harness_ref,
+                "EXPECTED_HARNESS_WORKFLOW_SHA": expected_harness_sha,
             })
             return subprocess.run(
                 [sys.executable, "-c", extract_inline_verifier()],
@@ -69,6 +78,8 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
             "consumer_commit_sha": SHA,
             "caller_workflow_ref": WORKFLOW_REF,
             "caller_workflow_sha": WORKFLOW_SHA,
+            "harness_workflow_ref": HARNESS_WORKFLOW_REF,
+            "harness_workflow_sha": HARNESS_WORKFLOW_SHA,
             "tests": {"runtime-validation": "passed", "consumer-acceptance-command": "passed"},
             "status": "passed",
         }
@@ -82,6 +93,8 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
             "consumer_commit_sha": SHA,
             "caller_workflow_ref": WORKFLOW_REF,
             "caller_workflow_sha": WORKFLOW_SHA,
+            "harness_workflow_ref": HARNESS_WORKFLOW_REF,
+            "harness_workflow_sha": HARNESS_WORKFLOW_SHA,
             "tests": {"runtime-validation": "passed", "consumer-acceptance-command": "failed"},
             "status": "failed",
         }
@@ -99,6 +112,8 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
             "consumer_commit_sha": SHA,
             "caller_workflow_ref": WORKFLOW_REF,
             "caller_workflow_sha": WORKFLOW_SHA,
+            "harness_workflow_ref": HARNESS_WORKFLOW_REF,
+            "harness_workflow_sha": HARNESS_WORKFLOW_SHA,
             "tests": {"runtime-validation": "passed"},
             "status": "passed",
         }
@@ -107,9 +122,17 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
         )
         self.assertEqual(wrong_ref.returncode, 1)
         wrong_workflow_sha = self.run_inline_verifier(
-            report, expected_workflow_sha="c" * 40
+            report, expected_workflow_sha="d" * 40
         )
         self.assertEqual(wrong_workflow_sha.returncode, 1)
+        wrong_harness_ref = self.run_inline_verifier(
+            report, expected_harness_ref="wosafety0/dev-workflow-kit/.github/workflows/reusable-acceptance.yml@refs/heads/main"
+        )
+        self.assertEqual(wrong_harness_ref.returncode, 1)
+        wrong_harness_sha = self.run_inline_verifier(
+            report, expected_harness_sha="e" * 40
+        )
+        self.assertEqual(wrong_harness_sha.returncode, 1)
 
     def test_actual_inline_verifier_rejects_invalid_schema_and_test_sets(self):
         base = {
@@ -117,6 +140,8 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
             "consumer_commit_sha": SHA,
             "caller_workflow_ref": WORKFLOW_REF,
             "caller_workflow_sha": WORKFLOW_SHA,
+            "harness_workflow_ref": HARNESS_WORKFLOW_REF,
+            "harness_workflow_sha": HARNESS_WORKFLOW_SHA,
             "tests": {"runtime-validation": "passed"},
             "status": "passed",
         }
@@ -150,6 +175,8 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
             '{"schema_version":1,"consumer_commit_sha":"' + SHA
             + '","caller_workflow_ref":"' + WORKFLOW_REF
             + '","caller_workflow_sha":"' + WORKFLOW_SHA
+            + '","harness_workflow_ref":"' + HARNESS_WORKFLOW_REF
+            + '","harness_workflow_sha":"' + HARNESS_WORKFLOW_SHA
             + '","tests":{"runtime-validation":"passed",'
             + '"consumer-acceptance-command":"passed"},'
             + '"status":"failed","status":"passed"}'
@@ -158,6 +185,8 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
             '{"schema_version":1,"consumer_commit_sha":"' + SHA
             + '","caller_workflow_ref":"' + WORKFLOW_REF
             + '","caller_workflow_sha":"' + WORKFLOW_SHA
+            + '","harness_workflow_ref":"' + HARNESS_WORKFLOW_REF
+            + '","harness_workflow_sha":"' + HARNESS_WORKFLOW_SHA
             + '","tests":{"runtime-validation":"failed",'
             + '"runtime-validation":"passed",'
             + '"consumer-acceptance-command":"passed"},"status":"passed"}'

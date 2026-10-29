@@ -12,10 +12,12 @@ The workflow writes `artifacts/consumer-acceptance-report.json` with exactly the
 - `consumer_commit_sha`: the consumer commit SHA from the caller's workflow context
 - `caller_workflow_ref`: the caller workflow reference from GitHub context
 - `caller_workflow_sha`: the caller workflow file SHA from GitHub context
+- `harness_workflow_ref`: the actual reusable workflow reference from the GitHub `job` context
+- `harness_workflow_sha`: the commit SHA of the reusable workflow definition from the GitHub `job` context
 - `tests`: exactly `runtime-validation` and `consumer-acceptance-command`, each set to `passed`, `failed`, or `not_run`
 - `status`: `passed` only when runtime validation and the consumer command both passed; otherwise `failed`
 
-The report contains no raw test output, environment dump, credentials, or logs. The workflow verifies the report against the trusted GitHub context values and rejects missing or malformed reports, unknown fields, duplicate JSON object keys, identity mismatches, and any non-passing test status. The final gate separately requires runtime validation, the consumer command, report generation, artifact upload, and report verification to succeed.
+The report contains no raw test output, environment dump, credentials, or logs. The workflow verifies the report against trusted GitHub context values for both the caller and the actual reusable workflow definition. The `job.workflow_ref` and `job.workflow_sha` values identify the called workflow, while `github.workflow_ref` and `github.workflow_sha` identify the caller. It rejects missing or malformed reports, unknown fields, duplicate JSON object keys, identity mismatches, and any non-passing test status. The final gate separately requires runtime validation, the consumer command, report generation, artifact upload, and report verification to succeed.
 
 ## Consumer responsibility
 
