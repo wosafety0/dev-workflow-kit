@@ -289,7 +289,6 @@ def main(argv: list[str] | None = None) -> int:
             raise HarnessRunnerError("project-root must be an existing directory")
         config_path = _resolve_inside_root(root, args.config, "config")
         _reject_symlink_path(root, args.config, "config")
-        _require_tracked_config(root, config_path)
         report_path = _resolve_inside_root(root, args.report_output, "report-output")
         _reject_symlink_path(root, args.report_output, "report-output")
         review_input = (
@@ -315,6 +314,7 @@ def main(argv: list[str] | None = None) -> int:
                 raise HarnessRunnerError(f"report-output must not overwrite {label}")
         if review_output is not None and review_output == config_path:
             raise HarnessRunnerError("review-output must not overwrite config")
+        _require_tracked_config(root, config_path)
 
         # Invalidate previous successful artifacts before config validation or task
         # execution. Otherwise a blocked run can leave a stale PASS for consumers.
