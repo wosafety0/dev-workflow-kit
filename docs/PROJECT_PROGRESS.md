@@ -186,3 +186,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Applied the source branch's runner implementation and regression suite, plus the three non-progress documentation files. Applied the PR-context branch-filter/gate logging changes as targeted edits to the current base CI workflow so other current workflow content is preserved.
 - Candidate head after these file updates: to be verified from GitHub ref metadata and compare output. This is a reconstruction candidate, not a validated replacement for PR #32.
 - Tests and exact-head CI have not yet been confirmed. Do not merge or retarget the original PR based on this candidate alone.
+
+
+## 2026-10-30 — trigger exact-head Push CI for PR #32 reconstruction candidate
+
+- Candidate branch `fix/reconcile-pr-32-current-base-20261030` is a copy of the isolated reconstruction `reconcile/pr-32-on-current-base-20261030`; the original PR and rescue refs remain untouched.
+- This archive commit is intended to trigger the repository's Push CI for the candidate head. Results must be queried by exact commit SHA before the candidate is considered validated.
+- Candidate remains non-mergeable until CI and patch review are complete. No original PR retarget or merge was performed.
