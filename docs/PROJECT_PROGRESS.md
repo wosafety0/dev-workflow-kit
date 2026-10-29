@@ -83,3 +83,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Normal-path CI validation is requested by this PR, but the GitHub connector currently returned no workflow-run records or commit status checks for its head at the time of this log update. Therefore the normal-path result is **pending/unverified**, not a pass.
 - Next: verify the normal-path CI result through GitHub's checks/runs, then select a low-risk independent consumer repository for the pilot. Do not wait indefinitely for a hard-to-reproduce service outage.
 
+
+### Current reusable acceptance gate: isolated failure-closed verification (2026-10-29)
+
+- Added \`tests/test_reusable_acceptance_fail_closed.py\` on isolated branch \`test/reusable-command-fail-closed-65544-20261029\`, based on the exact reusable workflow revision currently pinned by the clamp trial: \`65544e290fd875bb6c4e30f6525b238200037bba\`.
+- Tests extract and execute the actual shell blocks from \`.github/workflows/reusable-acceptance.yml\`, including both the consumer-command step and final acceptance gate. Empty and whitespace-only commands return exit code 2 with the explicit \`test-command must not be empty.\` diagnostic; a nonexistent command returns nonzero and exposes the command-not-found error; the final gate then exits 1 and names \`tests\` as the unsuccessful stage. A valid command plus all-success outcomes opens the gate.
+- Failure diagnostics are traceable across the job: the named \`Run consumer-owned acceptance command\` step contains the shell error; the redacted report records \`status: failed\`; the final gate names the failed \`tests\` stage. The report intentionally does not copy raw command output.
+- Exact-head CI: [run 40801493718](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801493718), tested commit \`bfdba4d51dba0f776aad8f136c2e394510b6a939\`, conclusion \`success\`. CI logs confirm all 99 offline tests passed; Python compilation, report generation, artifact upload, and the final CI gate succeeded.
+- Remote readback confirmed test-file blob \`e18a17432c8d204cad5cac6d8588c859f4c1f711\`.
+- Status boundary: verified isolated contract tests only; this does not simulate a complete hosted run with empty/invalid input. The branch is unmerged, \`main\` is unchanged, and no release or consumer pin was changed.
