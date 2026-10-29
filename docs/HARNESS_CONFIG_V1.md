@@ -1,6 +1,6 @@
 # Versioned Harness Configuration (v1)
 
-Status: validation contract only; this is not a command runner.
+Status: v1 configuration contract consumed by `scripts/harness_runner.py`; early implementation, not a stable API guarantee.
 
 ## Example
 
@@ -24,8 +24,8 @@ Status: validation contract only; this is not a command runner.
 - Currently recognized task IDs are `python-unittest` and `semantic-review`.
 - Configuration cannot provide executable names, arbitrary arguments, or unknown task IDs.
 - Unknown keys and unknown task IDs fail closed.
-- Validation is offline and side-effect free. It does not execute tasks, read credentials, access the network, or resolve paths.
-- An eventual runner must map each task ID to reviewed fixed behavior; it must not treat this configuration as permission to execute arbitrary commands.
+- Validation in `scripts/harness_config.py` remains offline and side-effect free. It does not execute tasks, read credentials, access the network, or resolve paths.
+- The runner maps each task ID to reviewed fixed behavior and does not treat configuration as permission to execute arbitrary commands. See `docs/HARNESS_RUNNER_V1.md`.
 
 ## Limits
 

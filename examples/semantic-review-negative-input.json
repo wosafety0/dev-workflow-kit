@@ -1,0 +1,9 @@
+{
+  "task": "Review this change for correctness and compliance with the supplied instructions.",
+  "changed_files": [
+    "src/example.py"
+  ],
+  "diff": "diff --git a/src/example.py b/src/example.py\nindex 1111111..2222222 100644\n--- a/src/example.py\n+++ b/src/example.py\n@@ -1,2 +1,2 @@\n def add(a, b):\n-    return a + b\n+    return a - b\n",
+  "global_rules": "R1: Preserve the documented arithmetic behavior of each function. Do not change addition to subtraction without an explicit task requirement.",
+  "project_instructions": "The file src/example.py defines an addition helper. No task requirement authorizes changing it to subtraction."
+}
