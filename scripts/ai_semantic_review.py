@@ -23,6 +23,7 @@ STATUSES = {"PASS", "NEEDS_CHANGES", "INCONCLUSIVE"}
 SEVERITIES = {"critical", "high", "medium", "low", "info"}
 MAX_CHANGED_FILE_PATH_LENGTH = 4096
 MAX_DIFF_LINE_NUMBER = 2_147_483_647
+MAX_MODEL_RESPONSE_BYTES = 1024 * 1024  # 1 MiB; bounded provider response
 
 
 class ReviewError(ValueError):
@@ -412,7 +413,10 @@ def call_model(payload: dict[str, Any]) -> Any:
         else:
             response_context = urllib.request.build_opener(_NoRedirectHandler()).open(request, timeout=60)
         with response_context as response:
-            response_data = json.loads(response.read().decode("utf-8"))
+            raw_response = response.read(MAX_MODEL_RESPONSE_BYTES + 1)
+            if len(raw_response) > MAX_MODEL_RESPONSE_BYTES:
+                raise ReviewError("Model response exceeds size limit; review cannot pass")
+            response_data = json.loads(raw_response.decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ReviewError(f"Model request failed ({type(exc).__name__}); review cannot pass") from None
     try:
