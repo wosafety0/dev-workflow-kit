@@ -493,3 +493,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added tests that execute the actual report-producer heredoc: a symlinked artifacts directory must fail without writing outside the workspace, and a hard-linked report path must be replaced without modifying its linked target. Existing inline verifier parity tests remain.
 - Workflow implementation commit: `7cad0b1d3d2bea8b2bf22c6302dc8b16021af7fb`; tests commit: `79db0e6f9d92b7783298db9843b45c71023e31a3`; extractor newline correction: `4b225c5bedb69d5fe8bf6b3e1bc918d49fd6876c`; documentation commit: `b9e3d7a8a759e05d9e60dad29f97c93182dfb959`.
 - Hosted exact-head Push CI and PR-context CI are pending for this security follow-up. PR #31 remains Draft/unmerged; no consumer pin, PR topology, release, or deployment changed.
+
+
+### Validation update — safe consumer report output
+
+- The initial test revisions exposed two test/implementation issues before acceptance: the extracted report-builder test initially emitted literal `\\n` in its generated source, then the workflow writer itself emitted a literal backslash-n after JSON. These were corrected; the earlier failed runs are retained as failed evidence and are not counted as validation.
+- Final workflow commit `fe6e77a3c22a0cdccf81c9bd96bbf610f044d5a2` passed exact-head Push CI [40862243915](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40862243915) and PR-context CI [40862251636](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40862251636). The 152-test suite passed, including both report-output redirection regressions; source compilation, report generation/upload, standalone report verification, and the final gate all passed.
+- This is offline workflow/source validation only. It does not claim a new external consumer integration or change any consumer's immutable pin. PR #31 remains Draft/unmerged.
