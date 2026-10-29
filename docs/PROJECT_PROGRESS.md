@@ -331,3 +331,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Exact-head Push CI for `5dacf82089a383094d9855e77852af0abd0f7868` passed: [run 40889112448](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40889112448). The run completed all **122 offline tests**, including the new regression test.
 - PR #32 remains open and Draft. Its reported base SHA is still `b402101ef41d3f9d4f9533545ea83128ba5843a6`; the latest PR-context run is still for an older head (`b59f83a1d4c394eade420ce4eadced7897f2a92a`, run [40858714785](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40858714785)). Therefore current-head PR-context CI is **not** validated. Do not substitute the successful Push run for that gate.
 - No PR retarget/rebase/merge/close-reopen, consumer pin change, or game action was performed. Next: keep the PR-context gap explicit and continue review only where a meaningful, topology-preserving action is available.
+
+## 2026-10-29 — reusable workflow supply-chain hardening
+
+- Pinned the reusable acceptance workflow's `actions/checkout` and `actions/setup-python` dependencies to full commit SHAs: `fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09` and `ece7cb06caefa5fff74198d8649806c4678c61a1`.
+- Verified the upstream `actions/checkout` `v5` ref and `actions/setup-python` `v6` ref each resolve directly to the selected commit SHA.
+- Updated `docs/REUSABLE_ACCEPTANCE_WORKFLOW.md` and `docs/ORCHESTRATION_FAULT_MATRIX.md` so they no longer claim those workflow dependencies remain tag-pinned.
+- Exact-head Push CI for `3653ac1ff7304c4715f34c11d80857c57e76e845` passed: [run 40891643084](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40891643084). The run completed compilation, all offline contract tests, acceptance report generation, artifact upload, and final gate.
+- PR #32 remains Draft/open/unmerged. Its PR-context CI gap is still unresolved; this Push run does not satisfy that gate. No PR target/topology changes or consumer pin updates were made.
+- Remaining acceptance gaps include real hosted-workflow failure injection (especially an actual artifact-upload failure) and a second unrelated consumer-repository pilot.
