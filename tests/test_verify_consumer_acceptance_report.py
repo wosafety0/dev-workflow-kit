@@ -77,6 +77,8 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
         self.assertFalse(verify_report(valid_report(), "bad-sha", WORKFLOW_REF, WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
         self.assertFalse(verify_report(valid_report(), SHA, "", WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
         self.assertFalse(verify_report(valid_report(), SHA, WORKFLOW_REF, "bad-sha", HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
+        self.assertFalse(verify_report(valid_report(), SHA, WORKFLOW_REF, WORKFLOW_SHA, "", HARNESS_WORKFLOW_SHA))
+        self.assertFalse(verify_report(valid_report(), SHA, WORKFLOW_REF, WORKFLOW_SHA, HARNESS_WORKFLOW_REF, "bad-sha"))
 
     def test_cli_accepts_matching_report(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -117,6 +119,8 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
                 '{"schema_version":1,"consumer_commit_sha":"' + SHA
                 + '","caller_workflow_ref":"' + WORKFLOW_REF
                 + '","caller_workflow_sha":"' + WORKFLOW_SHA
+                + '","harness_workflow_ref":"' + HARNESS_WORKFLOW_REF
+                + '","harness_workflow_sha":"' + HARNESS_WORKFLOW_SHA
                 + '","tests":{"runtime-validation":"passed",'
                 + '"consumer-acceptance-command":"passed"},'
                 + '"status":"failed","status":"passed"}'
@@ -125,6 +129,8 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
                 '{"schema_version":1,"consumer_commit_sha":"' + SHA
                 + '","caller_workflow_ref":"' + WORKFLOW_REF
                 + '","caller_workflow_sha":"' + WORKFLOW_SHA
+                + '","harness_workflow_ref":"' + HARNESS_WORKFLOW_REF
+                + '","harness_workflow_sha":"' + HARNESS_WORKFLOW_SHA
                 + '","tests":{"runtime-validation":"failed",'
                 + '"runtime-validation":"passed",'
                 + '"consumer-acceptance-command":"passed"},"status":"passed"}'
