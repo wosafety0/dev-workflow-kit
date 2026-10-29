@@ -187,3 +187,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The base branch reported by PR #33, `fix/semantic-review-no-redirect-20261029`, was checked at its PR base SHA and still had the old `pull_request.branches` filter without `fix/**`. The fix was therefore applied to PR #22's actual branch and archived there.
 - PR #22 base-branch workflow update: `f6bb3db6cf1c93a18a98bd844cd253a043fae38a`; archive commit on that branch: `46587adaf9160c4e0b8503dfe49dc779cd976a33`.
 - A successful downstream PR-context run for PR #33 has not yet appeared in the currently retrieved run list. The duplicate-key fix remains unvalidated until its exact code/archive head receives hosted CI evidence. PR #33 remains Draft/unmerged.
+
+## 2026-10-29 — correct duplicate-key regression fixture on PR #33
+
+- Source review found that the regression intended to exercise duplicate keys inside model-produced JSON had over-escaped quotes. The provider-envelope fixture was malformed before the inner JSON parser could be tested, so the test did not independently prove duplicate-key rejection in model content.
+- Corrected the fixture so the outer provider response is valid JSON and its `message.content` is the valid JSON text `{"status":"PASS","status":"NEEDS_CHANGES"}`. The inner parser must now reject the duplicate `status` key.
+- Test fixture commit: `070d7c9a2387acbb724275cdecbd5f51612dcdd6`; read-back confirmed the intended literal at `tests/test_ai_semantic_review.py`.
+- Validation boundary: no test execution was performed by this connector; exact-head hosted CI for this commit has not yet been observed. PR #33 remains Draft/open/unmerged.
+- Dependency note: PR #33 still reports base SHA `f71025d2303737dafe18ae823f93cad9cdd1249d`, while PR #22's current PR metadata reports head SHA `071c168bc9532ba8d8c6a9f4708046e164879568` on the same base branch name. This indicates a branch-ref/base-SHA mismatch in the PR metadata snapshot; do not assume the downstream PR has inherited every current base-branch change. No retarget, rebase, merge, close/reopen, or consumer pin change was performed.
