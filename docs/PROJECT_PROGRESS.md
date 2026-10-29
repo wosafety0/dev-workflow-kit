@@ -368,3 +368,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Current PR metadata still reports base SHA `b402101ef41d3f9d4f9533545ea83128ba5843a6`, while the target branch's observed live head is `e4be499e36ed9d8e22ff45065d95f92e0876df34`. The immutable workflow revision at the reported base SHA excludes `fix/**`; the live target branch workflow includes it. This remains the leading explanation for the missing event, but GitHub's exact event/metadata behavior is not proven as a single root cause.
 - No further progress-only trigger probes were made. PR #32 remains Draft/open/unmerged; no retarget, rebase, merge, close/reopen, or consumer pin update occurred.
 - Hosted fault-injection boundary remains unchanged: prior hosted tests prove fail-closed behavior for a deliberately missing artifact input, not an actual GitHub Artifact service outage. No workflow-dispatch tool is available in this session, so no new manual hosted fault run is claimed.
+
+## 2026-10-29 — PR #32 branch-reference discrepancy and preservation
+
+- The previously recorded PR #32 head `54f7d244be17dc32f945009264e8fee6322e9226` was confirmed retrievable as a commit, and a preservation branch `rescue/pr-32-last-known-head-20261029` was created at that exact SHA.
+- The live source branch name `fix/runner-commit-provenance-20261029` currently resolves to the same `scripts/harness_runner.py` blob as base head `e4be499e36ed9d8e22ff45065d95f92e0876df34`; compare also reports those refs identical. This conflicts with the PR body/history that records a later implementation head.
+- The earlier PR progress-log update attempt returned HTTP 409 because the target file blob did not match the expected SHA. No change was forced through that conflict.
+- Recovery branch exact-SHA comparison verified identical to `54f7d244be17dc32f945009264e8fee6322e9226`. The original PR branch was not force-updated, retargeted, closed, or merged. Restore requires an explicit branch-ref change and is therefore paused pending user decision.
+- CI evidence boundary unchanged: historical exact-head Push CI exists for earlier commits, but current PR-context validation is not established.
