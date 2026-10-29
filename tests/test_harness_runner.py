@@ -404,11 +404,11 @@ class HarnessRunnerTests(unittest.TestCase):
         # An ignored test module must not execute under a report attributed to HEAD.
         ignored_test = self.root / "tests" / "test_ignored.py"
         (self.root / ".gitignore").write_text(
-            "tests/test_ignored.py\\n", encoding="utf-8"
+            "tests/test_ignored.py\n", encoding="utf-8"
         )
         ignored_test.write_text(
-            "import unittest\\nclass Hidden(unittest.TestCase):\\n"
-            "    def test_hidden(self): self.assertTrue(True)\\n",
+            "import unittest\nclass Hidden(unittest.TestCase):\n"
+            "    def test_hidden(self): self.assertTrue(True)\n",
             encoding="utf-8",
         )
         subprocess.run(
