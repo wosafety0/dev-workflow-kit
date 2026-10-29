@@ -46,6 +46,12 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         self.assertIn("artifacts/consumer-acceptance-report.json", self.source)
         self.assertIn("retention-days: 14", self.source)
 
+    def test_empty_or_whitespace_test_command_fails_closed(self):
+        self.assertIn('if [ -z "${ACCEPTANCE_COMMAND//[[:space:]]/}" ]; then', self.source)
+        self.assertIn('echo "test-command must not be empty." >&2', self.source)
+        self.assertIn("exit 2", self.source)
+        self.assertIn('bash -euo pipefail -c "$ACCEPTANCE_COMMAND"', self.source)
+
     def test_final_gate_requires_exact_success_for_every_required_stage(self):
         self.assertIn('[[ "$TEST_OUTCOME" == "success" ]] || failed+=("tests")', self.source)
         self.assertIn('[[ "$REPORT_OUTCOME" == "success" ]] || failed+=("report")', self.source)
