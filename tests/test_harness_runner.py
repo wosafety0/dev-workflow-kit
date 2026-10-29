@@ -156,6 +156,28 @@ class HarnessRunnerTests(unittest.TestCase):
             {"python-unittest": "failed", "semantic-review": "not_run"},
         )
 
+    def test_skipped_semantic_review_invalidates_prior_pass_artifact(self):
+        self.write_config(["python-unittest", "semantic-review"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        review_path = self.root / "artifacts" / "review.json"
+        review_path.write_text('{"status":"PASS"}', encoding="utf-8")
+        with patch("scripts.harness_runner._git_commit_sha", return_value="f" * 40), patch(
+            "scripts.harness_runner._rules_pin", return_value="sha256:contract"
+        ), patch(
+            "scripts.harness_runner._run_task", return_value=("failed", 23)
+        ) as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 1)
+        self.assertEqual(stderr, "")
+        self.assertEqual(run_task.call_count, 1)
+        self.assertFalse(review_path.exists())
+        report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["tests"]["semantic-review"], "not_run")
+        self.assertEqual(report["status"], "failed")
+
     def test_semantic_review_must_be_last_configured_task(self):
         self.write_config(["semantic-review", "python-unittest"])
         (self.root / "review-input.json").write_text("{}", encoding="utf-8")

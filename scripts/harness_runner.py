@@ -243,6 +243,11 @@ def main(argv: list[str] | None = None) -> int:
             raise HarnessRunnerError("review-input must identify an existing file")
         if review_output is not None:
             review_output.parent.mkdir(parents=True, exist_ok=True)
+            # A skipped or blocked semantic-review must not expose a previous PASS artifact.
+            try:
+                review_output.unlink()
+            except FileNotFoundError:
+                pass
 
         # Preflight every task before executing any of them, avoiding partial execution if
         # a configured task lacks its required arguments or implementation.
