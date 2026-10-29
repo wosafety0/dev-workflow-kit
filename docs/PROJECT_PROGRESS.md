@@ -249,3 +249,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The prior entry correctly recorded that no PR-triggered run was visible at that inspection time. Subsequent API lookup found push-triggered Harness CI [run 40801168010](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801168010), conclusion `success`, on the exact head SHA `827bb99d2eb97ac61909979094f68471f081150b` used by Draft PR #20.
 - This provides CI evidence for the head tree, but it does not prove a PR merge-ref check against the current base; PR #20 remains draft/unmerged pending separate diff/base review.
 - Updated PR #20's description with this distinction. No merge, release, main change, or live model call.
+
+
+### PR #20 exact PR-context CI confirmed (2026-10-29)
+
+- Follow-up run-history query by exact head SHA `827bb99d2eb97ac61909979094f68471f081150b` found the previously unreported PR-context run [40797681816](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40797681816), conclusion `success`, in addition to push run [40801168010](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801168010).
+- The earlier note that PR-context evidence was unavailable was correct at the time of inspection but is superseded by this finding. PR #20's exact head has both successful push and PR-triggered CI evidence.
+- Updated PR #20's body accordingly. It remains draft/unmerged pending review of the combined runner/loopback diff; no live model call, main merge, or release.
