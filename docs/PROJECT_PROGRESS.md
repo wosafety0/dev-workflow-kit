@@ -450,3 +450,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 
 - First hosted exact-head Push CI exposed a test harness omission, not a production verifier failure: the duplicate-key subprocess cases had not been given the two newly required expected-Harness-identity CLI arguments, so argparse exited with code 2 before parsing their fixtures. Added those arguments in test commit `fa6e8f957c7d7856af4a7affeaab089e508fe529`. The run correctly stayed red; rerun exact-head Push and PR CI after this correction.
 - Final code+archive head `adb17a7f712d40f088b9bfcd104b1efe360f23e0` passed exact-head Push CI [40828082019](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40828082019) and PR CI [40828087972](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40828087972). Both ran **148 offline tests**, including the decisive duplicate-key fixtures; report generation/upload, strict report verification, and the final orchestration gate passed. No consumer pin was changed.
+
+## 2026-10-29 — prevent future drift between inline and standalone consumer verifiers
+
+- Follow-up audit confirmed both verifiers currently reject duplicate JSON object keys and require the same exact root fields, trusted caller/Harness identity, passing status, and exact required stage set.
+- Added a parity regression in `tests/test_reusable_acceptance_workflow.py` that runs the actual inline verifier and the standalone verifier against the same valid and invalid report cases, asserting identical accept/reject decisions. This targets the class of drift that caused the previous schema mismatch.
+- Test commit: `240f2779174dff84a49f6af842f7d53f0a154a0f`. Exact-head Push and PR CI must pass before this follow-up is considered validated. No consumer pin changes; PR #31 remains Draft/unmerged.
