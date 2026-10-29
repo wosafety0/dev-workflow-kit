@@ -16,7 +16,7 @@ def valid():
         "schema_version": 1,
         "commit_sha": SHA,
         "rules_pin": PIN,
-        "tool_version": "dev-workflow-kit/harness-runner@" + SHA,
+        "tool_version": "dev-workflow-kit@" + SHA,
         "tests": {"python-unittest": "passed"},
         "status": "passed",
     }
@@ -33,7 +33,7 @@ class AcceptanceReportVerifierTests(unittest.TestCase):
         self.assertFalse(verify_report(valid(), SHA, "sha256:" + "c" * 64))
 
     def test_rejects_tool_version_not_bound_to_expected_commit(self):
-        for version in ("harness-runner@other", " ", "dev-workflow-kit/harness-runner@" + "c" * 40):
+        for version in ("other", " ", "dev-workflow-kit@" + "c" * 40):
             with self.subTest(version=version):
                 report = valid()
                 report["tool_version"] = version
