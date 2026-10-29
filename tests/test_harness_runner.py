@@ -33,6 +33,7 @@ class HarnessRunnerTests(unittest.TestCase):
         )
         self.config_path = self.root / "harness.json"
         self.write_config(["python-unittest"])
+        self.initialize_git_worktree()
 
     def write_config(self, commands):
         self.config_path.write_text(
@@ -44,10 +45,10 @@ class HarnessRunnerTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def run_runner(self, *extra):
+    def run_runner(self, *extra, config="harness.json"):
         args = [
             "--project-root", str(self.root),
-            "--config", "harness.json",
+            "--config", config,
             "--report-output", "artifacts/report.json",
             "--timeout-seconds", "10",
             *extra,
@@ -249,7 +250,9 @@ class HarnessRunnerTests(unittest.TestCase):
 
 
     def initialize_git_worktree(self):
-        """Commit fixture sources so provenance checks use a real Git worktree."""
+        """Commit fixture sources once so provenance checks use a real Git worktree."""
+        if (self.root / ".git").exists():
+            return
         commands = [
             ["git", "init", "-q"],
             ["git", "add", "."],
@@ -260,6 +263,43 @@ class HarnessRunnerTests(unittest.TestCase):
         for command in commands:
             subprocess.run(command, cwd=self.root, check=True,
                            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+    def test_runner_rejects_config_under_artifacts_before_task_execution(self):
+        config_path = self.root / "artifacts" / "harness.json"
+        config_path.write_text(json.dumps({
+            "schema_version": 1,
+            "project": "test-project",
+            "commands": ["python-unittest"],
+        }), encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(config="artifacts/harness.json")
+        self.assertEqual(code, 2)
+        self.assertIn("config must not resolve inside artifacts/", stderr)
+        run_task.assert_not_called()
+        self.assertTrue(config_path.is_file())
+
+    def test_runner_rejects_untracked_ignored_config_before_task_execution(self):
+        ignored = self.root / ".venv"
+        ignored.mkdir()
+        (self.root / ".gitignore").write_text(".venv/\\n", encoding="utf-8")
+        config_path = ignored / "harness.json"
+        config_path.write_text(json.dumps({
+            "schema_version": 1,
+            "project": "test-project",
+            "commands": ["python-unittest"],
+        }), encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(config=".venv/harness.json")
+        self.assertEqual(code, 2)
+        self.assertIn("config must be tracked by the current Git HEAD", stderr)
+        run_task.assert_not_called()
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
+
+    def test_runner_accepts_config_tracked_by_current_head(self):
+        with patch("scripts.harness_runner._run_task", return_value=("passed", 0)):
+            code, _, stderr = self.run_runner()
+        self.assertEqual((code, stderr), (0, ""))
+
 
     def test_runner_rejects_modified_tracked_code_before_execution(self):
         self.initialize_git_worktree()
