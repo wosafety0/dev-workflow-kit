@@ -376,3 +376,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The earlier PR progress-log update attempt returned HTTP 409 because the target file blob did not match the expected SHA. No change was forced through that conflict.
 - Recovery branch exact-SHA comparison verified identical to `54f7d244be17dc32f945009264e8fee6322e9226`. The original PR branch was not force-updated, retargeted, closed, or merged. Restore requires an explicit branch-ref change and is therefore paused pending user decision.
 - CI evidence boundary unchanged: historical exact-head Push CI exists for earlier commits, but current PR-context validation is not established.
+
+
+## 2026-10-30 — Correction: PR #32 head/base refs were previously conflated
+
+- Re-fetched PR #32 metadata directly. The actual PR head ref is `fix/review-output-config-collision-20261029` at `9d3fb4bce16ff75dbfd6003103c3e4d67b02f126`; the PR base ref is `fix/runner-commit-provenance-20261029`, whose recorded base SHA is `b402101ef41d3f9d4f9533545ea83128ba5843a6`.
+- Exact-ref comparisons confirm the PR head branch equals its recorded head SHA. The earlier “source branch identical to base” check had compared the PR's *base branch* name to the newer live base head, not the PR head branch. Therefore the prior branch-reference-discrepancy conclusion was incorrect; this is a correction to the investigation record, not evidence of lost code.
+- The PR diff is supported by exact commit comparison: recorded base SHA `b402101...` to PR head `9d3fb4b...` is ahead by 62 commits and reports the expected seven changed files. PR #32's current base branch has advanced to `e4be499e36ed9d8e22ff45065d95f92e0876df34`; comparing that live base branch to the PR head reports divergence with the PR head 3 commits behind. This stacked-branch/base drift and `mergeable=false` remain genuine issues to resolve.
+- Rescue branch `rescue/pr-32-last-known-head-20261029` is still preserved as an additional snapshot at the previously recorded `54f7d244...` plus its archive commit. No original PR ref, base, review state, or consumer pin was changed.
+- Validation boundary: historical Push CI evidence remains historical; current-head PR-context CI is not established by this check. No tests or CI were run in this step.
