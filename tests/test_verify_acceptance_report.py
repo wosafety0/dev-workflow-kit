@@ -34,7 +34,7 @@ class AcceptanceReportVerifierTests(unittest.TestCase):
             / "ci.yml"
         ).read_text(encoding="utf-8")
         self.assertIn(
-            "TOOL_VERSION: dev-workflow-kit@" + "$" + "{{ github.sha }}",
+            "TOOL_VERSION: dev-workflow-kit/harness-runner@" + "$" + "{{ github.sha }}",
             workflow,
         )
 
