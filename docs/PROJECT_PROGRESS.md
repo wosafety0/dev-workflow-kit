@@ -340,3 +340,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Exact-head Push CI for `3653ac1ff7304c4715f34c11d80857c57e76e845` passed: [run 40891643084](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40891643084). The run completed compilation, all offline contract tests, acceptance report generation, artifact upload, and final gate.
 - PR #32 remains Draft/open/unmerged. Its PR-context CI gap is still unresolved; this Push run does not satisfy that gate. No PR target/topology changes or consumer pin updates were made.
 - Remaining acceptance gaps include real hosted-workflow failure injection (especially an actual artifact-upload failure) and a second unrelated consumer-repository pilot.
+
+
+## 2026-10-29 — immutable-blob correction for PR #32 trigger diagnosis
+
+- Revalidated the workflow using Git tree entries and immutable blob reads rather than the file-fetch wrapper's ref parameter, which did not return the requested historical revision in the earlier check.
+- At PR #32's reported base commit `b402101ef41d3f9d4f9533545ea83128ba5843a6`, tree `975445bf91ef08ae40c1cc28b357961d3f41748a` points to `.github/workflows/ci.yml` blob `e06ac71bcbd823bc774a6ac118c6e2bcd82d591c`; its `pull_request.branches` filter is `[main, "feat/**", "test/**"]` and does **not** include `fix/**`.
+- The live target branch head `e4be499e36ed9d8e22ff45065d95f92e0876df34` points to tree `e8c2a57d61396dfbca4d690922f0a11976aceb4c`, whose workflow blob `73c528ed3280f0c0c50d50740dac453fc2f801c5` does include `fix/**`.
+- This immutable-blob comparison restores the earlier diagnosis: the workflow revision associated with the PR's reported base SHA excludes the target branch pattern, while the live target branch contains the fix. The prior statement that the base-SHA workflow already included `fix/**` was based on a non-authoritative historical-file read and is superseded by this entry.
+- Current head `fac475685b446e0e1a54984f6b1517f7aecf7a5f` has successful exact-head Push CI run [40891713223](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40891713223), but the PR-context run remains absent. A fresh head update did not refresh the reported base SHA, so no further no-op probes will be made.
+- Safe boundary remains unchanged: PR #32 stays Draft/open/unmerged; no retarget, rebase, merge, close/reopen, or consumer pin changes. A topology-preserving solution is still needed to make the PR-context gate observable.
