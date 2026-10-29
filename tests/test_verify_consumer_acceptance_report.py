@@ -11,6 +11,8 @@ from scripts.verify_consumer_acceptance_report import main, verify_report
 SHA = "a" * 40
 WORKFLOW_SHA = "b" * 40
 WORKFLOW_REF = "wosafety0/example/.github/workflows/ci.yml@refs/heads/main"
+HARNESS_WORKFLOW_SHA = "e" * 40
+HARNESS_WORKFLOW_REF = "wosafety0/dev-workflow-kit/.github/workflows/reusable-acceptance.yml@refs/heads/main"
 
 
 def valid_report():
@@ -19,6 +21,8 @@ def valid_report():
         "consumer_commit_sha": SHA,
         "caller_workflow_ref": WORKFLOW_REF,
         "caller_workflow_sha": WORKFLOW_SHA,
+        "harness_workflow_ref": HARNESS_WORKFLOW_REF,
+        "harness_workflow_sha": HARNESS_WORKFLOW_SHA,
         "tests": {"runtime-validation": "passed", "consumer-acceptance-command": "passed"},
         "status": "passed",
     }
@@ -26,18 +30,20 @@ def valid_report():
 
 class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
     def test_valid_report_passes(self):
-        self.assertTrue(verify_report(valid_report(), SHA, WORKFLOW_REF, WORKFLOW_SHA))
+        self.assertTrue(verify_report(valid_report(), SHA, WORKFLOW_REF, WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
 
     def test_wrong_commit_or_workflow_identity_fails(self):
         for field, expected in (
             ("consumer_commit_sha", "c" * 40),
             ("caller_workflow_ref", "another/repo/.github/workflows/ci.yml@refs/heads/main"),
             ("caller_workflow_sha", "d" * 40),
+            ("harness_workflow_ref", "other/harness/.github/workflows/reusable.yml@refs/heads/main"),
+            ("harness_workflow_sha", "f" * 40),
         ):
             report = valid_report()
             report[field] = expected
             with self.subTest(field=field):
-                self.assertFalse(verify_report(report, SHA, WORKFLOW_REF, WORKFLOW_SHA))
+                self.assertFalse(verify_report(report, SHA, WORKFLOW_REF, WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
 
     def test_failed_or_empty_tests_fail(self):
         for tests, status in (({"check": "failed"}, "failed"), ({"check": "skipped"}, "failed"),
@@ -68,9 +74,9 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
             report = valid_report()
             mutate(report)
             self.assertFalse(verify_report(report, SHA, WORKFLOW_REF, WORKFLOW_SHA))
-        self.assertFalse(verify_report(valid_report(), "bad-sha", WORKFLOW_REF, WORKFLOW_SHA))
-        self.assertFalse(verify_report(valid_report(), SHA, "", WORKFLOW_SHA))
-        self.assertFalse(verify_report(valid_report(), SHA, WORKFLOW_REF, "bad-sha"))
+        self.assertFalse(verify_report(valid_report(), "bad-sha", WORKFLOW_REF, WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
+        self.assertFalse(verify_report(valid_report(), SHA, "", WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
+        self.assertFalse(verify_report(valid_report(), SHA, WORKFLOW_REF, "bad-sha", HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
 
     def test_cli_accepts_matching_report(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -80,6 +86,8 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
                 "--report", str(path), "--expected-sha", SHA,
                 "--expected-workflow-ref", WORKFLOW_REF,
                 "--expected-workflow-sha", WORKFLOW_SHA,
+                "--expected-harness-workflow-ref", HARNESS_WORKFLOW_REF,
+                "--expected-harness-workflow-sha", HARNESS_WORKFLOW_SHA,
             ]), 0)
 
     def test_cli_rejects_missing_and_corrupt_report(self):
@@ -137,6 +145,8 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
                     "--report", str(path), "--expected-sha", "c" * 40,
                     "--expected-workflow-ref", WORKFLOW_REF,
                     "--expected-workflow-sha", WORKFLOW_SHA,
+                    "--expected-harness-workflow-ref", HARNESS_WORKFLOW_REF,
+                    "--expected-harness-workflow-sha", HARNESS_WORKFLOW_SHA,
                 ],
                 capture_output=True, text=True, check=False,
             )
