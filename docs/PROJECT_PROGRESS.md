@@ -385,3 +385,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The PR diff is supported by exact commit comparison: recorded base SHA `b402101...` to PR head `9d3fb4b...` is ahead by 62 commits and reports the expected seven changed files. PR #32's current base branch has advanced to `e4be499e36ed9d8e22ff45065d95f92e0876df34`; comparing that live base branch to the PR head reports divergence with the PR head 3 commits behind. This stacked-branch/base drift and `mergeable=false` remain genuine issues to resolve.
 - Rescue branch `rescue/pr-32-last-known-head-20261029` is still preserved as an additional snapshot at the previously recorded `54f7d244...` plus its archive commit. No original PR ref, base, review state, or consumer pin was changed.
 - Validation boundary: historical Push CI evidence remains historical; current-head PR-context CI is not established by this check. No tests or CI were run in this step.
+
+
+## 2026-10-30 — Direct source/base file verification (PR #32)
+
+- Read `scripts/harness_runner.py` at the exact merge-base SHA `b402101ef41d3f9d4f9533545ea83128ba5843a6`, the live base SHA `e4be499e36ed9d8e22ff45065d95f92e0876df34`, and the actual source branch `fix/review-output-config-collision-20261029`.
+- The merge-base and live-base file blob SHA is `b1be5c0480875aee62f152f5025396c4936d78dd` (12,815 characters). The source branch file blob SHA is `55b39b22113df5a07da7d6e0dcd9108baf1276df` (18,185 characters).
+- The source version contains `_reject_duplicate_json_keys` and review-output/config collision protection; the checked base version does not. The source test file blob (`98d5ac1f0b661106533c90003e0476edc26065a7`, 26,571 characters) is also larger than the live-base test file (`0914a5fe3968d5d406f4436f3068606fb97e6c0f`, 13,452 characters) and contains duplicate-key regression coverage.
+- This is read-only content verification. No branch or PR refs were changed; no tests or CI were run. Exact-head CI remains unverified for the current source branch.
