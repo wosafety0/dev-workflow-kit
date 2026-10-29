@@ -363,3 +363,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Follow-up test-quality review changed the duplicate top-level-key fixture into an otherwise-valid report with two `status` keys, so the test proves duplicate-key rejection rather than merely failing schema validation. Final code head `3bdb1bd0f1cd9546bd26b5b8472fc349e7c26a7b` passed Push CI [run 40823913329](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823913329) and PR CI [run 40823918724](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823918724).
 - The report identity contract is currently aligned on `dev-workflow-kit/harness-runner@<commit SHA>` across the CI report producer, runner, verifier, and regression tests.
 - Fresh local targeted verification passed 28 tests across the standalone report verifier, consumer verifier helper, and extracted inline reusable-workflow verifier; git diff --check passed. PR #31 remains Draft/open/unmerged. No live model calls, game actions, deployment, release, or merge; local working-tree synchronization remains unverified.
+
+
+## 2026-10-29 — reject duplicate keys in Harness runner configuration
+
+- The runner parsed `harness.json` with Python's default JSON decoder, which silently keeps the last occurrence of duplicate object keys. A crafted config could therefore contain ambiguous command declarations and still be accepted.
+- Added duplicate-key rejection at config parsing time and a regression with duplicate `commands` keys where the last value would otherwise be valid. The test confirms the runner fails closed, invalidates any stale PASS report, and executes no task.
+- Code head `329103d26c5a57ab3f2c6b9df8b5d9e0f1b6c133` passed exact-head Push CI [run 40824152546](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824152546) and PR CI [run 40824160320](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824160320). Both passed 144 offline tests; logs confirm report verification and the final orchestration gate succeeded.
+- PR #31 remains Draft/open/unmerged. No live model calls, game actions, deployment, release, or merge; local working-tree synchronization remains unverified.
