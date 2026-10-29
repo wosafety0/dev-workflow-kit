@@ -215,3 +215,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Documentation updated. Code/docs head before this archive: `11d48221b27daa128b931410442bb86e3b1c3163`; CI not yet asserted for that head. No live provider requests, game actions, merge, or deployment.
 
 - Follow-up validation: added subprocess-level CLI tests covering successful matching report verification, stale expected SHA, missing report, and malformed JSON. This verifies the actual command-line exit behavior, not only the pure validation function. CI pending for the new test commit.
+
+
+### 2026-10-29: enforce acceptance report verification in Harness CI
+
+- Follow-up branch: `feat/ci-enforce-report-verifier-20261029`, based on report-verifier PR #29 head `514f4f979a470c77b5a55ee699cbedd435e4857a`.
+- Integrated `scripts/verify_acceptance_report.py` into `.github/workflows/ci.yml`. The verifier runs even after earlier failures, checks the generated report against trusted `github.sha` and the contract SHA-256 produced by the workflow, and its outcome is now a fourth required stage in `scripts/ci_gate.py`.
+- Expanded `tests/test_ci_gate.py` for four required outcomes, missing/extra arguments, and verifier failure. Updated the runner consumer contract to distinguish toolkit CI enforcement from consumer responsibilities.
+- Safety property: a missing, malformed, failed, stale-commit, or wrong-rules-pin report cannot open the final CI gate. The downstream caller must still check the runner process exit code and artifact provenance independently.
+- Validation is pending hosted CI on this branch; do not treat the implementation as verified until Push and PR runs pass on the exact head SHA.
+- PRs remain draft/unmerged. No model-provider calls, game actions, releases, or deployments were performed.
