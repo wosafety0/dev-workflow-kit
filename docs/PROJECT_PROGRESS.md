@@ -408,3 +408,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Re-ran the complete offline suite on exact head `e3c457717d1524383c037dc3ec901fedb4e9f5d4`, covering duplicate JSON-key rejection in reports, runner config, and semantic-review inputs/responses; bounded 1 MiB provider response reads; redirect rejection; and reusable consumer-report identity checks. Python compilation passed, **146 tests passed**, and `git diff --check` passed.
 - Exact-head Push CI [40825902357](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825902357) and PR-context CI [40825907701](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825907701) both succeeded, including report generation, artifact upload, strict report verification, and the final gate.
 - This is offline/local-loopback validation only; no external model-provider request was made. PR #31 remains Draft/open/unmerged; no merge, release, deployment, or game action occurred.
+
+
+## 2026-10-29 — require a clean worktree for commit-bound runner reports
+
+- Audit found that `git rev-parse HEAD` alone does not prove the tested source matches the reported commit: tracked edits and untracked inputs could affect task outcomes while the report still claimed the unchanged HEAD SHA.
+- Updated `scripts/harness_runner.py` to require a successful, empty `git status --porcelain --untracked-files=all` result before accepting the HEAD SHA. Dirty or untracked worktrees now fail closed before any configured task executes; the previous acceptance report has already been invalidated by runner preflight.
+- Added offline regressions for modified tracked files, untracked files, and clean-worktree SHA resolution; documented the rule in the stable acceptance contract.
+- Exact-head CI and test counts will be recorded after the new code head is verified. This is an offline validation change only; no live model-provider request, game action, deployment, release, or merge is involved.

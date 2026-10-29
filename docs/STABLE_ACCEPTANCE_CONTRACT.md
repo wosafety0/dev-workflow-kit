@@ -62,6 +62,8 @@ The caller must treat validation/provider failures as failure or inconclusive ou
 
 ## 7. CI evidence and acceptance procedure
 
+The local Harness runner records a commit-bound acceptance report only when `git status --porcelain --untracked-files=all` confirms a clean worktree. A HEAD SHA alone does not identify modified or untracked files that may affect the tested result. Commit or otherwise remove source changes and untracked inputs before using the runner to produce acceptance evidence; ordinary direct test commands may still be used during development.
+
 A change to this contract or its implementation is accepted only when:
 
 1. Tests are added or updated for the changed behavior.

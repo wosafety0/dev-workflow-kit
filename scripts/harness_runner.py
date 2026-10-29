@@ -70,6 +70,27 @@ def _require_artifact_path(root: Path, path: Path, field: str) -> None:
 
 
 def _git_commit_sha(root: Path) -> str:
+    # A HEAD SHA alone does not identify dirty or untracked source files. Refuse to
+    # publish a commit-bound acceptance report unless the tested tree is reproducible.
+    try:
+        status = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise HarnessRunnerError("Could not verify the project Git worktree status") from None
+    if status.returncode != 0:
+        raise HarnessRunnerError("Could not verify the project Git worktree status")
+    if status.stdout:
+        raise HarnessRunnerError(
+            "Project Git worktree must be clean before acceptance can be recorded"
+        )
+
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],

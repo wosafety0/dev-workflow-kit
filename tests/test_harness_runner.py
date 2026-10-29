@@ -388,5 +388,34 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual((status, exit_code), ("failed", None))
 
 
+    def test_git_commit_sha_rejects_dirty_or_untracked_worktree(self):
+        for status_output in (" M scripts/harness_runner.py\n", "?? untracked-input.json\n"):
+            with self.subTest(status_output=status_output), patch(
+                "scripts.harness_runner.subprocess.run",
+                return_value=type("Result", (), {
+                    "returncode": 0, "stdout": status_output
+                })(),
+            ) as run:
+                with self.assertRaisesRegex(
+                    harness_runner.HarnessRunnerError, "worktree must be clean"
+                ):
+                    harness_runner._git_commit_sha(self.root)
+                self.assertEqual(run.call_count, 1)
+                self.assertEqual(
+                    run.call_args.args[0],
+                    ["git", "status", "--porcelain", "--untracked-files=all"],
+                )
+
+    def test_git_commit_sha_accepts_clean_worktree_and_returns_head(self):
+        with patch(
+            "scripts.harness_runner.subprocess.run",
+            side_effect=[
+                type("Result", (), {"returncode": 0, "stdout": ""})(),
+                type("Result", (), {"returncode": 0, "stdout": "a" * 40 + "\n"})(),
+            ],
+        ) as run:
+            self.assertEqual(harness_runner._git_commit_sha(self.root), "a" * 40)
+        self.assertEqual(run.call_count, 2)
+
 if __name__ == "__main__":
     unittest.main()
