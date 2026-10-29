@@ -353,3 +353,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Exact-head PR CI passed: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823479931.
 - Both checks passed the 141-test offline suite and final report-verification gate. Earlier failing runs are retained as evidence of the contract mismatch; they are not counted as passing validation.
 - PR #31 remains Draft/open/unmerged. No branch topology changes, live model calls, game actions, deployment, release, or merge.
+
+## 2026-10-29 - Align CI report identity with strict verifier
+
+- Corrected the root CI report producer and its regression assertion to use `dev-workflow-kit/harness-runner@<github.sha>`, matching the strict standalone verifier and the runner's commit-bound report identity. The report producer, verifier, and runner now share one canonical identity string.
+- Targeted local verification passed: 12 standalone report-verifier tests, 2 runner report-identity tests, Python compilation, and `git diff --check`.
+- Exact-head hosted CI for `4743a0f762c34d59cb46763bc651e14993a8520f` passed both Push run [40823472625](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823472625) and PR-context run [40823479931](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823479931). The complete hosted offline suite, report generation, report identity verification, artifact upload, and final gate succeeded.
+- PR #31 remains Draft and unmerged. GitHub currently reports it mergeable against its declared base; this does not authorize or imply a merge. No live model-provider request, game operation, deployment, release, or branch-protection change occurred.
