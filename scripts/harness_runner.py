@@ -185,16 +185,18 @@ def main(argv: list[str] | None = None) -> int:
             raise HarnessRunnerError("project-root must be an existing directory")
         report_path = _resolve_inside_root(root, args.report_output, "report-output")
         _require_artifact_path(root, report_path, "report-output")
-        # Invalidate a prior PASS before validating other arguments or inputs.
+        # Resolve the config first: never delete an input file used as report-output.
+        # An invalid config path can still invalidate a safely resolved report.
         try:
-            report_path.unlink()
-        except FileNotFoundError:
-            pass
-        if not 1 <= args.timeout_seconds <= _MAX_TIMEOUT_SECONDS:
-            raise HarnessRunnerError(
-                f"timeout-seconds must be between 1 and {_MAX_TIMEOUT_SECONDS}"
-            )
-        config_path = _resolve_inside_root(root, args.config, "config")
+            config_path = _resolve_inside_root(root, args.config, "config")
+        except HarnessRunnerError:
+            try:
+                report_path.unlink()
+            except FileNotFoundError:
+                pass
+            raise
+        if config_path == report_path:
+            raise HarnessRunnerError("report-output must not overwrite config")
         review_input = (
             _resolve_inside_root(root, args.review_input, "review-input")
             if args.review_input is not None else None
@@ -214,6 +216,16 @@ def main(argv: list[str] | None = None) -> int:
         ):
             if path is not None and path == report_path:
                 raise HarnessRunnerError(f"report-output must not overwrite {label}")
+
+        # Only invalidate after checking all known input/output path collisions.
+        try:
+            report_path.unlink()
+        except FileNotFoundError:
+            pass
+        if not 1 <= args.timeout_seconds <= _MAX_TIMEOUT_SECONDS:
+            raise HarnessRunnerError(
+                f"timeout-seconds must be between 1 and {_MAX_TIMEOUT_SECONDS}"
+            )
 
         try:
             raw_config = json.loads(config_path.read_text(encoding="utf-8"))
