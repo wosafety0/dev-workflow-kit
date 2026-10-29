@@ -191,3 +191,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Candidate branch `fix/reconcile-pr-33-current-base-20261030` is a copy of the isolated reconstruction `reconcile/pr-33-on-current-base-20261030`; the original PR and rescue refs remain untouched.
 - This archive commit is intended to trigger the repository's Push CI for the candidate head. Results must be queried by exact commit SHA before the candidate is considered validated.
 - Candidate remains non-mergeable until CI and patch review are complete. No original PR retarget or merge was performed.
+
+## 2026-10-30 — Duplicate-input JSON regression repaired on reconstruction candidate
+
+- Exact-head Push CI initially failed on candidate commit `06858e97bd0a3657c2a379f97807003876b15202` (run [40912095333](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40912095333)). The failing test was `test_duplicate_input_json_keys_fail_closed_before_model_call`: the duplicate-key hook raised plain `ValueError`, while the CLI's fail-closed handler catches `ReviewError`.
+- Corrected `scripts/ai_semantic_review.py` so duplicate JSON keys raise `ReviewError`, preserving rejection while allowing the CLI to return its documented blocked exit code and remove any stale PASS artifact.
+- Fix commit: `d5346d0571ce6933c643220791ec020d8b26cf2a` on `fix/reconcile-pr-33-current-base-20261030`. Exact-head Push CI [40928437863](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40928437863) completed successfully: Python compilation passed, **108 offline tests passed**, redacted acceptance report upload succeeded, and the final acceptance gate passed.
+- Verification scope is the candidate branch's Push CI only. No live provider request or credential was used. Original PR #33 and PR #22 were not retargeted, merged, or closed; the reconstruction candidate remains separate pending patch review and PR-context CI. No release or deployment occurred.
+- Next: create a Draft PR for the reconstruction candidate against the current stacked base, verify the exact PR head and PR-context CI, then re-check dependency drift without changing the original PR.
