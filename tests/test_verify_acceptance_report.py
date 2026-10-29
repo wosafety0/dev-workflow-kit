@@ -97,13 +97,21 @@ class AcceptanceReportVerifierTests(unittest.TestCase):
             command = [sys.executable, "scripts/verify_acceptance_report.py",
                        "--report", str(path), "--expected-sha", SHA,
                        "--expected-rules-pin", PIN]
-            for raw in (
-                '{"schema_version":1,"schema_version":1}',
+            valid_prefix = (
                 '{"schema_version":1,"commit_sha":"' + SHA
                 + '","rules_pin":"' + PIN
-                + '","tool_version":"v1","tests":{"unit":"failed","unit":"passed"},'
-                + '"status":"passed"}',
-            ):
+                + '","tool_version":"dev-workflow-kit/harness-runner@' + SHA
+                + '","tests":{"unit":"passed"}'
+            )
+            raw_reports = (
+                valid_prefix + ',"status":"failed","status":"passed"}',
+                '{"schema_version":1,"commit_sha":"' + SHA
+                + '","rules_pin":"' + PIN
+                + '","tool_version":"dev-workflow-kit/harness-runner@' + SHA
+                + '","tests":{"unit":"failed","unit":"passed"},"status":"passed"}',
+            )
+            for raw in raw_reports:
+
                 with self.subTest(raw=raw):
                     path.write_text(raw, encoding="utf-8")
                     result = subprocess.run(command, capture_output=True, text=True)
