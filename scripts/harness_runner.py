@@ -113,7 +113,11 @@ def _git_commit_sha(root: Path) -> str:
 
 
 def _rules_pin(root: Path) -> str:
-    contract = root / "docs" / "STABLE_ACCEPTANCE_CONTRACT.md"
+    contract = _resolve_inside_root(
+        root, "docs/STABLE_ACCEPTANCE_CONTRACT.md", "stable acceptance contract"
+    )
+    if not contract.is_file():
+        raise HarnessRunnerError("Could not read docs/STABLE_ACCEPTANCE_CONTRACT.md")
     try:
         digest = hashlib.sha256(contract.read_bytes()).hexdigest()
     except OSError:
@@ -128,13 +132,16 @@ def _task_argv(
     review_output: Path | None,
 ) -> list[str]:
     if task_id == "python-unittest":
+        tests_dir = _resolve_inside_root(root, "tests", "tests directory")
+        if not tests_dir.is_dir():
+            raise HarnessRunnerError("python-unittest task requires a tests/ directory")
         return [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
     if task_id == "semantic-review":
         if review_input is None or review_output is None:
             raise HarnessRunnerError(
                 "semantic-review requires both --review-input and --review-output"
             )
-        script = root / "scripts" / "ai_semantic_review.py"
+        script = _resolve_inside_root(root, "scripts/ai_semantic_review.py", "semantic-review script")
         if not script.is_file():
             raise HarnessRunnerError("semantic-review task requires scripts/ai_semantic_review.py")
         return [
