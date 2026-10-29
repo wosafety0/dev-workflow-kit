@@ -114,6 +114,8 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
                 "--report", str(path), "--expected-sha", SHA,
                 "--expected-workflow-ref", WORKFLOW_REF,
                 "--expected-workflow-sha", WORKFLOW_SHA,
+                "--expected-harness-workflow-ref", HARNESS_WORKFLOW_REF,
+                "--expected-harness-workflow-sha", HARNESS_WORKFLOW_SHA,
             ]
             duplicate_top_level = (
                 '{"schema_version":1,"consumer_commit_sha":"' + SHA
