@@ -436,5 +436,37 @@ class HarnessRunnerTests(unittest.TestCase):
             harness_runner._resolve_trusted_source(self.root, "tests", "tests directory")
 
 
+    def test_runner_rejects_config_symlink_into_ignored_directory(self):
+        ignored = self.root / ".venv"
+        ignored.mkdir()
+        target = ignored / "mutable-config.json"
+        target.write_text(self.config_path.read_text(encoding="utf-8"), encoding="utf-8")
+        self.config_path.unlink()
+        try:
+            self.config_path.symlink_to(target)
+        except (OSError, NotImplementedError):
+            self.config_path.write_text(target.read_text(encoding="utf-8"), encoding="utf-8")
+            self.skipTest("file symlink creation is unavailable")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("config must not use symlinked paths", stderr)
+        run_task.assert_not_called()
+
+    def test_runner_rejects_report_output_symlink_before_deleting_target(self):
+        target = self.root / "artifacts" / "preserve.json"
+        target.write_text('{"keep": true}', encoding="utf-8")
+        report = self.root / "artifacts" / "report.json"
+        try:
+            report.symlink_to(target)
+        except (OSError, NotImplementedError):
+            self.skipTest("file symlink creation is unavailable")
+        code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("report-output must not use symlinked paths", stderr)
+        self.assertEqual(target.read_text(encoding="utf-8"), '{"keep": true}')
+        self.assertTrue(report.is_symlink())
+
+
 if __name__ == "__main__":
     unittest.main()
