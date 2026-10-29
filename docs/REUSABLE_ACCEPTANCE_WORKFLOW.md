@@ -42,6 +42,6 @@ Replace the placeholder with a real, reviewed commit SHA from this repository. D
 - The reusable workflow has only `contents: read` permissions and does not receive secrets by default.
 - `test-command` is executable shell supplied by the consuming repository. Treat it as code, review it, and do not populate it from untrusted PR text, issue comments, model output, or other untrusted data.
 - This workflow checks out and executes code from the consuming repository. Use it only for repositories and events where executing that code is appropriate.
-- The reusable workflow does not install project dependencies, access model-provider APIs, publish artifacts, merge PRs, or perform project business actions.
-- The workflow's SHA pin makes the reusable workflow definition immutable for that call. Third-party actions used inside it are currently referenced by version tags; a future hardening pass should pin those action dependencies to verified full commit SHAs.
+- The reusable workflow does not install project dependencies, access model-provider APIs, publish releases/packages, merge PRs, or perform project business actions. It does upload one redacted acceptance-report artifact for CI inspection, with a 14-day retention period.
+- The workflow's SHA pin makes the reusable workflow definition immutable for that call. Third-party actions in the current workflow are pinned to full commit SHAs; when upgrading an action, verify the selected commit against the upstream release and update the pin deliberately.
 - A green run establishes only that the consumer-provided command exited successfully. It does not prove the quality or completeness of the command itself.
