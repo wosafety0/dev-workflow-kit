@@ -403,3 +403,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The connector's current-head workflow-run lookup returned no PR-triggered run for `9d3fb4b...`; because this lookup filters to PR-triggered runs, this is not proof that Push CI is absent. Exact-head CI remains unverified. No tests were run; no PR/base/source ref was changed.
 
 - Cross-PR overlap check: PR #32 and PR #33 both modify `tests/test_harness_runner.py`. The shared semantic-review argv assertion currently differs: #32 expects raw `Path` string forms, while #33 changes expectations to `.resolve()` for the script, input, and output paths to handle Windows path normalization. Any combined candidate should retain #32's expanded Git/provenance and regression tests while carrying forward #33's resolved-path expectations; do not take either entire test file wholesale.
+
+
+## 2026-10-30 — candidate reconstruction refs recorded
+
+- Built isolated current-base reconstruction `reconcile/pr-32-on-current-base-20261030` from `e4be499e36ed9d8e22ff45065d95f92e0876df34`, and a CI-intended branch `fix/reconcile-pr-32-current-base-20261030` at commit `ec37ca93e225aef668472e52bd4db485c107fe23`.
+- The candidate compare shows 7 changed files, 8 commits ahead, 0 behind; ahead count includes candidate commits and is not a patch-size metric. Files match the expected PR #32 scope. Exact-head CI is not yet visible: combined status is empty and the available workflow-run query returned no runs (it filters to PR-triggered runs).
+- Original PR #32 and all rescue snapshots remain untouched. Candidate is not approved for merge; tests/CI remain unverified.
