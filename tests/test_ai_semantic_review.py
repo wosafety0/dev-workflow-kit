@@ -766,7 +766,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
             b'{"choices":[{"message":{"content":"not-json"}}]}',
             b'{"choices":[{"message":{"content":null}}]}',
             b'{"choices":[],"choices":[{"message":{"content":"{}"}}]}',
-            b'{"choices":[{"message":{"content":"{\\"status\\":\\"PASS\\",\\"status\\":\\"NEEDS_CHANGES\\"}"}}]}',
+            b'{"choices":[{"message":{"content":"{\"status\":\"PASS\",\"status\":\"NEEDS_CHANGES\"}"}}]}',
         ]
         for raw in responses:
             with self.subTest(raw=raw):
