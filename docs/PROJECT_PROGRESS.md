@@ -165,3 +165,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Hosted CI run [40718581286](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40718581286), run number 203, succeeded on exact head `8dd0e4b58cdf7384ebe703b8fd076ec97e98fd72`: 101 offline tests passed, including end-to-end runner execution, both task mappings, both example configs, and validation of the negative-review fixture. Acceptance report uploaded (artifact ID `12829517160`); final gate passed.
 - The model smoke test remains opt-in and was not run by CI; no live model request has been made.
 - PR #13 remains draft/unmerged. The runner is not a sandbox; running project tests can have side effects, so consumers must use trusted worktrees and review their test commands. No live model request was made.
+
+
+### Integration preflight: PR #12 and #13 branch divergence (2026-10-29)
+
+- Read-only GitHub compare confirmed both branches diverge from integration branch `feat/semantic-review-core-20261028` (base SHA `a3fbe350739b2108cd72bf063015281417fdd628`).
+- `fix/local-loopback-model-endpoint-20261028`: 6 ahead / 7 behind; changed files: `docs/STABLE_ACCEPTANCE_CONTRACT.md`, `scripts/ai_semantic_review.py`, `tests/test_ai_semantic_review.py`.
+- `feat/safe-task-runner-20261028`: 27 ahead / 6 behind; changed files include runner, examples, docs, and `tests/test_ai_semantic_review.py`.
+- The shared test file is an integration overlap, not proof of an actual merge conflict. Individual green CI results do not establish combined compatibility. Next: construct a non-main integration candidate, resolve any conflicts explicitly, and run full offline tests and acceptance gate before recommending merges.
+- No PR merged, no main branch change, no model calls or game operations in this preflight.
