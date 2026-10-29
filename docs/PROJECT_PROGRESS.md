@@ -343,3 +343,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The first strict-verifier run correctly failed because the CI report producer used `dev-workflow-kit@<SHA>` while the runner emitted `dev-workflow-kit/harness-runner@<SHA>`. This exposed a producer-contract inconsistency; the fix was not to weaken verification, but to standardize the runner on the CI report's commit-bound identity and add an explicit runner regression assertion.
 - Final code head `d9eb1df62a7e0c8b9a5d956dfa72fb17302078f7` passed exact-head Push CI [run 40822974635](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40822974635) and PR CI [run 40822982587](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40822982587). Push logs confirm 140 offline tests passed, the acceptance report verified, and the orchestration gate passed.
 - The progress-only archive update that follows must also pass exact-head CI before this archive is considered fully validated. PR #31 remains Draft/unmerged. No live model calls, game actions, deployment, release, or merge occurred; local working-tree synchronization remains unverified.
+
+
+## 2026-10-29 — revalidated strict report tool identity after branch-head drift
+
+- A later branch-head audit found the CI producer and verifier identity strings had drifted again: the verifier's active contract requires `dev-workflow-kit/harness-runner@<expected SHA>`. The CI producer and contract documentation were realigned to that exact form, and the workflow regression asserts the producer string.
+- Exact latest code head: `4743a0f762c34d59cb46763bc651e14993a8520f`.
+- Exact-head Push CI passed: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823472625.
+- Exact-head PR CI passed: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823479931.
+- Both checks passed the 141-test offline suite and final report-verification gate. Earlier failing runs are retained as evidence of the contract mismatch; they are not counted as passing validation.
+- PR #31 remains Draft/open/unmerged. No branch topology changes, live model calls, game actions, deployment, release, or merge.
