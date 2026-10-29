@@ -389,5 +389,15 @@ class HarnessRunnerTests(unittest.TestCase):
             harness_runner._rules_pin(self.root)
 
 
+    def test_trusted_source_resolver_rejects_generated_artifact_paths(self):
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError,
+            "source path must not resolve inside artifacts/",
+        ):
+            harness_runner._resolve_trusted_source(
+                self.root, "artifacts/generated-source.py", "source path"
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
