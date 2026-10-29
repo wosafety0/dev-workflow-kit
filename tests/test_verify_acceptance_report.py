@@ -26,6 +26,18 @@ class AcceptanceReportVerifierTests(unittest.TestCase):
     def test_accepts_matching_pass_report(self):
         self.assertTrue(verify_report(valid(), SHA, PIN))
 
+    def test_ci_report_tool_identity_matches_verifier_contract(self):
+        workflow = (
+            Path(__file__).resolve().parents[1]
+            / ".github"
+            / "workflows"
+            / "ci.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "TOOL_VERSION: dev-workflow-kit/harness-runner@" + "$" + "{{ github.sha }}",
+            workflow,
+        )
+
     def test_rejects_stale_commit(self):
         self.assertFalse(verify_report(valid(), "c" * 40, PIN))
 
