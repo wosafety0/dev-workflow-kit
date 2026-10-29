@@ -33,6 +33,7 @@ class HarnessRunnerTests(unittest.TestCase):
         )
         self.config_path = self.root / "harness.json"
         self.write_config(["python-unittest"])
+        self.initialize_git_worktree()
 
     def write_config(self, commands):
         self.config_path.write_text(
@@ -44,10 +45,10 @@ class HarnessRunnerTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def run_runner(self, *extra):
+    def run_runner(self, *extra, config="harness.json"):
         args = [
             "--project-root", str(self.root),
-            "--config", "harness.json",
+            "--config", config,
             "--report-output", "artifacts/report.json",
             "--timeout-seconds", "10",
             *extra,
@@ -171,6 +172,21 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("review-output must be inside the artifacts/", stderr)
         run_task.assert_not_called()
+    def test_review_output_cannot_overwrite_config_inside_artifacts(self):
+        self.config_path = self.root / "artifacts" / "harness.json"
+        self.write_config(["semantic-review"])
+        original_config = self.config_path.read_bytes()
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--config", "artifacts/harness.json",
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/harness.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("review-output must not overwrite config", stderr)
+        run_task.assert_not_called()
+        self.assertEqual(self.config_path.read_bytes(), original_config)
 
     def test_rejects_path_traversal_before_running_tasks(self):
         with patch("scripts.harness_runner._run_task") as run_task:
@@ -234,7 +250,9 @@ class HarnessRunnerTests(unittest.TestCase):
 
 
     def initialize_git_worktree(self):
-        """Commit fixture sources so provenance checks use a real Git worktree."""
+        """Commit fixture sources once so provenance checks use a real Git worktree."""
+        if (self.root / ".git").exists():
+            return
         commands = [
             ["git", "init", "-q"],
             ["git", "add", "."],
@@ -245,6 +263,48 @@ class HarnessRunnerTests(unittest.TestCase):
         for command in commands:
             subprocess.run(command, cwd=self.root, check=True,
                            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+    def test_runner_rejects_config_under_artifacts_before_task_execution(self):
+        config_path = self.root / "artifacts" / "harness.json"
+        config_path.write_text(json.dumps({
+            "schema_version": 1,
+            "project": "test-project",
+            "commands": ["python-unittest"],
+        }), encoding="utf-8")
+        report_path = self.root / "artifacts" / "report.json"
+        report_path.write_text('{"status":"passed"}', encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(config="artifacts/harness.json")
+        self.assertEqual(code, 2)
+        self.assertIn("config must not resolve inside artifacts/", stderr)
+        run_task.assert_not_called()
+        self.assertTrue(config_path.is_file())
+        self.assertFalse(report_path.exists(), "stale passing report must be invalidated")
+
+    def test_runner_rejects_untracked_ignored_config_before_task_execution(self):
+        ignored = self.root / ".venv"
+        ignored.mkdir()
+        (self.root / ".gitignore").write_text(".venv/\\n", encoding="utf-8")
+        config_path = ignored / "harness.json"
+        config_path.write_text(json.dumps({
+            "schema_version": 1,
+            "project": "test-project",
+            "commands": ["python-unittest"],
+        }), encoding="utf-8")
+        report_path = self.root / "artifacts" / "report.json"
+        report_path.write_text('{"status":"passed"}', encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(config=".venv/harness.json")
+        self.assertEqual(code, 2)
+        self.assertIn("config must be tracked by the current Git HEAD", stderr)
+        run_task.assert_not_called()
+        self.assertFalse(report_path.exists(), "stale passing report must be invalidated")
+
+    def test_runner_accepts_config_tracked_by_current_head(self):
+        with patch("scripts.harness_runner._run_task", return_value=("passed", 0)):
+            code, _, stderr = self.run_runner()
+        self.assertEqual((code, stderr), (0, ""))
+
 
     def test_runner_rejects_modified_tracked_code_before_execution(self):
         self.initialize_git_worktree()
@@ -274,6 +334,34 @@ class HarnessRunnerTests(unittest.TestCase):
         run_task.assert_not_called()
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
+    def test_runner_rejects_artifacts_directory_replaced_by_symlink_during_task(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        outside_path = Path(outside.name)
+        artifacts = self.root / "artifacts"
+        saved_artifacts = outside_path / "saved-artifacts"
+
+        def replace_artifacts_directory(*_args):
+            artifacts.rename(saved_artifacts)
+            try:
+                artifacts.symlink_to(outside_path, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                saved_artifacts.rename(artifacts)
+                self.skipTest("directory symlinks are not supported on this platform")
+            return "passed", 0
+
+        with patch(
+            "scripts.harness_runner._run_task",
+            side_effect=replace_artifacts_directory,
+        ):
+            code, _, stderr = self.run_runner()
+
+        self.assertEqual(code, 2)
+        self.assertIn("report-output must not use symlinked paths", stderr)
+        self.assertFalse((outside_path / "report.json").exists())
+        self.assertTrue(saved_artifacts.is_dir())
+
+
     def test_runner_rejects_task_that_mutates_tracked_code(self):
         self.initialize_git_worktree()
         test_file = self.root / "tests" / "test_example.py"
@@ -294,6 +382,194 @@ class HarnessRunnerTests(unittest.TestCase):
         with self.assertRaisesRegex(harness_runner.HarnessRunnerError, "repository root"):
             harness_runner._git_commit_sha(self.root / "scripts")
 
+
+
+    def test_rejects_duplicate_json_config_keys_before_task_execution(self):
+        duplicate_configs = (
+            '{"schema_version":1,"schema_version":1,"project":"test-project","commands":["python-unittest"]}',
+            '{"schema_version":1,"project":"test-project","commands":["semantic-review"],"commands":["python-unittest"]}',
+            '{"schema_version":1,"project":"test-project","commands":["python-unittest"],"metadata":{"mode":"safe","mode":"unsafe"}}',
+        )
+        for raw in duplicate_configs:
+            with self.subTest(raw=raw):
+                self.config_path.write_text(raw, encoding="utf-8")
+                with patch("scripts.harness_runner._run_task") as run_task:
+                    code, _, stderr = self.run_runner()
+                self.assertEqual(code, 2)
+                self.assertIn("Could not read a valid JSON Harness config", stderr)
+                run_task.assert_not_called()
+
+
+    def test_runner_rejects_ignored_python_test_module_before_execution(self):
+        # An ignored test module must not execute under a report attributed to HEAD.
+        ignored_test = self.root / "tests" / "test_ignored.py"
+        (self.root / ".gitignore").write_text(
+            "tests/test_ignored.py\n", encoding="utf-8"
+        )
+        ignored_test.write_text(
+            "import unittest\nclass Hidden(unittest.TestCase):\n"
+            "    def test_hidden(self): self.assertTrue(True)\n",
+            encoding="utf-8",
+        )
+        subprocess.run(
+            ["git", "add", ".gitignore"], cwd=self.root, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test",
+             "-c", "user.email=harness-test@example.invalid",
+             "commit", "-qm", "ignore hidden test"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        report_path = self.root / "artifacts" / "report.json"
+        report_path.write_text('{"status":"passed"}', encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("ignored Python test source", stderr)
+        self.assertFalse(report_path.exists())
+        run_task.assert_not_called()
+
+    def test_runner_rejects_tests_directory_symlink_outside_root(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        (Path(outside.name) / "test_external.py").write_text(
+            "def test_external(): pass\\n", encoding="utf-8"
+        )
+        tests_dir = self.root / "tests"
+        saved_tests = self.root / "tests-saved"
+        tests_dir.rename(saved_tests)
+        try:
+            tests_dir.symlink_to(Path(outside.name), target_is_directory=True)
+        except (OSError, NotImplementedError):
+            saved_tests.rename(tests_dir)
+            self.skipTest("directory symlink creation is unavailable")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("tests directory resolves outside", stderr)
+        run_task.assert_not_called()
+
+    def test_runner_rejects_semantic_review_script_symlink_outside_root(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        external_script = Path(outside.name) / "ai_semantic_review.py"
+        external_script.write_text("# external script\\n", encoding="utf-8")
+        script = self.root / "scripts" / "ai_semantic_review.py"
+        script.unlink()
+        try:
+            script.symlink_to(external_script)
+        except (OSError, NotImplementedError):
+            script.write_text("# test fixture\\n", encoding="utf-8")
+            self.skipTest("file symlink creation is unavailable")
+        self.write_config(["semantic-review"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("semantic-review script resolves outside", stderr)
+        run_task.assert_not_called()
+
+    def test_rules_pin_rejects_contract_symlink_outside_root(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        external_contract = Path(outside.name) / "STABLE_ACCEPTANCE_CONTRACT.md"
+        external_contract.write_text("external mutable rules", encoding="utf-8")
+        contract = self.root / "docs" / "STABLE_ACCEPTANCE_CONTRACT.md"
+        contract.unlink()
+        try:
+            contract.symlink_to(external_contract)
+        except (OSError, NotImplementedError):
+            contract.write_text("contract", encoding="utf-8")
+            self.skipTest("file symlink creation is unavailable")
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError,
+            "stable acceptance contract resolves outside",
+        ):
+            harness_runner._rules_pin(self.root)
+
+
+    def test_trusted_source_resolver_rejects_generated_artifact_paths(self):
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError,
+            "source path must not resolve inside artifacts/",
+        ):
+            harness_runner._resolve_trusted_source(
+                self.root, "artifacts/generated-source.py", "source path"
+            )
+
+
+    def test_trusted_source_resolver_rejects_in_root_symlink_to_ignored_directory(self):
+        ignored = self.root / ".venv"
+        ignored.mkdir()
+        target = ignored / "mutable-source.py"
+        target.write_text("# mutable ignored source\\n", encoding="utf-8")
+        source = self.root / "scripts" / "ai_semantic_review.py"
+        source.unlink()
+        try:
+            source.symlink_to(target)
+        except (OSError, NotImplementedError):
+            source.write_text("# test fixture\\n", encoding="utf-8")
+            self.skipTest("file symlink creation is unavailable")
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError,
+            "semantic-review script must not use symlinked source paths",
+        ):
+            harness_runner._resolve_trusted_source(
+                self.root, "scripts/ai_semantic_review.py", "semantic-review script"
+            )
+
+    def test_trusted_source_resolver_rejects_nested_symlink_in_tests_directory(self):
+        ignored = self.root / ".venv"
+        ignored.mkdir()
+        target = ignored / "mutable_test.py"
+        target.write_text("import unittest\\n", encoding="utf-8")
+        source = self.root / "tests" / "test_mutable.py"
+        try:
+            source.symlink_to(target)
+        except (OSError, NotImplementedError):
+            self.skipTest("file symlink creation is unavailable")
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError,
+            "tests directory must not contain symlinked source paths",
+        ):
+            harness_runner._resolve_trusted_source(self.root, "tests", "tests directory")
+
+
+    def test_runner_rejects_config_symlink_into_ignored_directory(self):
+        ignored = self.root / ".venv"
+        ignored.mkdir()
+        target = ignored / "mutable-config.json"
+        target.write_text(self.config_path.read_text(encoding="utf-8"), encoding="utf-8")
+        self.config_path.unlink()
+        try:
+            self.config_path.symlink_to(target)
+        except (OSError, NotImplementedError):
+            self.config_path.write_text(target.read_text(encoding="utf-8"), encoding="utf-8")
+            self.skipTest("file symlink creation is unavailable")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("config must not use symlinked paths", stderr)
+        run_task.assert_not_called()
+
+    def test_runner_rejects_report_output_symlink_before_deleting_target(self):
+        target = self.root / "artifacts" / "preserve.json"
+        target.write_text('{"keep": true}', encoding="utf-8")
+        report = self.root / "artifacts" / "report.json"
+        try:
+            report.symlink_to(target)
+        except (OSError, NotImplementedError):
+            self.skipTest("file symlink creation is unavailable")
+        code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("report-output must not use symlinked paths", stderr)
+        self.assertEqual(target.read_text(encoding="utf-8"), '{"keep": true}')
+        self.assertTrue(report.is_symlink())
 
 
 if __name__ == "__main__":
