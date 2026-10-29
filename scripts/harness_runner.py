@@ -70,8 +70,21 @@ def _require_artifact_path(root: Path, path: Path, field: str) -> None:
 
 
 def _resolve_trusted_source(root: Path, value: str, field: str) -> Path:
-    """Resolve executable/rule inputs inside the repository, excluding generated artifacts."""
+    """Resolve committed executable/rule inputs, excluding mutable symlink targets and artifacts."""
     resolved = _resolve_inside_root(root, value, field)
+    candidate = root / value
+    current = candidate
+    while current != root:
+        if current.is_symlink():
+            raise HarnessRunnerError(f"{field} must not use symlinked source paths")
+        current = current.parent
+
+    if resolved.is_dir():
+        for directory, subdirectories, filenames in os.walk(resolved, followlinks=False):
+            entries = [Path(directory) / name for name in (*subdirectories, *filenames)]
+            if any(entry.is_symlink() for entry in entries):
+                raise HarnessRunnerError(f"{field} must not contain symlinked source paths")
+
     artifact_root = (root / "artifacts").resolve()
     try:
         resolved.relative_to(artifact_root)
