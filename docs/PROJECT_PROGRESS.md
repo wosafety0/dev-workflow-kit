@@ -195,3 +195,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Test fixture commit: `070d7c9a2387acbb724275cdecbd5f51612dcdd6`; read-back confirmed the intended literal at `tests/test_ai_semantic_review.py`.
 - Validation boundary: no test execution was performed by this connector; exact-head hosted CI for this commit has not yet been observed. PR #33 remains Draft/open/unmerged.
 - Dependency note: PR #33 still reports base SHA `f71025d2303737dafe18ae823f93cad9cdd1249d`, while PR #22's current PR metadata reports head SHA `071c168bc9532ba8d8c6a9f4708046e164879568` on the same base branch name. This indicates a branch-ref/base-SHA mismatch in the PR metadata snapshot; do not assume the downstream PR has inherited every current base-branch change. No retarget, rebase, merge, close/reopen, or consumer pin change was performed.
+
+## 2026-10-29 — test import correction for duplicate-input regression
+
+- Read-only review of the current PR #33 branch found that `test_duplicate_input_json_keys_fail_closed_before_model_call` patches `sys.stderr` with `StringIO`, but the test module did not import `StringIO`. This would raise `NameError` when the test executes.
+- Added `from io import StringIO` to the test module imports in commit `d8792d225a972eb8885187676be0ae8d3e073091`.
+- This is a narrow test-harness correction; no production behavior was changed.
+- Validation boundary: this connector has not executed the test suite. Exact-head hosted CI for this commit remains unverified until a run tied to this SHA is inspected. PR #33 remains Draft/open/unmerged; no merge, rebase, retarget, release, deployment, or consumer integration occurred.
