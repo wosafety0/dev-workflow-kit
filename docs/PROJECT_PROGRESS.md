@@ -174,3 +174,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - `feat/safe-task-runner-20261028`: 27 ahead / 6 behind; changed files include runner, examples, docs, and `tests/test_ai_semantic_review.py`.
 - The shared test file is an integration overlap, not proof of an actual merge conflict. Individual green CI results do not establish combined compatibility. Next: construct a non-main integration candidate, resolve any conflicts explicitly, and run full offline tests and acceptance gate before recommending merges.
 - No PR merged, no main branch change, no model calls or game operations in this preflight.
+
+
+### Runner configuration output alias hardening (2026-10-29)
+
+- Draft PR #19: https://github.com/wosafety0/dev-workflow-kit/pull/19 ; head `956b43939dc010f7a62561d8e1f7ceb766b61b68`; base `feat/safe-task-runner-20261028` (not `main`).
+- Fixed a preflight alias bug: if a valid Harness config lived inside `artifacts/`, `--review-output` could target the same path and overwrite it. The runner now rejects that alias before any task runs.
+- Added a regression test asserting exit 2, no task execution, and intact config content.
+- Hosted CI run [40793868543](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40793868543), job `offline-tests` ID `123185427562`, completed successfully. Decoded job logs confirm 102 offline tests passed; report creation, artifact upload, and final acceptance gate succeeded.
+- PR remains draft/unmerged. No `main` modification, deployment, or model request.
