@@ -54,7 +54,9 @@ A downstream consumer must first require the runner process to exit with code `0
 It must also independently compare the report's `commit_sha` with the intended
 checkout SHA and `rules_pin` with the reviewed contract SHA-256 digest.
 `scripts/verify_acceptance_report.py` provides a fail-closed report-content
-check, but cannot prove the process exit code or establish artifact provenance:
+check. The toolkit's own CI runs this verifier and includes its outcome in the
+final gate. A downstream consumer must still check its runner process exit code
+and establish artifact provenance; the JSON verifier cannot prove either:
 
 ```bash
 python scripts/verify_acceptance_report.py \
