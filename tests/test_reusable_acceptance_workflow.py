@@ -21,6 +21,30 @@ HARNESS_WORKFLOW_REF = (
 )
 
 
+def extract_inline_report_builder():
+    lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
+    marker = "      - name: Build redacted consumer acceptance report"
+    start = lines.index(marker)
+    run_index = next(i for i in range(start, len(lines)) if lines[i] == "        run: |")
+    heredoc_index = next(
+        i for i in range(run_index + 1, len(lines))
+        if lines[i] == "          python3 - <<'PY'"
+    )
+    code = []
+    for line in lines[heredoc_index + 1:]:
+        if line == "          PY":
+            break
+        if not line.strip():
+            code.append("")
+            continue
+        if not line.startswith("          "):
+            raise AssertionError("Unexpected YAML indentation in report builder")
+        code.append(line[10:])
+    else:
+        raise AssertionError("Report builder heredoc terminator not found")
+    return "\\n".join(code) + "\\n"
+
+
 def extract_inline_verifier():
     lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
     marker = "      - name: Verify consumer report identity and passing status"
@@ -55,6 +79,47 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
         )
         checkout_block = lines[checkout_index:next_step]
         self.assertIn("          persist-credentials: false", checkout_block)
+
+    def run_inline_report_builder(self, root):
+        env = os.environ.copy()
+        env.update({
+            "CONSUMER_COMMIT_SHA": SHA,
+            "CALLER_WORKFLOW_REF": WORKFLOW_REF,
+            "CALLER_WORKFLOW_SHA": WORKFLOW_SHA,
+            "HARNESS_WORKFLOW_REF": HARNESS_WORKFLOW_REF,
+            "HARNESS_WORKFLOW_SHA": HARNESS_WORKFLOW_SHA,
+            "RUNTIME_OUTCOME": "success",
+            "TEST_OUTCOME": "success",
+        })
+        return subprocess.run(
+            [sys.executable, "-c", extract_inline_report_builder()],
+            cwd=root, env=env, capture_output=True, text=True, check=False,
+        )
+
+    def test_report_builder_rejects_symlinked_artifacts_directory(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
+            root = Path(directory)
+            (root / "artifacts").symlink_to(Path(outside), target_is_directory=True)
+            result = self.run_inline_report_builder(root)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Unsafe acceptance report output directory", result.stderr)
+            self.assertFalse((Path(outside) / "consumer-acceptance-report.json").exists())
+
+    def test_report_builder_atomically_replaces_hardlinked_output_without_modifying_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifacts = root / "artifacts"
+            artifacts.mkdir()
+            target = root / "consumer-source.txt"
+            target.write_text("original consumer source", encoding="utf-8")
+            output = artifacts / "consumer-acceptance-report.json"
+            os.link(target, output)
+            result = self.run_inline_report_builder(root)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(target.read_text(encoding="utf-8"), "original consumer source")
+            report = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "passed")
+            self.assertNotEqual(target.stat().st_ino, output.stat().st_ino)
 
     def run_inline_verifier_payload(self, payload=None, expected_sha=SHA,
                                     expected_ref=WORKFLOW_REF,
