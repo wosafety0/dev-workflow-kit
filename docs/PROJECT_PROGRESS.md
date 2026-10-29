@@ -225,3 +225,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Evidence available before the clamp retest: Harness CI for the selected reusable workflow candidate passed (run https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715196026); independent Node consumer normal-path run passed (https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/40715309593); isolated Node consumer failure-path run ended with the expected failed conclusion (https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715636382).
 - Clamp's exact updated consumer run and report artifact remain pending/unverified in this record. The previous clamp successes used a different reusable-workflow SHA.
 - No PR was merged and no release was created.
+
+### Clamp report gate validation passed (2026-10-29)
+
+- Consumer trial PR #14: https://github.com/wosafety0/wosafety0clamp/pull/14.
+- Updated consumer head `af07c5ab266dc258a4fad831cffde3e5457c84bc` passed both PR-triggered run [40801011771](https://github.com/wosafety0/wosafety0clamp/actions/runs/40801011771) and push-triggered run [40801005786](https://github.com/wosafety0/wosafety0clamp/actions/runs/40801005786), pinned to reusable workflow SHA `65544e290fd875bb6c4e30f6525b238200037bba`.
+- Confirmed checkout, Python 3.12, consumer Node static tests, Python compile, offline unit tests, redacted acceptance report, artifact upload, and final gate all succeeded. Log states `Acceptance status: passed` and `Acceptance orchestration gate passed.`.
+- Consumer report artifact ID `12865713014`, SHA-256 `cc528d8f3dcd0a993c6dcd5b6db499eac35fe87996d64a372a29aab922208296`; expires 2026-11-12.
+- The same reusable revision has an isolated hosted failure-path run [40715636382](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715636382): command exit 23, report status failed, artifact upload success, final gate exit 1 naming `tests`. This confirms the intended failure closes the gate for that tested case.
+- Scope boundary: one consumer and one command-failure scenario are verified; no claim of complete runtime, live model, game operation, or broad cross-project coverage. Clamp PR remains draft/unmerged; no release or main-branch change.
