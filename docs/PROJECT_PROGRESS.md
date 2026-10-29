@@ -92,3 +92,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Exact-head CI for the expanded test suite: [run 40801822443](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801822443), tested commit `75865a39849492e3b355b99c0353d07cfe5c2caa`, conclusion `success`. CI logs confirm all 100 offline tests passed; Python compilation, report generation, artifact upload, and the final CI gate succeeded.
 - Remote readback confirmed the expanded test-file blob `a8e9d378c839d2d581a8cacda3350fcd0b756716`.
 - Status boundary: verified isolated contract tests only; this does not simulate a complete hosted run with empty/invalid input. The branch is unmerged, `main` is unchanged, and no release or consumer pin was changed.
+
+
+### Hosted consumer negative-path probe: empty command (2026-10-29)
+
+- Used the current pinned reusable workflow SHA `65544e290fd875bb6c4e30f6525b238200037bba` from an isolated clamp test branch; consumer workflow commit: `c47d3d1e7a0475d91808718f26d5cc49b4bcd510`.
+- Hosted run [40802071906](https://github.com/wosafety0/wosafety0clamp/actions/runs/40802071906) completed with workflow conclusion `failure`, as intentionally expected for the negative-path probe. The command step emitted the exact diagnostic `test-command must not be empty.` and exited 2; the redacted report recorded `status: failed` / `TEST_OUTCOME: failure`; report upload succeeded with artifact ID `12866197367`; the final gate exited 1 and named `tests` as the unsuccessful required stage.
+- This closes the previous evidence gap: the empty-input behavior was exercised in a real hosted reusable-workflow call, not only isolated shell-block tests. The run's red conclusion is the expected safety outcome, not a passing acceptance run.
+- The consumer probe exists only on isolated branch `test/harness-empty-command-hosted-20261029`; no PR was opened, no merge or release occurred, and `main` and the reusable-workflow pin remain unchanged.
