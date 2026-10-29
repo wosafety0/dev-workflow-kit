@@ -379,3 +379,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added regressions for duplicate input fields (verifying the model is not called and stale PASS output is removed), duplicate provider response keys, and duplicate model-review fields.
 - Final code head `89a7254e45494476665ea50fc5187d0b0ae1c111` passed exact-head Push CI [run 40824547635](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824547635) and PR CI [run 40824552875](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824552875). Both passed 145 offline tests; report verification and the final orchestration gate succeeded.
 - PR #31 remains Draft/open/unmerged. No live model-provider requests were made by these tests, no game actions, deployment, release, or merge occurred; local working-tree synchronization remains unverified.
+
+## 2026-10-29 - Reject duplicate JSON keys in semantic review
+
+- Hardened `scripts/ai_semantic_review.py` to reject duplicate JSON object keys when parsing the provider response envelope, the model-generated review JSON, and the supplied review input. This prevents ambiguous `status`, findings, or task fields from being silently resolved by Python's default last-key-wins behavior.
+- Added regressions for duplicate top-level and nested response keys and duplicate input keys; duplicate-key parsing fails closed without exposing response contents or credentials.
+- Exact code head `89a7254e45494476665ea50fc5187d0b0ae1c111` passed Push CI [40824547635](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824547635) and PR-context CI [40824552875](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824552875). Both passed **145 offline tests**, report generation, artifact upload, strict report verification, and the final orchestration gate.
+- PR #31 remains Draft/open/unmerged. No live model-provider request, game action, merge, release, or deployment occurred.
