@@ -285,7 +285,7 @@ def main(argv: list[str] | None = None) -> int:
         metadata = {
             "commit_sha": commit_sha,
             "rules_pin": rules_pin,
-            "tool_version": f"dev-workflow-kit@{commit_sha}",
+            "tool_version": f"dev-workflow-kit/harness-runner@{commit_sha}",
             "tests": outcomes,
         }
         report = _write_report(report_path, metadata)

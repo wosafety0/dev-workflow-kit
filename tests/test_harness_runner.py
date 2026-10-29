@@ -76,7 +76,7 @@ class HarnessRunnerTests(unittest.TestCase):
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["status"], "passed")
         self.assertEqual(report["tests"], {"python-unittest": "passed"})
-        self.assertEqual(report["tool_version"], "dev-workflow-kit@" + "a" * 40)
+        self.assertEqual(report["tool_version"], "dev-workflow-kit/harness-runner@" + "a" * 40)
         self.assertEqual(
             set(report),
             {"schema_version", "commit_sha", "rules_pin", "tool_version", "tests", "status"},

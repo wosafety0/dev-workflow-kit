@@ -35,7 +35,7 @@ def verify_report(report: object, expected_sha: str, expected_rules_pin: str) ->
         return False
     # Bind the tool identity to the same commit as the report.
     # A non-empty arbitrary version string is insufficient provenance.
-    if report["tool_version"] != f"dev-workflow-kit@{expected_sha}":
+    if report["tool_version"] != f"dev-workflow-kit/harness-runner@{expected_sha}":
         return False
     tests = report["tests"]
     if not isinstance(tests, dict) or not tests:

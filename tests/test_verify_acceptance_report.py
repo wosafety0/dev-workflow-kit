@@ -16,7 +16,7 @@ def valid():
         "schema_version": 1,
         "commit_sha": SHA,
         "rules_pin": PIN,
-        "tool_version": "dev-workflow-kit@" + SHA,
+        "tool_version": "dev-workflow-kit/harness-runner@" + SHA,
         "tests": {"python-unittest": "passed"},
         "status": "passed",
     }
