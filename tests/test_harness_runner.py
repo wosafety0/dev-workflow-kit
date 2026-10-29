@@ -327,5 +327,67 @@ class HarnessRunnerTests(unittest.TestCase):
                 run_task.assert_not_called()
 
 
+    def test_runner_rejects_tests_directory_symlink_outside_root(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        (Path(outside.name) / "test_external.py").write_text(
+            "def test_external(): pass\\n", encoding="utf-8"
+        )
+        tests_dir = self.root / "tests"
+        saved_tests = self.root / "tests-saved"
+        tests_dir.rename(saved_tests)
+        try:
+            tests_dir.symlink_to(Path(outside.name), target_is_directory=True)
+        except (OSError, NotImplementedError):
+            saved_tests.rename(tests_dir)
+            self.skipTest("directory symlink creation is unavailable")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("tests directory resolves outside", stderr)
+        run_task.assert_not_called()
+
+    def test_runner_rejects_semantic_review_script_symlink_outside_root(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        external_script = Path(outside.name) / "ai_semantic_review.py"
+        external_script.write_text("# external script\\n", encoding="utf-8")
+        script = self.root / "scripts" / "ai_semantic_review.py"
+        script.unlink()
+        try:
+            script.symlink_to(external_script)
+        except (OSError, NotImplementedError):
+            script.write_text("# test fixture\\n", encoding="utf-8")
+            self.skipTest("file symlink creation is unavailable")
+        self.write_config(["semantic-review"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("semantic-review script resolves outside", stderr)
+        run_task.assert_not_called()
+
+    def test_rules_pin_rejects_contract_symlink_outside_root(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        external_contract = Path(outside.name) / "STABLE_ACCEPTANCE_CONTRACT.md"
+        external_contract.write_text("external mutable rules", encoding="utf-8")
+        contract = self.root / "docs" / "STABLE_ACCEPTANCE_CONTRACT.md"
+        contract.unlink()
+        try:
+            contract.symlink_to(external_contract)
+        except (OSError, NotImplementedError):
+            contract.write_text("contract", encoding="utf-8")
+            self.skipTest("file symlink creation is unavailable")
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError,
+            "stable acceptance contract resolves outside",
+        ):
+            harness_runner._rules_pin(self.root)
+
+
 if __name__ == "__main__":
     unittest.main()
