@@ -171,3 +171,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The protection existed as a separate change in PR #19, but that branch is based directly on #13 and is not an ancestor of #14/#18. The #14 → #18 chain therefore did not contain the guard.
 - Created a narrow follow-up branch based on the exact #18 head; added an early alias rejection, a regression that verifies the config bytes remain unchanged and no task executes, and a security-boundary note. This is not a merge or a rebase; it keeps the fix reviewable against the provenance/stale-artifact line.
 - Validation status at archive time: code and test changes committed to the follow-up branch; exact-head hosted CI is pending. No live model requests, game actions, deployment, release, or merge.
+
+
+## 2026-10-29 — review-output/config alias fix CI result
+
+- PR #32 exact head `8c02d63aea03a3705cb75783b57182f713eb2185` passed hosted Push CI: [run 40821391073](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40821391073). The job ran 108 offline tests (`OK`), built and uploaded the redacted acceptance report, and passed the final gate.
+- This is evidence for the exact #32 head only. PR #32 remains Draft/unmerged and stacked on PR #18; the independent PR #19 remains a separate branch. No branch was merged or retargeted.
