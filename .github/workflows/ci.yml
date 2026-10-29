@@ -79,12 +79,25 @@ jobs:
           path: artifacts/acceptance-report.json
           if-no-files-found: error
           retention-days: 14
+      - name: Verify acceptance report identity and passing status
+        id: verification
+        if: always()
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_RULES_PIN: ${{ steps.rules.outputs.pin }}
+        run: >-
+          python scripts/verify_acceptance_report.py
+          --report artifacts/acceptance-report.json
+          --expected-sha "$EXPECTED_SHA"
+          --expected-rules-pin "$EXPECTED_RULES_PIN"
+
       - name: Fail job unless all required stages succeeded
         if: always()
         env:
           TEST_OUTCOME: ${{ steps.tests.outcome }}
           REPORT_OUTCOME: ${{ steps.report.outcome }}
           ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
+          VERIFICATION_OUTCOME: ${{ steps.verification.outcome }}
         run: >-
           python scripts/ci_gate.py
-          "$TEST_OUTCOME" "$REPORT_OUTCOME" "$ARTIFACT_OUTCOME"
+          "$TEST_OUTCOME" "$REPORT_OUTCOME" "$ARTIFACT_OUTCOME" "$VERIFICATION_OUTCOME"
