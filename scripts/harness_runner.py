@@ -102,6 +102,33 @@ def _resolve_trusted_source(root: Path, value: str, field: str) -> Path:
     raise HarnessRunnerError(f"{field} must not resolve inside artifacts/")
 
 
+def _require_tracked_config(root: Path, config_path: Path) -> None:
+    """Require the config to be a committed file outside generated artifacts/."""
+    artifact_root = (root / "artifacts").resolve()
+    try:
+        config_path.relative_to(artifact_root)
+    except ValueError:
+        pass
+    else:
+        raise HarnessRunnerError("config must not resolve inside artifacts/")
+
+    try:
+        relative = config_path.relative_to(root.resolve()).as_posix()
+        result = subprocess.run(
+            ["git", "ls-tree", "-r", "--name-only", "HEAD", "--", f":(literal){relative}"],
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise HarnessRunnerError("Could not verify tracked Harness config") from None
+    if result.returncode != 0 or relative not in result.stdout.splitlines():
+        raise HarnessRunnerError("config must be tracked by the current Git HEAD")
+
+
 def _git_commit_sha(root: Path) -> str:
     """Require that the report's commit describes the exact checked-out source.
 
@@ -262,6 +289,7 @@ def main(argv: list[str] | None = None) -> int:
             raise HarnessRunnerError("project-root must be an existing directory")
         config_path = _resolve_inside_root(root, args.config, "config")
         _reject_symlink_path(root, args.config, "config")
+        _require_tracked_config(root, config_path)
         report_path = _resolve_inside_root(root, args.report_output, "report-output")
         _reject_symlink_path(root, args.report_output, "report-output")
         review_input = (
