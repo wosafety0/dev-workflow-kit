@@ -48,6 +48,24 @@ The runner reuses `scripts/acceptance_report.py` and emits only the current comm
 
 A passing runner result establishes only that the configured fixed tasks exited successfully on the recorded commit. It is not proof that semantic review detects every defect and is not authorization to merge, deploy, or perform project actions.
 
+## Consumer verification
+
+A downstream consumer must first require the runner process to exit with code `0`.
+It must also independently compare the report's `commit_sha` with the intended
+checkout SHA and `rules_pin` with the reviewed contract SHA-256 digest.
+`scripts/verify_acceptance_report.py` provides a fail-closed report-content
+check, but cannot prove the process exit code or establish artifact provenance:
+
+```bash
+python scripts/verify_acceptance_report.py \
+  --report artifacts/acceptance-report.json \
+  --expected-sha "$EXPECTED_COMMIT_SHA" \
+  --expected-rules-pin "$EXPECTED_RULES_PIN"
+```
+
+The expected values must come from trusted caller context, not from the report
+being verified. A passing JSON file alone is not evidence of a successful run.
+
 ## Security boundaries
 
 - Unknown task IDs fail closed in `scripts/harness_config.py`.
