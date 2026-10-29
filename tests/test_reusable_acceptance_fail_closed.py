@@ -112,7 +112,7 @@ class ReusableAcceptanceFailClosedTests(unittest.TestCase):
         self.assertIn("continue-on-error: true", self.source)
         self.assertIn(f"- name: {FINAL_GATE_STEP}", self.source)
         self.assertIn('failed+=("tests")', self.source)
-        self.assertIn('echo "Acceptance status: " + report["status"]', self.source)
+        self.assertIn('print("Acceptance status: " + report["status"])', self.source)
 
 
 if __name__ == "__main__":
