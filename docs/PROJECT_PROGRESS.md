@@ -234,3 +234,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Consumer report artifact ID `12865713014`, SHA-256 `cc528d8f3dcd0a993c6dcd5b6db499eac35fe87996d64a372a29aab922208296`; expires 2026-11-12.
 - The same reusable revision has an isolated hosted failure-path run [40715636382](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715636382): command exit 23, report status failed, artifact upload success, final gate exit 1 naming `tests`. This confirms the intended failure closes the gate for that tested case.
 - Scope boundary: one consumer and one command-failure scenario are verified; no claim of complete runtime, live model, game operation, or broad cross-project coverage. Clamp PR remains draft/unmerged; no release or main-branch change.
+
+
+### Empty consumer command contract regression (2026-10-29)
+
+- Added `test_empty_or_whitespace_test_command_fails_closed` to `tests/test_reusable_workflow_contract.py` on the report-gate candidate branch. It asserts the reusable workflow rejects blank/whitespace-only consumer commands with an explicit diagnostic and exit code 2, and retains `bash -euo pipefail` execution.
+- Harness CI run [40801233092](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801233092) passed on exact candidate head `ed9fccc0f510a1d4c0656589ae57e0a3ff6a4586`; logs show 95 offline tests passed, including the new regression.
+- This is a static workflow-contract test, not a claim that a separate hosted consumer run was invoked with a blank input. The hosted command-failure path remains evidenced by [run 40715636382](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715636382).
+- PR #8 remains draft/unmerged; no release or main-branch change.
