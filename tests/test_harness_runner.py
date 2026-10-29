@@ -311,5 +311,20 @@ class HarnessRunnerTests(unittest.TestCase):
 
 
 
+    def test_rejects_duplicate_json_config_keys_before_task_execution(self):
+        duplicate_configs = (
+            '{"schema_version":1,"schema_version":1,"project":"test-project","commands":["python-unittest"]}',
+            '{"schema_version":1,"project":"test-project","commands":["semantic-review"],"commands":["python-unittest"]}',
+        )
+        for raw in duplicate_configs:
+            with self.subTest(raw=raw):
+                self.config_path.write_text(raw, encoding="utf-8")
+                with patch("scripts.harness_runner._run_task") as run_task:
+                    code, _, stderr = self.run_runner()
+                self.assertEqual(code, 2)
+                self.assertIn("Could not read a valid JSON Harness config", stderr)
+                run_task.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
