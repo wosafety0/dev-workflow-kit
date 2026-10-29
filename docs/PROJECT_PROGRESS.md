@@ -216,3 +216,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Verified consumer run [40798692801](https://github.com/wosafety0/wosafety0clamp/actions/runs/40798692801) and repeat run [40798667539](https://github.com/wosafety0/wosafety0clamp/actions/runs/40798667539) both completed successfully. Checkout, Python 3.12 setup, and the consumer-owned Node static tests + Python compile + offline unittest command all passed.
 - Result: the reusable workflow is proven to run in one independent consumer repository for the configured offline acceptance suite. This is a successful integration pilot, not a general release or real-model validation.
 - Boundaries: consumer PR remains draft/unmerged; the consumer's existing CI remains unchanged; no game operations or provider API calls were made.
+
+### Clamp pilot upgraded to report-producing fail-closed revision (2026-10-29)
+
+- Consumer: `wosafety0/wosafety0clamp`, Draft PR #14: https://github.com/wosafety0/wosafety0clamp/pull/14.
+- Updated the consumer trial workflow to pin reusable acceptance workflow SHA `65544e290fd875bb6c4e30f6525b238200037bba`, which supports runtime allowlisting, a redacted JSON acceptance report, report artifact upload, and a final fail-closed gate.
+- Consumer-owned checks and read-only permissions remain unchanged; no consumer secrets, provider requests, game operations, deployment, or auto-merge are introduced.
+- Evidence available before the clamp retest: Harness CI for the selected reusable workflow candidate passed (run https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715196026); independent Node consumer normal-path run passed (https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/40715309593); isolated Node consumer failure-path run ended with the expected failed conclusion (https://github.com/wosafety0/dev-workflow-kit/actions/runs/40715636382).
+- Clamp's exact updated consumer run and report artifact remain pending/unverified in this record. The previous clamp successes used a different reusable-workflow SHA.
+- No PR was merged and no release was created.
