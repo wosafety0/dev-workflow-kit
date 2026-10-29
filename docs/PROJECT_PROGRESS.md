@@ -248,3 +248,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - A second hosted test run showed the extractor still included the shell heredoc launcher instead of only its embedded Python source. Corrected the test helper to begin after `python3 - <<'PY'` in commit `01c60a4bcf2dff0ee143a93bdd5062aa475a4e74`; the workflow's inline verifier itself had succeeded on the valid and invalid report cases. Re-run final-head CI before selecting a new consumer pin.
 
 - Final corrected/archive head `0173c597e82364a91e50f9817a9c8d40876dc04c` passed Push CI [40813501693](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40813501693) and PR CI [40813508518](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40813508518). The tests execute the exact inline verifier code extracted from the reusable workflow; the matching report passes and stale identity/failed status are rejected. This is the first verified candidate pin after correcting the consumer workspace boundary.
+
+
+## 2026-10-29 — reusable consumer report verifier edge-case coverage
+
+- Extended `tests/test_reusable_acceptance_workflow.py` to execute the exact inline verifier from `.github/workflows/reusable-acceptance.yml` against mismatched caller workflow ref/SHA, empty test maps, unknown fields, boolean schema version, blank test names, skipped status, missing report, and malformed JSON.
+- This is static/offline validation only; it does not execute consumer project actions. Current test commit: `fa7740e05af7b411ddce186d860434981bddda8a`. Awaiting exact-head hosted Push and PR CI before treating this expansion as verified.
+- Keep all stacked PRs Draft/unmerged. No model calls, game actions, release, or deployment.
