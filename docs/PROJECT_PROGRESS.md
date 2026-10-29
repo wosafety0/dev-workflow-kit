@@ -199,3 +199,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Retargeted draft PR #20 to `feat/safe-task-runner-20261028` to make the pull-request trigger eligible while preserving PR #19's fix in the integration head. The integration head remains `b44b7f139fdabe62cc215b173d022c5c13cc5c90`.
 - Connector's commit workflow lookup returned no PR-triggered runs after retargeting at inspection time. This lookup only includes pull-request-triggered runs, so it cannot establish whether a push-triggered run occurred. **No CI pass is claimed.**
 - Follow-up: obtain explicit PR-triggered workflow run/job evidence, or inspect run history through an appropriate run-list interface. PR remains draft; no merge or deployment.
+
+
+### Integrated runner and loopback fail-closed regression (2026-10-29)
+
+- Draft PR #20 received commit `827bb99d2eb97ac61909979094f68471f081150b` on `test/runner-loopback-integration-20261029`.
+- New `test_loopback_semantic_review_task_is_preflighted_without_network` verifies literal loopback endpoint normalization, reviewed runner task dispatch, and failed semantic-review propagation into the overall acceptance report. The test mocks task execution and makes no real provider request.
+- The integration candidate includes loopback proxy-bypass mock-server tests, safe runner, and output alias regression. Workflow lookup for the new head returned no PR-triggered runs at inspection time; CI pass remains **unverified**. A commit workflow lookup alone is insufficient to assess push-triggered runs.
+- PR stays draft; no merge or release.
