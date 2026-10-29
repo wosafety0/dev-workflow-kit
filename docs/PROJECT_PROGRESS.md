@@ -305,3 +305,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Reviewed the actual redirect patches in #17 and #22. Both fail closed by returning `None` from a `urllib.request.HTTPRedirectHandler`, but they implement the opener path differently: #17 centralizes endpoint-specific opener setup in `_open_model_request(request, endpoint)` and keeps the response-size limit from its #15 ancestry; #22 adds the redirect handler directly in `call_model` on the #20 loopback branch. Both have a local two-server regression test proving the redirect destination is not contacted. Their security intent is equivalent, but their helper/mocking edits overlap.
 - Non-destructive convergence recommendation for a future shared branch: retain one endpoint-aware request-opening helper (the #17 structure is easier to test and keeps proxy handling localized), carry forward #22's explicit two-listener credential-forwarding regression and contract text, and rerun the complete offline suite against the combined final head. This is a review recommendation only; no branch was rebased, retargeted, merged, or closed.
 - Current status remains Draft/unmerged. CI proves offline tests only; no live provider request, game operation, release, or deployment occurred. Local working-tree synchronization remains unverified.
+
+
+## 2026-10-29 — require the complete consumer report stage set
+
+- Static contract review found that the inline report verifier accepted any non-empty all-passed test map, even if a required stage was omitted or an unknown stage substituted. The final workflow gate separately checked both actual stage outcomes, so this did not bypass the execution gate, but the report verifier was weaker than its documented contract.
+- Tightened the inline verifier to require exactly `runtime-validation` and `consumer-acceptance-command`; added regressions for a missing required stage and an unexpected stage, and clarified the report contract.
+- This is an offline contract-hardening change only. No provider requests, game actions, deployment, release, or merge.

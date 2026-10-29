@@ -163,7 +163,9 @@ jobs:
               and report.get("caller_workflow_sha") == expected_workflow_sha
               and report.get("status") == "passed"
               and isinstance(report.get("tests"), dict)
-              and bool(report["tests"])
+              and set(report["tests"]) == {
+                  "runtime-validation", "consumer-acceptance-command"
+              }
               and all(
                   isinstance(name, str) and bool(name.strip()) and status == "passed"
                   for name, status in report["tests"].items()

@@ -12,7 +12,7 @@ The workflow writes `artifacts/consumer-acceptance-report.json` with exactly the
 - `consumer_commit_sha`: the consumer commit SHA from the caller's workflow context
 - `caller_workflow_ref`: the caller workflow reference from GitHub context
 - `caller_workflow_sha`: the caller workflow file SHA from GitHub context
-- `tests`: non-empty map of stage names to `passed`, `failed`, or `not_run`
+- `tests`: exactly `runtime-validation` and `consumer-acceptance-command`, each set to `passed`, `failed`, or `not_run`
 - `status`: `passed` only when runtime validation and the consumer command both passed; otherwise `failed`
 
 The report contains no raw test output, environment dump, credentials, or logs. The workflow verifies the report against the trusted GitHub context values and rejects missing or malformed reports, unknown fields, identity mismatches, and any non-passing test status. The final gate separately requires runtime validation, the consumer command, report generation, artifact upload, and report verification to succeed.

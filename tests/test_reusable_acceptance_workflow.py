@@ -123,6 +123,14 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
         cases = []
         empty_tests = dict(base, tests={})
         cases.append(empty_tests)
+        missing_required_stage = dict(base, tests={"runtime-validation": "passed"})
+        cases.append(missing_required_stage)
+        unknown_stage = dict(base, tests={
+            "runtime-validation": "passed",
+            "consumer-acceptance-command": "passed",
+            "unrecognized-stage": "passed",
+        })
+        cases.append(unknown_stage)
         extra_key = dict(base, unexpected="not allowed")
         cases.append(extra_key)
         boolean_version = dict(base, schema_version=True)
