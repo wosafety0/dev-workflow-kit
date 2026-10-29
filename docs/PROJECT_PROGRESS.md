@@ -312,3 +312,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Probe/archive head `6ab6c6b438aa6ae4b638a12863e48acbe9090af5` passed exact-head Push CI: [run 40867026733](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40867026733).
 - After this fresh head update, the PR API still reported base SHA `b402101ef41d3f9d4f9533545ea83128ba5843a6`, and no new PR-context run appeared for the new head. The probe therefore did not close the PR-context gap.
 - A PR comment records this result. Continue to keep PR #32 Draft/unmerged and do not treat Push CI as a substitute for PR-context validation. No PR topology changes or consumer pin changes were made.
+
+## 2026-10-29 continued review — runner output hardening and PR-context CI gap
+
+- Harness repository: `wosafety0/dev-workflow-kit`; PR #32 remains Draft/open/unmerged, head branch `fix/review-output-config-collision-20261029`, current head before this archive: `49baad3adc1d508a74204b22c545cbf8fbf53b16`.
+- Runner output-path review: `scripts/harness_runner.py` revalidates report/review output symlink components after task completion, rechecks the artifacts boundary, and writes the acceptance report using a same-directory temporary file plus `os.replace`. Regression coverage for an artifacts-directory symlink swap was included in the 121-test suite.
+- Exact-head Push CI for `49baad3adc1d508a74204b22c545cbf8fbf53b16` passed: run [40867111522](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40867111522). This is Push CI evidence only.
+- PR-context CI remains unresolved for PR #32. The PR API reports base SHA `b402101ef41d3f9d4f9533545ea83128ba5843a6`, while the live base branch ref is `e4be499e36ed9d8e22ff45065d95f92e0876df34`. The workflow at the live base includes `fix/**`, while the older base SHA's workflow omitted it. A progress-only head update did not create a newer PR-context run. Do not count older PR-context success as current-head validation.
+- Safe-boundary decision: no PR retarget, merge, rebase, close/reopen, consumer pin update, or further no-op trigger-probe commits. The trigger gap is recorded as a blocker pending a solution that preserves PR topology.
+- PR #31 remains Draft/open/unmerged. Its latest known exact-head Push and PR-context validation were previously recorded at archive commit `10c5036e2889a9a28e05c3494b964dbb0023b088`; no consumer pins were changed.
+- Next: continue source-level Harness security review and validate the latest archive commit's Push CI. Reassess PR-context CI only if a non-topology-changing route becomes available.
