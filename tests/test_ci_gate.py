@@ -8,13 +8,12 @@ from scripts.ci_gate import gate_passes, main
 class CiGateTests(unittest.TestCase):
     def test_only_all_exact_success_outcomes_pass(self):
         self.assertTrue(gate_passes("success", "success", "success", "success"))
-        for stage_index, bad_outcome in enumerate(
-            ("failure", "cancelled", "skipped", "neutral", "", "Success", "unknown")
-        ):
-            outcomes = ["success"] * 4
-            outcomes[stage_index] = bad_outcome
-            with self.subTest(stage_index=stage_index, bad_outcome=bad_outcome):
-                self.assertFalse(gate_passes(*outcomes))
+        for stage_index in range(4):
+            for bad_outcome in ("failure", "cancelled", "skipped", "neutral", "", "Success", "unknown"):
+                outcomes = ["success"] * 4
+                outcomes[stage_index] = bad_outcome
+                with self.subTest(stage_index=stage_index, bad_outcome=bad_outcome):
+                    self.assertFalse(gate_passes(*outcomes))
 
     def test_missing_or_extra_stage_outcomes_fail_closed(self):
         self.assertFalse(gate_passes())
