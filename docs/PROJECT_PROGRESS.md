@@ -151,3 +151,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added offline tests for `http://127.0.0.1:1235/v1` and `http://[::1]:1235/v1`, and retained negative tests for unsafe HTTP endpoints. Updated `docs/STABLE_ACCEPTANCE_CONTRACT.md`.
 - Hosted CI run [40716125120](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40716125120), run number 144, succeeded on the exact tested head. 90 offline tests passed, the acceptance report uploaded (artifact ID `12829135525`), and the final gate passed.
 - This validates configuration parsing and security boundaries only. It does not constitute a live model request or prove that the user's local LM Studio endpoint is reachable from this environment. PR #12 remains draft and unmerged.
+
+
+### Reusable acceptance command fail-closed contract tests (2026-10-29)
+
+- Added \`tests/test_reusable_acceptance_fail_closed.py\` on branch \`test/reusable-command-fail-closed-20261029\`, based on reusable-workflow commit \`827bb99d2eb97ac61909979094f68471f081150b\`.
+- The tests extract and execute the actual shell block from \`.github/workflows/reusable-acceptance.yml\`, rather than a separately copied guard. They verify: an empty command fails with exit code 2 and the explicit diagnostic; whitespace-only input also fails closed; a nonexistent command exits nonzero and identifies the command in stderr; a valid command succeeds; and the failure-producing workflow step has a stable, identifiable name.
+- Exact-head CI: [run 40801197610](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801197610), tested commit \`37284d4662856a80c0ada183361233ce9a589651\`, conclusion \`success\`. The log confirms 110 offline tests passed; Python compilation, test suite, report generation, artifact upload, and final CI gate all succeeded.
+- Remote readback confirmed test-file blob \`382b8eaa44527795885aaeb517d4a423170e7e85\`.
+- Status boundary: this is verified test coverage on an isolated, unmerged test branch. The reusable workflow implementation itself was not changed, \`main\` was not changed, and consumers pinned to \`827bb99d2eb97ac61909979094f68471f081150b\` do not receive these tests automatically. Any upgrade of the clamp pin remains a separate review decision.
