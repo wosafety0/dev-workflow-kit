@@ -228,3 +228,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The hosted job ran all **115 offline tests**, including both new regressions for symlinks into ignored in-repository paths and nested symlinks under `tests/`; Python compilation, redacted acceptance-report generation/upload (artifact `12889309542`), and the final orchestration gate all passed.
 - This is PR-context CI evidence; the report's `github.sha` is the PR merge commit, as expected for that event. A separate exact branch Push CI result is not exposed by the currently available commit-run retrieval wrapper, so it is not claimed here.
 - The workflow filter was added to the PR #32 head and its base branch so stacked fix PRs can trigger PR-context CI. PR #32 remains Draft/unmerged; no consumer pin change or topology operation occurred.
+
+
+## 2026-10-29 — reject symlinked caller IO paths before reads or cleanup (PR #32)
+
+- Continued review of `scripts/harness_runner.py` found that the trusted-source guard did not cover caller-supplied config and review-input paths, and output paths were resolved before cleanup. A tracked symlink could therefore point at mutable ignored content, while an output symlink could cause cleanup to unlink the resolved target rather than the requested link.
+- Added `_reject_symlink_path` and applied it to the configured Harness JSON, report output, semantic-review input, and semantic-review output. Path containment validation still runs first; symlink components are then rejected before config reads, report invalidation, or review output creation.
+- Added regression tests for a config symlink into an ignored `.venv/` location and for an acceptance-report output symlink, asserting the latter's target content is preserved and no task executes on the blocked config case.
+- Code commit: `4fdff5b416ba62e848eee2bdfa7a3da04b6d07d6`; regression tests: `bcdf017020c1766a036426c7a203c43b808c043d`; runner documentation: `436a656a42591de9287dc29cf12bcb423ab66a64`.
+- Validation boundary: no local test runtime is available through this GitHub-only workflow, so hosted CI is required. Prior PR-context CI passed on earlier code head `b59f83a1d4c394eade420ce4eadced7897f2a92a` (115 tests), but does not validate these new changes. Exact-head CI must be observed before calling this revision validated. PR #32 remains Draft/unmerged; no consumer pin change or branch topology change occurred.
