@@ -121,7 +121,7 @@ jobs:
           )
           try:
               with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-                  handle.write(json.dumps(report, indent=2, sort_keys=True) + "\\n")
+                  handle.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
               # Atomic replacement prevents a consumer-created symlink or hard link
               # at the output path from redirecting the report write.
               os.replace(temporary_name, output)
