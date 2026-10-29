@@ -94,6 +94,20 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(report["status"], "passed")
         self.assertEqual(report["tests"], {"python-unittest": "passed"})
 
+    def test_report_output_equal_to_config_preserves_config(self):
+        config_path = self.root / "artifacts" / "harness.json"
+        config_path.write_text(self.config_path.read_text(encoding="utf-8"), encoding="utf-8")
+        original = config_path.read_bytes()
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--config", "artifacts/harness.json",
+                "--report-output", "artifacts/harness.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("report-output must not overwrite config", stderr)
+        self.assertEqual(config_path.read_bytes(), original)
+        run_task.assert_not_called()
+
     def test_invalid_timeout_invalidates_prior_passed_report(self):
         report_path = self.root / "artifacts" / "report.json"
         report_path.write_text('{"status":"passed"}', encoding="utf-8")
