@@ -203,3 +203,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Updated `docs/HARNESS_RUNNER_V1.md` to document the provenance boundary.
 - Implementation commit: `b9cba674b3697664cea9a65c7fa8a57c6f364714`; follow-up artifact-exclusion commit: `0286e2e930400b9d1c618c876971647a23459fcd`. Regression-test commits: `722398956021c4b875fc046485d14160d67d415d` and `748c7cf27121b9f346bcf6c2dae79174795708ff`. Documentation commits: `587d3ec6f3da1a95304c64c3f014ed322330b465` and `8e10cc9988cacbba503d52753b8ea2ea3371d503`.
 - Verification boundary: the code and tests are committed to the existing PR #32 branch. Exact-head hosted CI for the final code-and-archive head must be checked before this change is considered validated. PR #32 remains Draft/unmerged; no branch rebase, retarget, merge, release, live model request, or consumer action occurred.
+
+
+## 2026-10-29 — enable PR-context CI for stacked fix branches
+
+- The Runner provenance hardening is stacked on PR #18, whose base branch is `fix/runner-commit-provenance-20261029`. Review of `.github/workflows/ci.yml` found that `push` included `fix/**`, but `pull_request.branches` omitted it. As a result, this PR target did not match the configured PR-context CI branch filter; a successful Push CI alone would not prove the PR-context gate ran.
+- Updated the pull-request branch filter to include `fix/**`, so stacked fix PRs receive the same offline test/report/final-gate workflow in PR context.
+- Workflow-filter change commit: `41c997a49ef9b4d75d1be60e9db0877a8ddd8238`.
+- Verification boundary: this commit should trigger both branch Push CI and PR-context CI, but neither run is claimed passed until an exact-head result is observed. PR #32 remains Draft/unmerged; no rebase, retarget, merge, consumer pin update, live model call, or game action occurred.
