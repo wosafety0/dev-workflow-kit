@@ -320,3 +320,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Static contract comparison found that PR #8 emits a report with only `consumer-acceptance-command` and has no `runtime-validation` report stage, while current PR #31 verifier requires exactly `runtime-validation` and `consumer-acceptance-command`. Therefore these report/workflow revisions are not contract-compatible as-is; passing PR #8 CI proves its offline tests, not compatibility with the newer PR #31 verifier.
 - PR #8 and PR #31 are separate open Draft branches with different ancestry. Do not combine their workflow files without reconciling the schema and stage semantics. No retarget, rebase, close, merge, or consumer pin change was performed.
 - The current PR #31 chain remains the newer report-verification path for the consumer pilot. Keep PR #8 as an explicitly unresolved parallel candidate until its intended role is decided through the normal review/integration plan.
+
+
+## 2026-10-29 — cross-branch runner safety finding (#32)
+
+- Separate review of the runner branch chain found that PR #14 → #18 did not inherit PR #19's review-output/config alias guard. This was material because stale-artifact cleanup can delete the output path before config parsing; if both paths alias inside `artifacts/`, it could delete the config and block the run.
+- Follow-up PR #32 adds the guard before cleanup, a byte-preservation regression, and a security-boundary note. It is stacked on PR #18 (`fix/runner-commit-provenance-20261029`), not on the reusable-workflow PR #31 chain; do not treat it as merged into the current consumer-report verifier line.
+- PR #32 code head `8c02d63aea03a3705cb75783b57182f713eb2185` passed Push CI [run 40821391073](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40821391073), 108 offline tests. Its subsequent progress-archive head `8223a68ece83fbaf1d92e01aa2146016aee54284` also passed exact-head Push CI [run 40821497469](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40821497469), 108 offline tests.
+- PR #32 remains Draft/unmerged; PR #19 remains a separate Draft line. No PR merge, rebase, retarget, consumer pin change, live model call, game operation, deployment, or release was performed.
