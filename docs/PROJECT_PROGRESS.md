@@ -193,3 +193,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Combined runner review found a second artifact-only consumer hazard: a prior `PASS` semantic-review output could survive when an earlier local task fails and semantic review is marked `not_run`.
 - The runner now unlinks a pre-existing semantic-review output after validating paths and before launching tasks. Added an offline regression with a pre-existing `PASS` review artifact, a failed first task, `semantic-review: not_run`, and an assertion that the stale artifact is absent. Updated `docs/HARNESS_RUNNER_V1.md`.
 - Follow-up branch `fix/runner-stale-review-artifact-20261029` is stacked on stale acceptance report candidate `80c1be685de2ca521418aa5622da02eb62911ad1`. No live model requests, game actions, merges, releases, or deployments. CI evidence tracked separately.
+
+## 2026-10-29 — early preflight stale-report invalidation (PR #27)
+
+- Reviewed runner preflight order after PR #26 and identified that timeout validation and config-path resolution occurred before previous acceptance-report invalidation; a prior PASS could survive these blocked runs.
+- Draft PR #27 (`fix/runner-early-stale-report-20261029`) moves report invalidation immediately after validating the project root and report output path, before timeout and other input-path preflight. Added two offline regressions and updated `docs/HARNESS_RUNNER_V1.md`.
+- Exact code/docs head before this archive: `386b032745e6649d017e20871fd35e8ab6eca5fd`; push CI run `40810871038` completed successfully. PR-context run `40810887822` was still in progress at observation; not yet claimed passed.
+- Limits: argparse failure, invalid project root, and invalid report path cannot guarantee artifact invalidation. Consumers must check exit code, report status, and commit identity. No live model request, game action, deployment, or merge.
