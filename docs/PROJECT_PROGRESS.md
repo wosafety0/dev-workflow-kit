@@ -253,5 +253,5 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 ## 2026-10-29 — reusable consumer report verifier edge-case coverage
 
 - Extended `tests/test_reusable_acceptance_workflow.py` to execute the exact inline verifier from `.github/workflows/reusable-acceptance.yml` against mismatched caller workflow ref/SHA, empty test maps, unknown fields, boolean schema version, blank test names, skipped status, missing report, and malformed JSON.
-- This is static/offline validation only; it does not execute consumer project actions. Current test commit: `fa7740e05af7b411ddce186d860434981bddda8a`. Awaiting exact-head hosted Push and PR CI before treating this expansion as verified.
+- This is static/offline validation only; it does not execute consumer project actions. Test commit `fa7740e05af7b411ddce186d860434981bddda8a` passed hosted Push CI [40814889244](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40814889244) and PR CI [40814894902](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40814894902). These checks cover the exact code/test commit; the subsequent progress-only archive commit is `8be6cb62c59ec355ca42ad32b1d193bba0dc68d0`.
 - Keep all stacked PRs Draft/unmerged. No model calls, game actions, release, or deployment.
