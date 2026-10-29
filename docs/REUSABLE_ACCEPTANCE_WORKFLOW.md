@@ -47,15 +47,16 @@ Replace the placeholder with a real, reviewed commit SHA from this repository. D
 - A green run establishes only that the consumer-provided command exited successfully. It does not prove the quality or completeness of the command itself.
 
 
-## Ownership boundary for consumer pilots
+## Ownership boundary and parallel workstreams
 
-The Harness repository owns the reusable workflow implementation and its debugging lifecycle. For any consumer pilot (including `wosafety0/wosafety0clamp`):
+The Harness repository is the sole owner of Harness implementation, debugging, and regression fixes across **all consumers**. Consumer projects must not take over, fork, duplicate, or conduct Harness debugging/development in their own repositories.
 
-- Fix reusable workflow behavior, report schema/verifier, provenance and identity checks, runtime orchestration, artifact handling, gate logic, and Harness regression tests in `wosafety0/dev-workflow-kit`.
-- Validate and archive the Harness fix in this repository first. Do not use a consumer repository as a development branch for Harness implementation.
-- The consumer repository owns only its immutable Harness SHA pin, its own acceptance command and project tests, and minimal consumer-side configuration/documentation.
-- When a consumer run reveals a suspected Harness defect, preserve the failing run as evidence, reproduce and fix it in the Harness repository, then update the consumer pin only after the exact Harness commit passes Harness CI. Re-run consumer CI to validate the integration.
-- Do not copy the verifier or reusable workflow implementation into consumer repositories, and do not add temporary Harness-debugging/probe workflows to a consumer repository unless the user explicitly authorizes a narrowly scoped diagnostic exception.
+- Harness-owned work includes reusable workflow implementation, report schema and verifiers, provenance/identity checks, runtime orchestration, artifact handling, gate behavior, Harness regression tests, root-cause analysis, and CI evidence.
+- Every Harness defect found by any consumer is treated as input evidence for the Harness backlog. Preserve the failing run, logs, exact pinned SHA, and minimal reproduction; then reproduce, prioritize, fix, and test in the Harness repository.
+- Harness debugging proceeds **in parallel with Harness's own planned/core product development**. It is not a consumer-led workstream and does not require pausing ordinary Harness feature development. Prioritize fixes by severity, security/correctness impact, affected consumers, reproducibility, and release/blocking risk.
+- Consumers own only their immutable Harness SHA pin, their own project acceptance command/tests, and the minimal configuration/documentation required to call a validated Harness revision. They may report failures and validate integration; they must not patch Harness internals or add Harness-specific diagnostic/probe implementations locally.
+- After a Harness fix passes exact-head Harness CI, update a consumer pin only when needed and rerun that consumer's own acceptance CI. Keep the failure evidence linked to the Harness fix so the cause and resolution remain traceable.
+- Do not copy Harness implementation into consumer repositories or add temporary Harness-debugging/probe workflows there unless the user explicitly authorizes a narrowly scoped diagnostic exception.
 - Keep consumer trial PRs Draft/unmerged until separately reviewed and explicitly authorized.
 
-This boundary separates reusable product development from consumer integration and prevents debugging fixes from becoming duplicated, consumer-specific implementations.
+This boundary applies to every current and future consumer, not only Clamp. It keeps one authoritative implementation and lets reusable Harness development and Harness debugging advance concurrently without consumer-specific forks.
