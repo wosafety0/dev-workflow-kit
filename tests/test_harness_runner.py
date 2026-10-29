@@ -171,6 +171,21 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("review-output must be inside the artifacts/", stderr)
         run_task.assert_not_called()
+    def test_review_output_cannot_overwrite_config_inside_artifacts(self):
+        self.config_path = self.root / "artifacts" / "harness.json"
+        self.write_config(["semantic-review"])
+        original_config = self.config_path.read_bytes()
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--config", "artifacts/harness.json",
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/harness.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("review-output must not overwrite config", stderr)
+        run_task.assert_not_called()
+        self.assertEqual(self.config_path.read_bytes(), original_config)
 
     def test_rejects_path_traversal_before_running_tasks(self):
         with patch("scripts.harness_runner._run_task") as run_task:
@@ -294,6 +309,131 @@ class HarnessRunnerTests(unittest.TestCase):
         with self.assertRaisesRegex(harness_runner.HarnessRunnerError, "repository root"):
             harness_runner._git_commit_sha(self.root / "scripts")
 
+
+
+    def test_rejects_duplicate_json_config_keys_before_task_execution(self):
+        duplicate_configs = (
+            '{"schema_version":1,"schema_version":1,"project":"test-project","commands":["python-unittest"]}',
+            '{"schema_version":1,"project":"test-project","commands":["semantic-review"],"commands":["python-unittest"]}',
+            '{"schema_version":1,"project":"test-project","commands":["python-unittest"],"metadata":{"mode":"safe","mode":"unsafe"}}',
+        )
+        for raw in duplicate_configs:
+            with self.subTest(raw=raw):
+                self.config_path.write_text(raw, encoding="utf-8")
+                with patch("scripts.harness_runner._run_task") as run_task:
+                    code, _, stderr = self.run_runner()
+                self.assertEqual(code, 2)
+                self.assertIn("Could not read a valid JSON Harness config", stderr)
+                run_task.assert_not_called()
+
+
+    def test_runner_rejects_tests_directory_symlink_outside_root(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        (Path(outside.name) / "test_external.py").write_text(
+            "def test_external(): pass\\n", encoding="utf-8"
+        )
+        tests_dir = self.root / "tests"
+        saved_tests = self.root / "tests-saved"
+        tests_dir.rename(saved_tests)
+        try:
+            tests_dir.symlink_to(Path(outside.name), target_is_directory=True)
+        except (OSError, NotImplementedError):
+            saved_tests.rename(tests_dir)
+            self.skipTest("directory symlink creation is unavailable")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("tests directory resolves outside", stderr)
+        run_task.assert_not_called()
+
+    def test_runner_rejects_semantic_review_script_symlink_outside_root(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        external_script = Path(outside.name) / "ai_semantic_review.py"
+        external_script.write_text("# external script\\n", encoding="utf-8")
+        script = self.root / "scripts" / "ai_semantic_review.py"
+        script.unlink()
+        try:
+            script.symlink_to(external_script)
+        except (OSError, NotImplementedError):
+            script.write_text("# test fixture\\n", encoding="utf-8")
+            self.skipTest("file symlink creation is unavailable")
+        self.write_config(["semantic-review"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("semantic-review script resolves outside", stderr)
+        run_task.assert_not_called()
+
+    def test_rules_pin_rejects_contract_symlink_outside_root(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        external_contract = Path(outside.name) / "STABLE_ACCEPTANCE_CONTRACT.md"
+        external_contract.write_text("external mutable rules", encoding="utf-8")
+        contract = self.root / "docs" / "STABLE_ACCEPTANCE_CONTRACT.md"
+        contract.unlink()
+        try:
+            contract.symlink_to(external_contract)
+        except (OSError, NotImplementedError):
+            contract.write_text("contract", encoding="utf-8")
+            self.skipTest("file symlink creation is unavailable")
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError,
+            "stable acceptance contract resolves outside",
+        ):
+            harness_runner._rules_pin(self.root)
+
+
+    def test_trusted_source_resolver_rejects_generated_artifact_paths(self):
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError,
+            "source path must not resolve inside artifacts/",
+        ):
+            harness_runner._resolve_trusted_source(
+                self.root, "artifacts/generated-source.py", "source path"
+            )
+
+
+    def test_trusted_source_resolver_rejects_in_root_symlink_to_ignored_directory(self):
+        ignored = self.root / ".venv"
+        ignored.mkdir()
+        target = ignored / "mutable-source.py"
+        target.write_text("# mutable ignored source\\n", encoding="utf-8")
+        source = self.root / "scripts" / "ai_semantic_review.py"
+        source.unlink()
+        try:
+            source.symlink_to(target)
+        except (OSError, NotImplementedError):
+            source.write_text("# test fixture\\n", encoding="utf-8")
+            self.skipTest("file symlink creation is unavailable")
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError,
+            "semantic-review script must not use symlinked source paths",
+        ):
+            harness_runner._resolve_trusted_source(
+                self.root, "scripts/ai_semantic_review.py", "semantic-review script"
+            )
+
+    def test_trusted_source_resolver_rejects_nested_symlink_in_tests_directory(self):
+        ignored = self.root / ".venv"
+        ignored.mkdir()
+        target = ignored / "mutable_test.py"
+        target.write_text("import unittest\\n", encoding="utf-8")
+        source = self.root / "tests" / "test_mutable.py"
+        try:
+            source.symlink_to(target)
+        except (OSError, NotImplementedError):
+            self.skipTest("file symlink creation is unavailable")
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError,
+            "tests directory must not contain symlinked source paths",
+        ):
+            harness_runner._resolve_trusted_source(self.root, "tests", "tests directory")
 
 
 if __name__ == "__main__":

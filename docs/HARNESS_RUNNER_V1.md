@@ -26,6 +26,8 @@ The runner writes `artifacts/acceptance-report.json`. It requires a clean Git re
 
 Configuration supplies only task IDs. The runner maps them to fixed argument vectors and never invokes a shell:
 
+The runner rejects duplicate JSON object keys at every nesting level in the Harness config instead of silently accepting ambiguous last-value-wins input.
+
 - `python-unittest`: `python -m unittest discover -s tests -v` using the current Python interpreter.
 - `semantic-review`: `python scripts/ai_semantic_review.py --input <path> --output <path>`; both paths must be supplied explicitly with `--review-input` and `--review-output`.
 
@@ -45,7 +47,7 @@ If `semantic-review` is configured, a caller must pass both review paths. Review
 
 The acceptance report's `commit_sha` must describe the source actually tested. Before the first task, the runner verifies that `--project-root` is the Git repository root and that the worktree has no staged, unstaged, or untracked changes outside `artifacts/`. After the final task, it repeats the check and verifies that HEAD did not move. A mismatch blocks the report (exit code `2`) instead of claiming a passing result for the wrong commit.
 
-Generated `artifacts/` files are excluded from the cleanliness check. The repository `.gitignore` excludes common Python bytecode, virtual environments, and test caches; other untracked files must be committed, ignored intentionally, or removed before running. This is a local provenance guard, not a cryptographic attestation or a concurrency lock: callers must still run in trusted, isolated worktrees and correlate CI evidence to the exact head SHA. Do not bypass the gate by hiding source files in `artifacts/`.
+Generated `artifacts/` files are excluded from the cleanliness check. The repository `.gitignore` excludes common Python bytecode, virtual environments, and test caches; other untracked files must be committed, ignored intentionally, or removed before running. This is a local provenance guard, not a cryptographic attestation or a concurrency lock: callers must still run in trusted, isolated worktrees and correlate CI evidence to the exact head SHA. Do not bypass the gate by hiding source files in `artifacts/`. The runner also resolves the `tests/` directory, semantic-review entrypoint, and stable acceptance contract. It rejects targets outside the project root, targets under `artifacts/`, and symlinked source paths (including symlinks nested inside `tests/`). This also blocks links into ignored in-repository locations such as `.venv/`, whose mutable contents are not covered by the Git cleanliness check.
 
 ## Report contract
 
@@ -59,5 +61,6 @@ A passing runner result establishes only that the configured fixed tasks exited 
 - The runner never evaluates configuration text as shell code and does not accept executable paths or arbitrary arguments from config.
 - The runner is not a sandbox: test suites are repository code and may have side effects. Run it only against a trusted worktree and review project tests before enabling the runner in CI.
 - All input/output paths must remain within the project root; output files are restricted to `artifacts/`.
+- The semantic-review output must not alias the Harness config, even when both paths are inside `artifacts/`; output invalidation must never delete the config before validation.
 - The semantic-review task may make a provider request only when explicitly configured in the task list and when the required provider environment variables are present. Provider/configuration errors fail closed.
 - The runner does not commit, push, create PRs, merge, deploy, or invoke game/business actions.

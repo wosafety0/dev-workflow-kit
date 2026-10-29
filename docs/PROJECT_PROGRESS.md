@@ -163,3 +163,60 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Documentation commit `91460c2e3f79754f6ee5e4a6f2bfaf5459c421f2`: hosted push CI https://github.com/wosafety0/dev-workflow-kit/actions/runs/40733848128 succeeded for that exact head. This progress-log change itself requires a new exact-head CI check.
 - Limits: cleanliness is not a sandbox, concurrent-worktree lock, or cryptographic attestation; `artifacts/` is intentionally excluded, so executable source must not be placed there. The PR remains draft and unmerged; no change to `main`, no release/deploy, no live model request, and no consumer integration. The local Windows worktree was not inspected or synchronized.
 - Approval required: review PR #13 -> #14 -> #18 in dependency order, and separately PR #12 -> #15 -> #17; integrate only after explicit authorization and combined-branch CI. The independent Node consumer pilot remains draft/unmerged.
+
+
+## 2026-10-29 — prevent review-output/config alias before stale-artifact cleanup
+
+- Re-review of the runner dependency chain (#13 → #14 → #18) found a destructive path alias not covered by those heads: when both `--config` and `--review-output` pointed to the same file under `artifacts/`, stale-artifact invalidation unlinked that file before attempting to parse the config.
+- The protection existed as a separate change in PR #19, but that branch is based directly on #13 and is not an ancestor of #14/#18. The #14 → #18 chain therefore did not contain the guard.
+- Created a narrow follow-up branch based on the exact #18 head; added an early alias rejection, a regression that verifies the config bytes remain unchanged and no task executes, and a security-boundary note. This is not a merge or a rebase; it keeps the fix reviewable against the provenance/stale-artifact line.
+- Validation status at archive time: code and test changes committed to the follow-up branch; exact-head hosted CI is pending. No live model requests, game actions, deployment, release, or merge.
+
+
+## 2026-10-29 — review-output/config alias fix CI result
+
+- PR #32 exact head `8c02d63aea03a3705cb75783b57182f713eb2185` passed hosted Push CI: [run 40821391073](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40821391073). The job ran 108 offline tests (`OK`), built and uploaded the redacted acceptance report, and passed the final gate.
+- This is evidence for the exact #32 head only. PR #32 remains Draft/unmerged and stacked on PR #18; the independent PR #19 remains a separate branch. No branch was merged or retargeted.
+
+
+## 2026-10-29 runner config ambiguity hardening (PR #32)
+
+- Reviewed runner report generation and the fail-closed report verifier. The report builder derives overall status from every declared task status; the runner's process exit code remains a separate required signal, and consumers must independently validate report identity/provenance.
+- Found a remaining ambiguity at the Harness config boundary: Python's default JSON decoder silently accepts duplicate object keys (including nested keys), so two syntactically valid-looking configs could be interpreted by last-value-wins behavior.
+- Updated `scripts/harness_runner.py` to reject duplicate keys at every JSON object nesting level using `object_pairs_hook`; parser failures fail closed before any task executes.
+- Added regression coverage for duplicate top-level `schema_version` and duplicate `commands` keys. Both cases return blocked exit code 2 and assert no task execution.
+- Documented strict duplicate-key rejection in `docs/HARNESS_RUNNER_V1.md`.
+- Exact branch head: `10a091c086bfa8de9557f329d6f121cbbaddb796`.
+- Exact-head Push CI: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40822592220 — success; offline suite ran 109 tests, including the new duplicate-config regression.
+- PR #32 remains open and unmerged, stacked on `fix/runner-commit-provenance-20261029`. No rebase, retarget, merge, release, live model call, or game action was performed.
+
+
+- Follow-up coverage refinement: added a nested duplicate-key config case (`metadata.mode`) to verify the same strict parser hook rejects duplicate keys below the top level, not only duplicate root fields.
+- Exact-head Push CI for this added regression: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40822740014 — success at `7570b6b0a7ace791922fc9c4776e3f3017c0f314`.
+
+
+## 2026-10-29 — constrain runner provenance inputs to committed source paths (PR #32)
+
+- Runner provenance review found that a clean Git HEAD alone does not bind execution to committed content if a task entrypoint or acceptance-contract file resolves through a symlink. The existing cleanliness gate intentionally excludes generated `artifacts/`, so a source symlink targeting that directory would also bypass source-change detection.
+- Hardened `scripts/harness_runner.py`: the `tests/` directory, semantic-review entrypoint, and stable acceptance contract now resolve through a trusted-source path check. Targets outside the repository root and targets under generated `artifacts/` are rejected before task execution or rules hashing.
+- Added regressions for external symlinks targeting the test directory, semantic-review entrypoint, and acceptance contract, plus direct rejection of paths under `artifacts/`. Tests skip symlink-specific cases only when the platform cannot create symlinks; the generated-artifact path guard is tested independently.
+- Updated `docs/HARNESS_RUNNER_V1.md` to document the provenance boundary.
+- Implementation commit: `b9cba674b3697664cea9a65c7fa8a57c6f364714`; follow-up artifact-exclusion commit: `0286e2e930400b9d1c618c876971647a23459fcd`. Regression-test commits: `722398956021c4b875fc046485d14160d67d415d` and `748c7cf27121b9f346bcf6c2dae79174795708ff`. Documentation commits: `587d3ec6f3da1a95304c64c3f014ed322330b465` and `8e10cc9988cacbba503d52753b8ea2ea3371d503`.
+- Verification boundary: the code and tests are committed to the existing PR #32 branch. Exact-head hosted CI for the final code-and-archive head must be checked before this change is considered validated. PR #32 remains Draft/unmerged; no branch rebase, retarget, merge, release, live model request, or consumer action occurred.
+
+
+## 2026-10-29 — enable PR-context CI for stacked fix branches
+
+- The Runner provenance hardening is stacked on PR #18, whose base branch is `fix/runner-commit-provenance-20261029`. Review of `.github/workflows/ci.yml` found that `push` included `fix/**`, but `pull_request.branches` omitted it. As a result, this PR target did not match the configured PR-context CI branch filter; a successful Push CI alone would not prove the PR-context gate ran.
+- Updated the pull-request branch filter to include `fix/**`, so stacked fix PRs receive the same offline test/report/final-gate workflow in PR context.
+- Workflow-filter change commit: `41c997a49ef9b4d75d1be60e9db0877a8ddd8238`.
+- Verification boundary: this commit should trigger both branch Push CI and PR-context CI, but neither run is claimed passed until an exact-head result is observed. PR #32 remains Draft/unmerged; no rebase, retarget, merge, consumer pin update, live model call, or game action occurred.
+
+
+## 2026-10-29 — close in-repository ignored-path symlink provenance gap (PR #32)
+
+- Follow-up threat review found that checking only “inside repository root” and “outside artifacts/” was insufficient: a trusted-source path could be a symlink into an ignored in-repository location such as `.venv/`. Git cleanliness does not attest to mutable ignored targets, so such a link could still make a clean commit execute content that was not pinned by the commit.
+- Updated `_resolve_trusted_source` to reject symlinked path components and, for directory sources such as `tests/`, any nested symlink entry. This supplements the existing outside-root and generated-artifact rejection.
+- Added regression tests for a semantic-review entrypoint symlink into an ignored in-repository directory and a nested symlink inside `tests/`. Existing external-symlink and generated-artifact cases remain in place.
+- Code commit: `38e8dfd9b0386345ea34c892744263e2edd99642`; test commit: `f2bca798744de56a052597a3a62add6541e52160`; documentation commit: `7dccb4fc5b82655c6d53424c3fc6aea943af0392`.
+- Verification boundary: hosted CI for the final code-and-archive head remains unconfirmed through the currently available run/status retrieval interface. The workflow filter now includes `fix/**` for PR-context checks; do not mark this branch validated until exact-head Push and PR-context results are independently observed. PR #32 remains Draft/unmerged and no consumer pin was changed.
