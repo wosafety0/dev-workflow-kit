@@ -271,12 +271,15 @@ class HarnessRunnerTests(unittest.TestCase):
             "project": "test-project",
             "commands": ["python-unittest"],
         }), encoding="utf-8")
+        report_path = self.root / "artifacts" / "report.json"
+        report_path.write_text('{"status":"passed"}', encoding="utf-8")
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(config="artifacts/harness.json")
         self.assertEqual(code, 2)
         self.assertIn("config must not resolve inside artifacts/", stderr)
         run_task.assert_not_called()
         self.assertTrue(config_path.is_file())
+        self.assertFalse(report_path.exists(), "stale passing report must be invalidated")
 
     def test_runner_rejects_untracked_ignored_config_before_task_execution(self):
         ignored = self.root / ".venv"
@@ -288,12 +291,14 @@ class HarnessRunnerTests(unittest.TestCase):
             "project": "test-project",
             "commands": ["python-unittest"],
         }), encoding="utf-8")
+        report_path = self.root / "artifacts" / "report.json"
+        report_path.write_text('{"status":"passed"}', encoding="utf-8")
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(config=".venv/harness.json")
         self.assertEqual(code, 2)
         self.assertIn("config must be tracked by the current Git HEAD", stderr)
         run_task.assert_not_called()
-        self.assertFalse((self.root / "artifacts" / "report.json").exists())
+        self.assertFalse(report_path.exists(), "stale passing report must be invalidated")
 
     def test_runner_accepts_config_tracked_by_current_head(self):
         with patch("scripts.harness_runner._run_task", return_value=("passed", 0)):
