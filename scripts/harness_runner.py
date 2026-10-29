@@ -209,7 +209,7 @@ def _task_argv(
         if any(
             Path(os.fsdecode(path)).name.startswith("test")
             and Path(os.fsdecode(path)).suffix == ".py"
-            for path in ignored.stdout.split(b"\\0") if path
+            for path in ignored.stdout.split(b"\0") if path
         ):
             raise HarnessRunnerError("ignored Python test source must not be executed")
         return [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
