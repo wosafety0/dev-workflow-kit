@@ -312,3 +312,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Static contract review found that the inline report verifier accepted any non-empty all-passed test map, even if a required stage was omitted or an unknown stage substituted. The final workflow gate separately checked both actual stage outcomes, so this did not bypass the execution gate, but the report verifier was weaker than its documented contract.
 - Tightened the inline verifier to require exactly `runtime-validation` and `consumer-acceptance-command`; added regressions for a missing required stage and an unexpected stage, and clarified the report contract.
 - This is an offline contract-hardening change only. No provider requests, game actions, deployment, release, or merge.
+
+
+## 2026-10-29 — parallel reusable-workflow branch compatibility review
+
+- Reviewed open Draft PR #8 at exact head `ed9fccc0f510a1d4c0656589ae57e0a3ff6a4586`; its exact-head `offline-tests` check passed: [run 40801233092](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40801233092).
+- Static contract comparison found that PR #8 emits a report with only `consumer-acceptance-command` and has no `runtime-validation` report stage, while current PR #31 verifier requires exactly `runtime-validation` and `consumer-acceptance-command`. Therefore these report/workflow revisions are not contract-compatible as-is; passing PR #8 CI proves its offline tests, not compatibility with the newer PR #31 verifier.
+- PR #8 and PR #31 are separate open Draft branches with different ancestry. Do not combine their workflow files without reconciling the schema and stage semantics. No retarget, rebase, close, merge, or consumer pin change was performed.
+- The current PR #31 chain remains the newer report-verification path for the consumer pilot. Keep PR #8 as an explicitly unresolved parallel candidate until its intended role is decided through the normal review/integration plan.
