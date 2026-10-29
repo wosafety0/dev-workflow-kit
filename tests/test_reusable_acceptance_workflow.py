@@ -46,6 +46,16 @@ def extract_inline_verifier():
 
 
 class ReusableAcceptanceWorkflowTests(unittest.TestCase):
+    def test_checkout_does_not_persist_github_credentials_for_consumer_code(self):
+        lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
+        checkout_index = lines.index("      - name: Check out consuming repository")
+        next_step = next(
+            index for index in range(checkout_index + 1, len(lines))
+            if lines[index].startswith("      - name: ")
+        )
+        checkout_block = lines[checkout_index:next_step]
+        self.assertIn("          persist-credentials: false", checkout_block)
+
     def run_inline_verifier_payload(self, payload=None, expected_sha=SHA,
                                     expected_ref=WORKFLOW_REF,
                                     expected_workflow_sha=WORKFLOW_SHA,
