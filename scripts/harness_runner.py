@@ -373,6 +373,16 @@ def main(argv: list[str] | None = None) -> int:
         if _git_commit_sha(root) != commit_sha:
             raise HarnessRunnerError("Git HEAD changed during task execution")
 
+        # A task can mutate generated paths even though artifacts/ is excluded from
+        # Git cleanliness checks. Revalidate caller output paths immediately before
+        # writing so a replaced directory or output symlink cannot redirect writes.
+        _reject_symlink_path(root, args.report_output, "report-output")
+        _require_artifact_path(root, report_path, "report-output")
+        if args.review_output is not None:
+            _reject_symlink_path(root, args.review_output, "review-output")
+            if review_output is not None:
+                _require_artifact_path(root, review_output, "review-output")
+
         metadata = {
             "commit_sha": commit_sha,
             "rules_pin": rules_pin,
