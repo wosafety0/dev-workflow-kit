@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 
 _SHA = re.compile(r"^[0-9a-f]{40}$")
+_EXPECTED_TESTS = {"runtime-validation", "consumer-acceptance-command"}
 _KEYS = {
     "schema_version",
     "consumer_commit_sha",
@@ -42,12 +43,24 @@ def verify_report(
     if report["status"] != "passed":
         return False
     tests = report["tests"]
-    if not isinstance(tests, dict) or not tests:
+    if not isinstance(tests, dict) or set(tests) != _EXPECTED_TESTS:
         return False
     return all(
-        isinstance(name, str) and bool(name.strip()) and status == "passed"
+        isinstance(name, str)
+        and bool(name)
+        and name == name.strip()
+        and status == "passed"
         for name, status in tests.items()
     )
+
+
+def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON object key")
+        result[key] = value
+    return result
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -58,8 +71,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--expected-workflow-sha", required=True)
     args = parser.parse_args(argv)
     try:
-        report = json.loads(Path(args.report).read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError):
+        report = json.loads(
+            Path(args.report).read_text(encoding="utf-8"),
+            object_pairs_hook=_reject_duplicate_keys,
+        )
+    except (OSError, UnicodeError, ValueError):
         print("Consumer acceptance report verification failed")
         return 1
     if not verify_report(

@@ -19,7 +19,7 @@ def valid_report():
         "consumer_commit_sha": SHA,
         "caller_workflow_ref": WORKFLOW_REF,
         "caller_workflow_sha": WORKFLOW_SHA,
-        "tests": {"consumer-acceptance-command": "passed"},
+        "tests": {"runtime-validation": "passed", "consumer-acceptance-command": "passed"},
         "status": "passed",
     }
 
@@ -46,6 +46,17 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
             report["tests"] = tests
             report["status"] = status
             with self.subTest(tests=tests, status=status):
+                self.assertFalse(verify_report(report, SHA, WORKFLOW_REF, WORKFLOW_SHA))
+
+    def test_required_stage_set_is_exact(self):
+        for tests in (
+            {"consumer-acceptance-command": "passed"},
+            {"runtime-validation": "passed", "unexpected": "passed"},
+            {"runtime-validation": "passed", "consumer-acceptance-command": "passed", "extra": "passed"},
+        ):
+            report = valid_report()
+            report["tests"] = tests
+            with self.subTest(tests=tests):
                 self.assertFalse(verify_report(report, SHA, WORKFLOW_REF, WORKFLOW_SHA))
 
     def test_schema_and_expected_identity_are_strict(self):
@@ -82,6 +93,34 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
             self.assertEqual(main(args), 1)
             path.write_text("{broken", encoding="utf-8")
             self.assertEqual(main(args), 1)
+
+    def test_cli_rejects_duplicate_json_object_keys(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "duplicate.json"
+            command = [
+                sys.executable, "scripts/verify_consumer_acceptance_report.py",
+                "--report", str(path), "--expected-sha", SHA,
+                "--expected-workflow-ref", WORKFLOW_REF,
+                "--expected-workflow-sha", WORKFLOW_SHA,
+            ]
+            duplicate_top_level = (
+                '{"schema_version":1,"schema_version":1}'
+            )
+            duplicate_nested = (
+                '{"schema_version":1,"consumer_commit_sha":"' + SHA
+                + '","caller_workflow_ref":"' + WORKFLOW_REF
+                + '","caller_workflow_sha":"' + WORKFLOW_SHA
+                + '","tests":{"runtime-validation":"failed",'
+                + '"runtime-validation":"passed",'
+                + '"consumer-acceptance-command":"passed"},"status":"passed"}'
+            )
+            for raw in (duplicate_top_level, duplicate_nested):
+                with self.subTest(raw=raw):
+                    path.write_text(raw, encoding="utf-8")
+                    result = subprocess.run(command, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn("verification failed", result.stdout.lower())
+                    self.assertNotIn("Traceback", result.stderr)
 
     def test_subprocess_cli_rejects_stale_commit(self):
         with tempfile.TemporaryDirectory() as directory:
