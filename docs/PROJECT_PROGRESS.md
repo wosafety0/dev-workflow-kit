@@ -177,3 +177,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - PR #22 head `46587adaf9160c4e0b8503dfe49dc779cd976a33` received a successful PR-context Harness CI run: [run 40859961406](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40859961406).
 - The run tested merge commit `e41cc9887e65ebd8f110761853261e0cadd02cf6`, ran **106 offline tests**, generated/uploaded acceptance-report artifact `12891346305`, and passed the final orchestration gate.
 - This verifies the CI workflow correction against PR #22's current merge context. It does not validate PR #33's duplicate-key implementation; PR #33 still needs its own exact-head PR-context CI run.
+
+
+## 2026-10-30 — Candidate reconstruction on current base (PR #33)
+
+- Created isolated candidate branch `reconcile/pr-33-on-current-base-20261030` from current recorded base SHA `071c168bc9532ba8d8c6a9f4708046e164879568`; original PR and rescue refs remain unchanged.
+- Applied the bounded-response and duplicate-JSON implementation/tests, Windows-resolved runner path assertions, and merged the stable-contract statements into the current base contract rather than replacing that contract wholesale.
+- Candidate head and exact-head validation remain to be verified. This is a reconstruction candidate, not a validated replacement for PR #33. No tests were run by the connector in this step.
