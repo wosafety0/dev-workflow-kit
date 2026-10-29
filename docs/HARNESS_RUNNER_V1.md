@@ -20,7 +20,7 @@ Run:
 python scripts/harness_runner.py --config examples/harness-config.json
 ```
 
-The runner writes `artifacts/acceptance-report.json`. It requires a clean Git repository root with a valid HEAD and the reviewed contract file at `docs/STABLE_ACCEPTANCE_CONTRACT.md`. The `--config` file must be tracked by the current HEAD and must not resolve under generated `artifacts/`; ignored or untracked config files are rejected before the config is read or stale artifacts are invalidated. For an opt-in live model test, see [SEMANTIC_REVIEW_SMOKE_TEST.md](SEMANTIC_REVIEW_SMOKE_TEST.md) and the semantic-review example config/input.
+The runner writes `artifacts/acceptance-report.json`. It requires a clean Git repository root with a valid HEAD and the reviewed contract file at `docs/STABLE_ACCEPTANCE_CONTRACT.md`. The `--config` file must be tracked by the current HEAD and must not resolve under generated `artifacts/`; ignored or untracked config files are rejected after prior acceptance artifacts are invalidated, but before the config is read or any task executes. For an opt-in live model test, see [SEMANTIC_REVIEW_SMOKE_TEST.md](SEMANTIC_REVIEW_SMOKE_TEST.md) and the semantic-review example config/input.
 
 ## Task mapping
 
