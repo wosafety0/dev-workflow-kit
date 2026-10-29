@@ -394,3 +394,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Exact code head `bb1e41be7937ea253a38aa16f3369d8f7d1ec67e` passed the full local Windows suite: **146 tests**, Python compilation, and `git diff --check`.
 - Exact-head Push CI [40825108944](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825108944) and PR CI [40825113981](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825113981) both passed **146 offline tests**, report generation, artifact upload, strict report verification, and the final gate.
 - PR #31 remains Draft/open/unmerged. No live model-provider call, game action, merge, release, or deployment occurred.
+
+
+## 2026-10-29 — make duplicate-key verifier regressions decisive
+
+- Review found that the standalone Harness report verifier's duplicate-key tests also contained unrelated invalid fields, so they could pass even if duplicate-key rejection regressed.
+- Replaced those fixtures with otherwise-valid reports containing duplicate top-level `status` keys and duplicate nested test-status keys. Either fixture would pass verification if Python's default last-key-wins parser were used, so the tests now specifically prove duplicate-key rejection.
+- Exact code head `78c6cb326c08dc482c60337a2a771e34ab2939c9` passed Push CI [run 40825814199](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825814199) and PR CI [run 40825821246](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40825821246). Both passed 146 offline tests; report verification and the final orchestration gate succeeded.
+- PR #31 remains Draft/open/unmerged. No live model-provider request, game action, merge, release, or deployment occurred.
