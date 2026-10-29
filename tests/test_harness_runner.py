@@ -315,6 +315,7 @@ class HarnessRunnerTests(unittest.TestCase):
         duplicate_configs = (
             '{"schema_version":1,"schema_version":1,"project":"test-project","commands":["python-unittest"]}',
             '{"schema_version":1,"project":"test-project","commands":["semantic-review"],"commands":["python-unittest"]}',
+            '{"schema_version":1,"project":"test-project","commands":["python-unittest"],"metadata":{"mode":"safe","mode":"unsafe"}}',
         )
         for raw in duplicate_configs:
             with self.subTest(raw=raw):
