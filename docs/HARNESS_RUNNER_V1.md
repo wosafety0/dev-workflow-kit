@@ -26,6 +26,8 @@ The runner writes `artifacts/acceptance-report.json`. It requires a clean Git re
 
 Configuration supplies only task IDs. The runner maps them to fixed argument vectors and never invokes a shell:
 
+The runner rejects duplicate JSON object keys at every nesting level in the Harness config instead of silently accepting ambiguous last-value-wins input.
+
 - `python-unittest`: `python -m unittest discover -s tests -v` using the current Python interpreter.
 - `semantic-review`: `python scripts/ai_semantic_review.py --input <path> --output <path>`; both paths must be supplied explicitly with `--review-input` and `--review-output`.
 
