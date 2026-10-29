@@ -202,3 +202,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added `from io import StringIO` to the test module imports in commit `d8792d225a972eb8885187676be0ae8d3e073091`.
 - This is a narrow test-harness correction; no production behavior was changed.
 - Validation boundary: this connector has not executed the test suite. Exact-head hosted CI for this commit remains unverified until a run tied to this SHA is inspected. PR #33 remains Draft/open/unmerged; no merge, rebase, retarget, release, deployment, or consumer integration occurred.
+
+## 2026-10-29 — PR #33 dependency and current-head CI boundary
+
+- Fresh PR metadata confirms PR #33 base ref is `fix/semantic-review-no-redirect-20261029`, but its recorded base SHA remains `f71025d2303737dafe18ae823f93cad9cdd1249d`; PR #22's current head is `071c168bc9532ba8d8c6a9f4708046e164879568`. Comparing current PR #22 head to PR #33 head `d6d0b797ea789f3c46c3f0940edfdec2f69115e2` reports `diverged`, with the downstream branch 3 commits behind the updated base. GitHub currently reports PR #33 `mergeable=false`.
+- PR #22's current head `071c168bc9532ba8d8c6a9f4708046e164879568` has a successful Harness CI run `40860087284`; this validates PR #22's head only, not PR #33's current code.
+- The current PR #33 head has no run returned by the connector's PR-triggered-run lookup and no commit status checks returned. The lookup filters to pull-request-triggered runs, so this is not proof that no push-triggered run exists; exact-head CI for PR #33 remains unverified.
+- No automatic rebase, retarget, force-push, merge, or PR closure was performed because reconciling the stacked branch could change its review diff. Keep PR #33 Draft/open/unmerged until its dependency is reconciled and its own current head has exact-SHA validation.
