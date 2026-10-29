@@ -852,6 +852,38 @@ class SemanticReviewValidationTests(unittest.TestCase):
             thread.join(timeout=2)
 
 
+    def test_https_model_requests_install_redirect_rejection_handler(self):
+        from unittest.mock import MagicMock
+        from scripts.ai_semantic_review import _NoRedirectHandler, call_model
+
+        raw = json.dumps({"choices": [{"message": {
+            "content": json.dumps(self.pass_review())
+        }}]}).encode("utf-8")
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = raw
+        config = {
+            "AI_REVIEW_API_BASE": "https://model.example.invalid/v1",
+            "AI_REVIEW_API_KEY": "test-key",
+            "AI_REVIEW_MODEL": "test-model",
+        }
+        with patch.dict("os.environ", config, clear=True), patch(
+            "scripts.ai_semantic_review.urllib.request.build_opener"
+        ) as opener_builder:
+            opener_builder.return_value.open.return_value = response
+            review = call_model(self.payload)
+
+        self.assertEqual(review["status"], "PASS")
+        handlers = opener_builder.call_args.args
+        redirect_handler = next(
+            (handler for handler in handlers if isinstance(handler, _NoRedirectHandler)),
+            None,
+        )
+        self.assertIsNotNone(redirect_handler)
+        self.assertIsNone(redirect_handler.redirect_request(
+            None, None, 302, "Found", {"Location": "https://attacker.invalid/collect"},
+            "https://attacker.invalid/collect",
+        ))
+
     def test_call_model_rejects_redirect_without_forwarding_authorization(self):
         import threading
         from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
