@@ -207,3 +207,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - New `test_loopback_semantic_review_task_is_preflighted_without_network` verifies literal loopback endpoint normalization, reviewed runner task dispatch, and failed semantic-review propagation into the overall acceptance report. The test mocks task execution and makes no real provider request.
 - The integration candidate includes loopback proxy-bypass mock-server tests, safe runner, and output alias regression. Workflow lookup for the new head returned no PR-triggered runs at inspection time; CI pass remains **unverified**. A commit workflow lookup alone is insufficient to assess push-triggered runs.
 - PR stays draft; no merge or release.
+
+
+### Independent consumer pilot: clamp (2026-10-29)
+
+- Consumer repository: `wosafety0/wosafety0clamp`; trial PR #14: https://github.com/wosafety0/wosafety0clamp/pull/14.
+- Consumer branch: `feat/harness-trial-gate-20261029`; reusable workflow pinned to this repository's exact tested commit `827bb99d2eb97ac61909979094f68471f081150b`.
+- Verified consumer run [40798692801](https://github.com/wosafety0/wosafety0clamp/actions/runs/40798692801) and repeat run [40798667539](https://github.com/wosafety0/wosafety0clamp/actions/runs/40798667539) both completed successfully. Checkout, Python 3.12 setup, and the consumer-owned Node static tests + Python compile + offline unittest command all passed.
+- Result: the reusable workflow is proven to run in one independent consumer repository for the configured offline acceptance suite. This is a successful integration pilot, not a general release or real-model validation.
+- Boundaries: consumer PR remains draft/unmerged; the consumer's existing CI remains unchanged; no game operations or provider API calls were made.
