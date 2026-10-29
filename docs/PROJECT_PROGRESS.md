@@ -472,3 +472,7 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Hardened `.github/workflows/reusable-acceptance.yml` by setting `persist-credentials: false` on the consuming-repository checkout. Added a regression test that extracts the checkout step and requires this setting, and documented the boundary in `docs/REUSABLE_ACCEPTANCE_WORKFLOW.md`.
 - Workflow commit: `e4c476f775c0fa3ea363b7dbfe0020d2c03d5565`; regression-test commit: `0caf718f63cc86425417ca9b7624d854b112444c`; documentation commit: `f7c906691c212e36cac4897435feaf067367ee12`.
 - This is a security hardening change only. No consumer pin was changed, no PR was merged, and no PR topology was changed. Exact-head Push and PR-context CI must pass before this fix is marked validated.
+
+## 2026-10-29 - exact-head Windows offline verification
+
+- At `bfca11d049915eaf185256f2eb1a37d3d11056e4`, Windows `python -m compileall -q scripts tests` passed, all 150 offline unittest cases passed, and `git diff --check` passed. This includes the consumer checkout credential-hardening regression. No live provider or game calls. Hosted CI remains a separate acceptance gate.
