@@ -180,3 +180,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added regression cases for duplicate keys in the provider envelope, duplicate keys inside model content, and duplicate keys in the input file; updated `docs/STABLE_ACCEPTANCE_CONTRACT.md` to make this behavior explicit.
 - Implementation commit: `2ce63cb3029b024ebcbdc64ad1fe570e94475922`; tests: `bcf960e451520dab8aa9b3db70f6d7375615724a`; contract update: `44188cf9b1d8d78887b66e660e7a86128fce14ef`.
 - Verification boundary: hosted CI for this code-and-archive head remains pending. PR #33 remains Draft/unmerged; no PR was merged, rebased, retargeted, or closed; no consumer pin was changed.
+
+
+## 2026-10-29 — downstream PR base workflow filter corrected
+
+- The base branch reported by PR #33, `fix/semantic-review-no-redirect-20261029`, was checked at its PR base SHA and still had the old `pull_request.branches` filter without `fix/**`. The fix was therefore applied to PR #22's actual branch and archived there.
+- PR #22 base-branch workflow update: `f6bb3db6cf1c93a18a98bd844cd253a043fae38a`; archive commit on that branch: `46587adaf9160c4e0b8503dfe49dc779cd976a33`.
+- A successful downstream PR-context run for PR #33 has not yet appeared in the currently retrieved run list. The duplicate-key fix remains unvalidated until its exact code/archive head receives hosted CI evidence. PR #33 remains Draft/unmerged.
