@@ -94,6 +94,26 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(report["status"], "passed")
         self.assertEqual(report["tests"], {"python-unittest": "passed"})
 
+    def test_invalid_timeout_invalidates_prior_passed_report(self):
+        report_path = self.root / "artifacts" / "report.json"
+        report_path.write_text('{"status":"passed"}', encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner("--timeout-seconds", "0")
+        self.assertEqual(code, 2)
+        self.assertIn("timeout-seconds must be between", stderr)
+        self.assertFalse(report_path.exists())
+        run_task.assert_not_called()
+
+    def test_invalid_config_path_invalidates_prior_passed_report(self):
+        report_path = self.root / "artifacts" / "report.json"
+        report_path.write_text('{"status":"passed"}', encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner("--config", "../outside.json")
+        self.assertEqual(code, 2)
+        self.assertIn("safe repository-relative path", stderr)
+        self.assertFalse(report_path.exists())
+        run_task.assert_not_called()
+
     def test_invalid_config_invalidates_prior_passed_report(self):
         report_path = self.root / "artifacts" / "report.json"
         report_path.write_text('{"status":"passed"}', encoding="utf-8")

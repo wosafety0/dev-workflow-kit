@@ -39,7 +39,7 @@ If `semantic-review` is configured, a caller must pass both review paths. Review
 - Exit code `0`: all configured tasks passed and the report status is `passed`.
 - Exit code `1`: at least one task failed; a redacted report is still written with overall status `failed`.
 - Exit code `2`: invalid config/paths, missing required review arguments, project metadata failure, or report-writing failure blocks the run.
-- The runner removes any existing acceptance report at the validated output path before config preflight. A blocked run cannot reuse an earlier `passed` report at that path; consumers must also honor the process exit code and current commit identity.
+- The runner removes any existing acceptance report at the validated output path before timeout and input-path preflight (once the report path is safely resolved). A blocked run cannot reuse an earlier `passed` report at that path; consumers must also honor the process exit code and current commit identity.
 - When semantic review is configured, the runner also removes the previous review-output artifact before task execution. A failed prerequisite leaving `semantic-review` as `not_run` must not preserve a prior `PASS` review file.
 
 ## Report contract
