@@ -368,3 +368,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Current PR metadata still reports base SHA `b402101ef41d3f9d4f9533545ea83128ba5843a6`, while the target branch's observed live head is `e4be499e36ed9d8e22ff45065d95f92e0876df34`. The immutable workflow revision at the reported base SHA excludes `fix/**`; the live target branch workflow includes it. This remains the leading explanation for the missing event, but GitHub's exact event/metadata behavior is not proven as a single root cause.
 - No further progress-only trigger probes were made. PR #32 remains Draft/open/unmerged; no retarget, rebase, merge, close/reopen, or consumer pin update occurred.
 - Hosted fault-injection boundary remains unchanged: prior hosted tests prove fail-closed behavior for a deliberately missing artifact input, not an actual GitHub Artifact service outage. No workflow-dispatch tool is available in this session, so no new manual hosted fault run is claimed.
+
+### 2026-10-29 — PR #32 CI trigger and base-branch relationship recheck
+
+- PR #32 remains open, Draft, and unmerged: https://github.com/wosafety0/dev-workflow-kit/pull/32.
+- Exact-head Push CI passed for `54f7d244be17dc32f945009264e8fee6322e9226`: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40892973098.
+- The current workflow at that head includes `fix/**` in both push and pull-request target-branch filters, and declares `workflow_dispatch`. The available GitHub connector actions in this session do not expose a workflow-dispatch operation, so no manual dispatch was claimed or attempted.
+- The PR API still reports base SHA `b402101ef41d3f9d4f9533545ea83128ba5843a6`, while the target branch `fix/runner-commit-provenance-20261029` currently points to `e4be499e36ed9d8e22ff45065d95f92e0876df34`. Compare confirms the target branch has three commits after the reported PR base; the PR head and target branch have diverged from their common ancestor.
+- Latest observed PR-context runs associated with PR #32 are older than the current head; do not treat Push CI as PR-context evidence. The branch filter currently matches the target branch name, so the missing current-head PR-context run is not explained by a presently missing `fix/**` filter alone.
+- No PR base retarget, rebase, merge, close/reopen, consumer pin change, or workflow-dispatch claim was made. Next safe validation is to obtain a genuine PR-context run from a natural PR event or a supported dispatch path, without creating an empty progress-only commit.
+- Artifact-service outage remains unverified. Existing hosted failure injection deliberately makes the upload step fail due to missing artifact input; this is not a real GitHub Artifact service outage.
