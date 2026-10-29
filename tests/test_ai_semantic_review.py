@@ -809,6 +809,26 @@ class SemanticReviewValidationTests(unittest.TestCase):
 
 
 
+    def test_model_response_size_is_bounded_and_fails_closed(self):
+        from unittest.mock import MagicMock
+        from scripts.ai_semantic_review import MAX_MODEL_RESPONSE_BYTES, call_model
+        config = {
+            "AI_REVIEW_API_BASE": "https://example.invalid/v1",
+            "AI_REVIEW_API_KEY": "test-key",
+            "AI_REVIEW_MODEL": "test-model",
+        }
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = b"x" * (MAX_MODEL_RESPONSE_BYTES + 1)
+        with patch.dict("os.environ", config, clear=True), patch(
+            "scripts.ai_semantic_review.urllib.request.build_opener"
+        ) as opener_builder:
+            opener_builder.return_value.open.return_value = response
+            with self.assertRaisesRegex(ReviewError, "size limit"):
+                call_model(self.payload)
+        response.__enter__.return_value.read.assert_called_once_with(
+            MAX_MODEL_RESPONSE_BYTES + 1
+        )
+
     def test_provider_config_validation_is_offline(self):
         from scripts.ai_semantic_review import validate_model_config
         with patch("scripts.ai_semantic_review.urllib.request.urlopen") as network:
