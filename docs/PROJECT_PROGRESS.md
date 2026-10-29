@@ -263,3 +263,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Kept the reusable workflow's verifier self-contained. It must not invoke a verifier script from the consumer checkout; that integration pattern previously failed because the helper is not present in the consumer repository. The helper script remains separately unit-tested, while workflow tests execute the actual inline verifier source.
 - Clamp PR #14 description was reconciled to the current immutable pin `0173c597e82364a91e50f9817a9c8d40876dc04c` and exact-head CI evidence. Clamp exact-head Push CI [40813942417](https://github.com/wosafety0/wosafety0clamp/actions/runs/40813942417) and PR CI [40813945988](https://github.com/wosafety0/wosafety0clamp/actions/runs/40813945988) passed for head `887eb1ff23fd04207f52707fa7323f7bf93a2b0e`.
 - Current Harness PR #29, #30, and #31, plus Clamp PR #14, remain Draft/unmerged. No live model calls, game actions, release, or deployment.
+
+## 2026-10-29 — reusable workflow documentation consistency review
+
+- Reviewed the consumer-facing reusable workflow guide against the actual `.github/workflows/reusable-acceptance.yml` implementation.
+- Corrected two documentation mismatches: the workflow uploads a redacted acceptance-report artifact with 14-day retention (it does not publish releases/packages), and the current third-party actions are pinned to full commit SHAs rather than version tags.
+- This is documentation-only; runtime behavior is unchanged. Exact-head CI must be checked after this archive commit. PR #31 remains Draft/unmerged; no live model calls, game actions, release, or deployment.
