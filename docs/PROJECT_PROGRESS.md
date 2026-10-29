@@ -290,3 +290,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Exact-head Push CI passed for documentation commit `68b6589ff0336115ea51dc91c32bba426483f526`: [run 40866441316](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40866441316).
 - Progress archive commit `2d13728f4080272ef3eb63011e6280d77fa7040a` also passed exact-head Push CI: [run 40866473003](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40866473003).
 - The new output-path regression is validated by exact-head Push CI. PR-context CI for this newer head remains unconfirmed due the previously recorded PR/base metadata discrepancy; no topology change or consumer pin update was made.
+
+### PR-context CI root-cause narrowed by exact workflow revision comparison
+
+- Fetched `.github/workflows/ci.yml` by immutable commit ref at both PR #32's reported base SHA and the live target branch head.
+- At reported base SHA `b402101ef41d3f9d4f9533545ea83128ba5843a6` (blob `e06ac71bcbd823bc774a6ac118c6e2bcd82d591c`), the `pull_request.branches` filter is `[main, "feat/**", "test/**"]` and omits `fix/**`.
+- At live target branch head `e4be499e36ed9d8e22ff45065d95f92e0876df34` (blob `73c528ed3280f0c0c50d50740dac453fc2f801c5`), the filter includes `fix/**`.
+- This makes the stale base-SHA/workflow revision mismatch a concrete explanation for why no new PR-context run appears, although the exact GitHub event/metadata update behavior remains unconfirmed. The latest exact-head Push CI remains green; no PR topology operation was performed.
+- Do not mark PR #32's PR-context gate passed based on earlier runs. Continue investigating a topology-preserving way to refresh or validate the PR event without merging, retargeting, rebasing, or closing/reopening the PR.
