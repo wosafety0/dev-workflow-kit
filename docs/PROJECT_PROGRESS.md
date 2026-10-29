@@ -171,3 +171,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Updated this branch's `.github/workflows/ci.yml` to include `fix/**` in `pull_request.branches`, matching the existing push filter and enabling PR-context CI for downstream stacked fix PRs such as #32.
 - Workflow commit: `77c2884f075acbaecd7d1043c6dd0493f27360bb`.
 - This is a workflow trigger correction only. PR #18 remains Draft/unmerged; no rebase, retarget, merge, consumer pin change, live model call, or game action occurred. Hosted exact-head Push CI and the downstream PR-context run must be independently checked before claiming validation.
+
+
+## 2026-10-29 — downstream fix-branch PR-context CI enablement result
+
+- The workflow trigger correction at `6fc5e5f8a8a41f6bace8585c3932d807cc9446c1` received a successful Harness CI run: [run 40858808116](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40858808116).
+- The hosted job completed Python compilation, offline tests, acceptance-report generation/upload, and the final orchestration gate. The run was retrieved through the PR-context run listing for this branch; it is not treated as separate Push CI evidence.
+- This branch is the base of PR #32, so the workflow filter correction here is what enables downstream stacked fix PRs to receive PR-context CI. PR #18 remains Draft/unmerged; no branch topology change or consumer pin update occurred.
