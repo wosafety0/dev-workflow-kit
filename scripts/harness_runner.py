@@ -69,6 +69,15 @@ def _require_artifact_path(root: Path, path: Path, field: str) -> None:
         raise HarnessRunnerError(f"{field} must identify a file inside artifacts/")
 
 
+def _reject_symlink_path(root: Path, value: str, field: str) -> None:
+    """Reject symlinks in a repository-relative input or output path."""
+    current = root / value
+    while current != root:
+        if current.is_symlink():
+            raise HarnessRunnerError(f"{field} must not use symlinked paths")
+        current = current.parent
+
+
 def _resolve_trusted_source(root: Path, value: str, field: str) -> Path:
     """Resolve committed executable/rule inputs, excluding mutable symlink targets and artifacts."""
     resolved = _resolve_inside_root(root, value, field)
@@ -252,15 +261,21 @@ def main(argv: list[str] | None = None) -> int:
         if not root.is_dir():
             raise HarnessRunnerError("project-root must be an existing directory")
         config_path = _resolve_inside_root(root, args.config, "config")
+        _reject_symlink_path(root, args.config, "config")
         report_path = _resolve_inside_root(root, args.report_output, "report-output")
+        _reject_symlink_path(root, args.report_output, "report-output")
         review_input = (
             _resolve_inside_root(root, args.review_input, "review-input")
             if args.review_input is not None else None
         )
+        if args.review_input is not None:
+            _reject_symlink_path(root, args.review_input, "review-input")
         review_output = (
             _resolve_inside_root(root, args.review_output, "review-output")
             if args.review_output is not None else None
         )
+        if args.review_output is not None:
+            _reject_symlink_path(root, args.review_output, "review-output")
         if review_input is not None and review_output is not None and review_input == review_output:
             raise HarnessRunnerError("review-input and review-output must be different paths")
         for label, path in (
