@@ -282,3 +282,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Current branch ref API reports target branch `fix/runner-commit-provenance-20261029` at `e4be499e36ed9d8e22ff45065d95f92e0876df34`, and its `.github/workflows/ci.yml` includes `fix/**` in the `pull_request.branches` filter.
 - The PR #32 API payload and workflow-run metadata still report the base SHA as `b402101ef41d3f9d4f9533545ea83128ba5843a6`, and no PR-context run has been recorded for the latest head `92b7ed9d45429a1d4cedee0cc1907e1880690d86`. Latest known exact-head Push CI passed at [run 40861810273](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40861810273).
 - This is an observed GitHub PR/base metadata and trigger-evidence discrepancy, not proof that the new PR-context gate passed. Do not change PR topology or use older PR-context results as a substitute. Continue by checking exact-head Push CI for the new output-path fix and investigating whether GitHub updates the PR base metadata/trigger behavior; keep the PR Draft/unmerged.
+
+### Validation update — post-task output path revalidation
+
+- Exact-head Push CI passed for runner commit `43449b15cb00adbcfe39ad7097b2de8c729c566d`: [run 40866390716](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40866390716).
+- Exact-head Push CI passed for regression-test commit `e9613efeacba83971153064651bcb7d25be13906`: [run 40866416039](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40866416039). The run compiled Python, passed all **121 offline tests** including `test_runner_rejects_artifacts_directory_replaced_by_symlink_during_task`, generated and uploaded the redacted report, and passed the final gate.
+- Exact-head Push CI passed for documentation commit `68b6589ff0336115ea51dc91c32bba426483f526`: [run 40866441316](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40866441316).
+- Progress archive commit `2d13728f4080272ef3eb63011e6280d77fa7040a` also passed exact-head Push CI: [run 40866473003](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40866473003).
+- The new output-path regression is validated by exact-head Push CI. PR-context CI for this newer head remains unconfirmed due the previously recorded PR/base metadata discrepancy; no topology change or consumer pin update was made.
