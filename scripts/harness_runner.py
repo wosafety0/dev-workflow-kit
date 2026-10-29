@@ -69,6 +69,17 @@ def _require_artifact_path(root: Path, path: Path, field: str) -> None:
         raise HarnessRunnerError(f"{field} must identify a file inside artifacts/")
 
 
+def _resolve_trusted_source(root: Path, value: str, field: str) -> Path:
+    """Resolve executable/rule inputs inside the repository, excluding generated artifacts."""
+    resolved = _resolve_inside_root(root, value, field)
+    artifact_root = (root / "artifacts").resolve()
+    try:
+        resolved.relative_to(artifact_root)
+    except ValueError:
+        return resolved
+    raise HarnessRunnerError(f"{field} must not resolve inside artifacts/")
+
+
 def _git_commit_sha(root: Path) -> str:
     """Require that the report's commit describes the exact checked-out source.
 
@@ -113,7 +124,7 @@ def _git_commit_sha(root: Path) -> str:
 
 
 def _rules_pin(root: Path) -> str:
-    contract = _resolve_inside_root(
+    contract = _resolve_trusted_source(
         root, "docs/STABLE_ACCEPTANCE_CONTRACT.md", "stable acceptance contract"
     )
     if not contract.is_file():
@@ -132,7 +143,7 @@ def _task_argv(
     review_output: Path | None,
 ) -> list[str]:
     if task_id == "python-unittest":
-        tests_dir = _resolve_inside_root(root, "tests", "tests directory")
+        tests_dir = _resolve_trusted_source(root, "tests", "tests directory")
         if not tests_dir.is_dir():
             raise HarnessRunnerError("python-unittest task requires a tests/ directory")
         return [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
@@ -141,7 +152,7 @@ def _task_argv(
             raise HarnessRunnerError(
                 "semantic-review requires both --review-input and --review-output"
             )
-        script = _resolve_inside_root(root, "scripts/ai_semantic_review.py", "semantic-review script")
+        script = _resolve_trusted_source(root, "scripts/ai_semantic_review.py", "semantic-review script")
         if not script.is_file():
             raise HarnessRunnerError("semantic-review task requires scripts/ai_semantic_review.py")
         return [
