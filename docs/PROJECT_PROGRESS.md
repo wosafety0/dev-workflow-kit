@@ -163,3 +163,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Documentation commit `91460c2e3f79754f6ee5e4a6f2bfaf5459c421f2`: hosted push CI https://github.com/wosafety0/dev-workflow-kit/actions/runs/40733848128 succeeded for that exact head. This progress-log change itself requires a new exact-head CI check.
 - Limits: cleanliness is not a sandbox, concurrent-worktree lock, or cryptographic attestation; `artifacts/` is intentionally excluded, so executable source must not be placed there. The PR remains draft and unmerged; no change to `main`, no release/deploy, no live model request, and no consumer integration. The local Windows worktree was not inspected or synchronized.
 - Approval required: review PR #13 -> #14 -> #18 in dependency order, and separately PR #12 -> #15 -> #17; integrate only after explicit authorization and combined-branch CI. The independent Node consumer pilot remains draft/unmerged.
+
+
+## 2026-10-29 — CI trigger fix for downstream stacked fix PRs
+
+- PR #32 is based on this branch, `fix/runner-commit-provenance-20261029`. GitHub evaluates the `pull_request` workflow filter from the target/base branch's workflow definition, so changing the filter only in PR #32's head branch would not be sufficient to make its own PR-context run trigger.
+- Updated this branch's `.github/workflows/ci.yml` to include `fix/**` in `pull_request.branches`, matching the existing push filter and enabling PR-context CI for downstream stacked fix PRs such as #32.
+- Workflow commit: `77c2884f075acbaecd7d1043c6dd0493f27360bb`.
+- This is a workflow trigger correction only. PR #18 remains Draft/unmerged; no rebase, retarget, merge, consumer pin change, live model call, or game action occurred. Hosted exact-head Push CI and the downstream PR-context run must be independently checked before claiming validation.
