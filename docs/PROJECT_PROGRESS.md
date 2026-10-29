@@ -184,3 +184,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Created isolated candidate branch `reconcile/pr-33-on-current-base-20261030` from current recorded base SHA `071c168bc9532ba8d8c6a9f4708046e164879568`; original PR and rescue refs remain unchanged.
 - Applied the bounded-response and duplicate-JSON implementation/tests, Windows-resolved runner path assertions, and merged the stable-contract statements into the current base contract rather than replacing that contract wholesale.
 - Candidate head and exact-head validation remain to be verified. This is a reconstruction candidate, not a validated replacement for PR #33. No tests were run by the connector in this step.
+
+
+## 2026-10-30 — trigger exact-head Push CI for PR #33 reconstruction candidate
+
+- Candidate branch `fix/reconcile-pr-33-current-base-20261030` is a copy of the isolated reconstruction `reconcile/pr-33-on-current-base-20261030`; the original PR and rescue refs remain untouched.
+- This archive commit is intended to trigger the repository's Push CI for the candidate head. Results must be queried by exact commit SHA before the candidate is considered validated.
+- Candidate remains non-mergeable until CI and patch review are complete. No original PR retarget or merge was performed.
