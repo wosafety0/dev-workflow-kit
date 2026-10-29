@@ -29,6 +29,15 @@ class ReviewError(ValueError):
     """Raised when model output is malformed or not evidence-grounded."""
 
 
+def _reject_duplicate_json_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON object key")
+        result[key] = value
+    return result
+
+
 def validate_input(payload: dict[str, Any]) -> None:
     required = ("task", "diff", "changed_files", "global_rules", "project_instructions")
     for key in required:
@@ -412,15 +421,18 @@ def call_model(payload: dict[str, Any]) -> Any:
         else:
             response_context = urllib.request.build_opener(_NoRedirectHandler()).open(request, timeout=60)
         with response_context as response:
-            response_data = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
+            response_data = json.loads(
+                response.read().decode("utf-8"),
+                object_pairs_hook=_reject_duplicate_json_keys,
+            )
+    except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, ValueError) as exc:
         raise ReviewError(f"Model request failed ({type(exc).__name__}); review cannot pass") from None
     try:
         content = response_data["choices"][0]["message"]["content"]
         if not isinstance(content, str):
             raise TypeError
-        return json.loads(content)
-    except (KeyError, IndexError, TypeError, json.JSONDecodeError):
+        return json.loads(content, object_pairs_hook=_reject_duplicate_json_keys)
+    except (KeyError, IndexError, TypeError, ValueError):
         raise ReviewError("Model response was not valid JSON in the expected chat-completions shape") from None
 
 
@@ -438,7 +450,10 @@ def main() -> int:
             output_path.unlink()
         except FileNotFoundError:
             pass
-        payload = json.loads(input_path.read_text(encoding="utf-8"))
+        payload = json.loads(
+            input_path.read_text(encoding="utf-8"),
+            object_pairs_hook=_reject_duplicate_json_keys,
+        )
         if not isinstance(payload, dict):
             raise ReviewError("Input root must be a JSON object")
         validate_input(payload)
@@ -449,7 +464,7 @@ def main() -> int:
         )
         print(f"AI semantic review result: {review['status']}")
         return 0 if review["status"] == "PASS" else 1
-    except (OSError, UnicodeError, json.JSONDecodeError, ReviewError) as exc:
+    except (OSError, UnicodeError, ValueError) as exc:
         print(f"AI semantic review blocked: {exc}", file=sys.stderr)
         return 2
 
