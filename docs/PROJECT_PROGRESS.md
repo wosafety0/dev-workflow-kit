@@ -209,3 +209,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - PR #22's current head `071c168bc9532ba8d8c6a9f4708046e164879568` has a successful Harness CI run `40860087284`; this validates PR #22's head only, not PR #33's current code.
 - The current PR #33 head has no run returned by the connector's PR-triggered-run lookup and no commit status checks returned. The lookup filters to pull-request-triggered runs, so this is not proof that no push-triggered run exists; exact-head CI for PR #33 remains unverified.
 - No automatic rebase, retarget, force-push, merge, or PR closure was performed because reconciling the stacked branch could change its review diff. Keep PR #33 Draft/open/unmerged until its dependency is reconciled and its own current head has exact-SHA validation.
+
+## 2026-10-29 — PR #33 branch-reference discrepancy and preservation
+
+- The previously recorded PR #33 head `c37ad36019a9bf6504e6e3be7450ddb27db1e73d` was confirmed retrievable as a commit, and a preservation branch `rescue/pr-33-last-known-head-20261029` was created at that exact SHA.
+- The live source branch name `fix/semantic-review-no-redirect-20261029` currently resolves to the same `scripts/ai_semantic_review.py` blob as base head `071c168bc9532ba8d8c6a9f4708046e164879568`; compare also reports those refs identical. This conflicts with the PR body/history that records a later implementation head.
+- No source-branch restoration, force update, retarget, closure, or merge was performed. Recovery branch exact-SHA comparison verified identical to `c37ad36019a9bf6504e6e3be7450ddb27db1e73d`. Restoring the original PR branch requires an explicit branch-ref change and is paused pending user decision.
+- CI evidence boundary unchanged: PR #22's successful run is not evidence for PR #33's preserved implementation head; exact-head CI for the preserved PR #33 revision remains unverified.
