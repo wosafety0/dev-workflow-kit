@@ -52,7 +52,7 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
             report["tests"] = tests
             report["status"] = status
             with self.subTest(tests=tests, status=status):
-                self.assertFalse(verify_report(report, SHA, WORKFLOW_REF, WORKFLOW_SHA))
+                self.assertFalse(verify_report(report, SHA, WORKFLOW_REF, WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
 
     def test_required_stage_set_is_exact(self):
         for tests in (
@@ -63,7 +63,7 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
             report = valid_report()
             report["tests"] = tests
             with self.subTest(tests=tests):
-                self.assertFalse(verify_report(report, SHA, WORKFLOW_REF, WORKFLOW_SHA))
+                self.assertFalse(verify_report(report, SHA, WORKFLOW_REF, WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
 
     def test_schema_and_expected_identity_are_strict(self):
         for mutate in (
@@ -73,7 +73,7 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
         ):
             report = valid_report()
             mutate(report)
-            self.assertFalse(verify_report(report, SHA, WORKFLOW_REF, WORKFLOW_SHA))
+            self.assertFalse(verify_report(report, SHA, WORKFLOW_REF, WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
         self.assertFalse(verify_report(valid_report(), "bad-sha", WORKFLOW_REF, WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
         self.assertFalse(verify_report(valid_report(), SHA, "", WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
         self.assertFalse(verify_report(valid_report(), SHA, WORKFLOW_REF, "bad-sha", HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
@@ -97,6 +97,8 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
                 "--report", str(path), "--expected-sha", SHA,
                 "--expected-workflow-ref", WORKFLOW_REF,
                 "--expected-workflow-sha", WORKFLOW_SHA,
+                "--expected-harness-workflow-ref", HARNESS_WORKFLOW_REF,
+                "--expected-harness-workflow-sha", HARNESS_WORKFLOW_SHA,
             ]
             self.assertEqual(main(args), 1)
             path.write_text("{broken", encoding="utf-8")
