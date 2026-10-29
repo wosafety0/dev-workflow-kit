@@ -1,0 +1,8 @@
+# Local Python and test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Generated acceptance and semantic-review artifacts
+artifacts/

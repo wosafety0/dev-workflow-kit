@@ -151,3 +151,30 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added offline tests for `http://127.0.0.1:1235/v1` and `http://[::1]:1235/v1`, and retained negative tests for unsafe HTTP endpoints. Updated `docs/STABLE_ACCEPTANCE_CONTRACT.md`.
 - Hosted CI run [40716125120](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40716125120), run number 144, succeeded on the exact tested head. 90 offline tests passed, the acceptance report uploaded (artifact ID `12829135525`), and the final gate passed.
 - This validates configuration parsing and security boundaries only. It does not constitute a live model request or prove that the user's local LM Studio endpoint is reachable from this environment. PR #12 remains draft and unmerged.
+
+
+### 2026-10-29 clean-worktree commit-provenance gate (stacked draft PR #18)
+
+- Draft PR: https://github.com/wosafety0/dev-workflow-kit/pull/18; branch `fix/runner-commit-provenance-20261029`, based on PR #14 (`fix/runner-stale-artifacts-20261029`), which itself depends on draft PR #13.
+- Finding: the runner could execute dirty or test-mutated source while labeling a passing acceptance report with the original Git HEAD SHA. This is a provenance mismatch, not proof that the code in that commit passed.
+- Change: require the exact Git repository root and a clean staged/unstaged/untracked source tree outside generated `artifacts/` before tasks; recheck cleanliness and HEAD after tasks, before writing the report. Common generated Python files are ignored via a reviewed `.gitignore`. Four Git-backed regression tests cover modified tracked code, untracked code, post-task mutation, and nested Git roots.
+- Test-first commit `39cb4749e7cffd415c762201596d0fd06333fb73`: expected failure run https://github.com/wosafety0/dev-workflow-kit/actions/runs/40733601898 (four new tests did not pass before implementation).
+- Implementation/ignore-rule commit `b175599a3824cda3b1174431d6d97913e518d1ac`: successful hosted push CI https://github.com/wosafety0/dev-workflow-kit/actions/runs/40733749977, 107 offline tests passed; acceptance artifact ID `12837210211` uploaded and final gate passed.
+- Documentation commit `91460c2e3f79754f6ee5e4a6f2bfaf5459c421f2`: hosted push CI https://github.com/wosafety0/dev-workflow-kit/actions/runs/40733848128 succeeded for that exact head. This progress-log change itself requires a new exact-head CI check.
+- Limits: cleanliness is not a sandbox, concurrent-worktree lock, or cryptographic attestation; `artifacts/` is intentionally excluded, so executable source must not be placed there. The PR remains draft and unmerged; no change to `main`, no release/deploy, no live model request, and no consumer integration. The local Windows worktree was not inspected or synchronized.
+- Approval required: review PR #13 -> #14 -> #18 in dependency order, and separately PR #12 -> #15 -> #17; integrate only after explicit authorization and combined-branch CI. The independent Node consumer pilot remains draft/unmerged.
+
+
+## 2026-10-29 — CI trigger fix for downstream stacked fix PRs
+
+- PR #32 is based on this branch, `fix/runner-commit-provenance-20261029`. GitHub evaluates the `pull_request` workflow filter from the target/base branch's workflow definition, so changing the filter only in PR #32's head branch would not be sufficient to make its own PR-context run trigger.
+- Updated this branch's `.github/workflows/ci.yml` to include `fix/**` in `pull_request.branches`, matching the existing push filter and enabling PR-context CI for downstream stacked fix PRs such as #32.
+- Workflow commit: `77c2884f075acbaecd7d1043c6dd0493f27360bb`.
+- This is a workflow trigger correction only. PR #18 remains Draft/unmerged; no rebase, retarget, merge, consumer pin change, live model call, or game action occurred. Hosted exact-head Push CI and the downstream PR-context run must be independently checked before claiming validation.
+
+
+## 2026-10-29 — downstream fix-branch PR-context CI enablement result
+
+- The workflow trigger correction at `6fc5e5f8a8a41f6bace8585c3932d807cc9446c1` received a successful Harness CI run: [run 40858808116](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40858808116).
+- The hosted job completed Python compilation, offline tests, acceptance-report generation/upload, and the final orchestration gate. The run was retrieved through the PR-context run listing for this branch; it is not treated as separate Push CI evidence.
+- This branch is the base of PR #32, so the workflow filter correction here is what enables downstream stacked fix PRs to receive PR-context CI. PR #18 remains Draft/unmerged; no branch topology change or consumer pin update occurred.

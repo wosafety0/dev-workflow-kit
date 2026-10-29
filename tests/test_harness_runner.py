@@ -1,4 +1,5 @@
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -230,6 +231,69 @@ class HarnessRunnerTests(unittest.TestCase):
                 [sys.executable, "-c", "pass"], self.root, 1
             )
         self.assertEqual((status, exit_code), ("failed", None))
+
+
+    def initialize_git_worktree(self):
+        """Commit fixture sources so provenance checks use a real Git worktree."""
+        commands = [
+            ["git", "init", "-q"],
+            ["git", "add", "."],
+            ["git", "-c", "user.name=Harness Test",
+             "-c", "user.email=harness-test@example.invalid",
+             "commit", "-qm", "fixture"],
+        ]
+        for command in commands:
+            subprocess.run(command, cwd=self.root, check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+    def test_runner_rejects_modified_tracked_code_before_execution(self):
+        self.initialize_git_worktree()
+        test_file = self.root / "tests" / "test_example.py"
+        test_file.write_text(test_file.read_text(encoding="utf-8") + "# modified\n",
+                             encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("clean", stderr)
+        run_task.assert_not_called()
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
+
+    def test_runner_rejects_untracked_source_but_allows_artifact_files(self):
+        self.initialize_git_worktree()
+        (self.root / "artifacts" / "old-output.json").write_text("{}",
+                                                                  encoding="utf-8")
+        with patch("scripts.harness_runner._run_task", return_value=("passed", 0)):
+            code, _, stderr = self.run_runner()
+        self.assertEqual((code, stderr), (0, ""))
+        (self.root / "scripts" / "new_untracked.py").write_text("# untracked\n",
+                                                                 encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("clean", stderr)
+        run_task.assert_not_called()
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
+
+    def test_runner_rejects_task_that_mutates_tracked_code(self):
+        self.initialize_git_worktree()
+        test_file = self.root / "tests" / "test_example.py"
+
+        def mutate_source(*_args):
+            test_file.write_text(test_file.read_text(encoding="utf-8") + "# mutated\n",
+                                 encoding="utf-8")
+            return "passed", 0
+
+        with patch("scripts.harness_runner._run_task", side_effect=mutate_source):
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("clean", stderr)
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
+
+    def test_commit_provenance_rejects_nested_project_root(self):
+        self.initialize_git_worktree()
+        with self.assertRaisesRegex(harness_runner.HarnessRunnerError, "repository root"):
+            harness_runner._git_commit_sha(self.root / "scripts")
+
 
 
 if __name__ == "__main__":
