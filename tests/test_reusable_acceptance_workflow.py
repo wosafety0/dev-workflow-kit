@@ -19,8 +19,12 @@ def extract_inline_verifier():
     marker = "      - name: Verify consumer report identity and passing status"
     start = lines.index(marker)
     run_index = next(i for i in range(start, len(lines)) if lines[i] == "        run: |")
+    heredoc_index = next(
+        i for i in range(run_index + 1, len(lines))
+        if lines[i] == "          python3 - <<'PY'"
+    )
     code = []
-    for line in lines[run_index + 1:]:
+    for line in lines[heredoc_index + 1:]:
         if line == "          PY":
             break
         if not line.strip():
