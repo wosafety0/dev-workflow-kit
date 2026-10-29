@@ -447,3 +447,5 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 
 - Test-quality follow-up: made the duplicate top-level and nested JSON-key fixtures otherwise valid under the expanded Harness identity schema, so those cases specifically exercise duplicate-key rejection rather than failing first on missing fields. Added explicit malformed expected Harness ref/SHA cases. Test commit: `611e209b505e45c540b2d2ec3ba47b58d10790a3`.
 - The progress archive is updated in this commit. Exact current-head Push/PR CI must finish successfully before this work is marked validated; consumer pins remain unchanged.
+
+- First hosted exact-head Push CI exposed a test harness omission, not a production verifier failure: the duplicate-key subprocess cases had not been given the two newly required expected-Harness-identity CLI arguments, so argparse exited with code 2 before parsing their fixtures. Added those arguments in test commit `fa6e8f957c7d7856af4a7affeaab089e508fe529`. The run correctly stayed red; rerun exact-head Push and PR CI after this correction.
