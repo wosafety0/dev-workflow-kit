@@ -163,3 +163,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Documentation commit `91460c2e3f79754f6ee5e4a6f2bfaf5459c421f2`: hosted push CI https://github.com/wosafety0/dev-workflow-kit/actions/runs/40733848128 succeeded for that exact head. This progress-log change itself requires a new exact-head CI check.
 - Limits: cleanliness is not a sandbox, concurrent-worktree lock, or cryptographic attestation; `artifacts/` is intentionally excluded, so executable source must not be placed there. The PR remains draft and unmerged; no change to `main`, no release/deploy, no live model request, and no consumer integration. The local Windows worktree was not inspected or synchronized.
 - Approval required: review PR #13 -> #14 -> #18 in dependency order, and separately PR #12 -> #15 -> #17; integrate only after explicit authorization and combined-branch CI. The independent Node consumer pilot remains draft/unmerged.
+
+
+## 2026-10-29 — prevent review-output/config alias before stale-artifact cleanup
+
+- Re-review of the runner dependency chain (#13 → #14 → #18) found a destructive path alias not covered by those heads: when both `--config` and `--review-output` pointed to the same file under `artifacts/`, stale-artifact invalidation unlinked that file before attempting to parse the config.
+- The protection existed as a separate change in PR #19, but that branch is based directly on #13 and is not an ancestor of #14/#18. The #14 → #18 chain therefore did not contain the guard.
+- Created a narrow follow-up branch based on the exact #18 head; added an early alias rejection, a regression that verifies the config bytes remain unchanged and no task executes, and a security-boundary note. This is not a merge or a rebase; it keeps the fix reviewable against the provenance/stale-artifact line.
+- Validation status at archive time: code and test changes committed to the follow-up branch; exact-head hosted CI is pending. No live model requests, game actions, deployment, release, or merge.

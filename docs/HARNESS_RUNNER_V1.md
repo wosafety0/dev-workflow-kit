@@ -59,5 +59,6 @@ A passing runner result establishes only that the configured fixed tasks exited 
 - The runner never evaluates configuration text as shell code and does not accept executable paths or arbitrary arguments from config.
 - The runner is not a sandbox: test suites are repository code and may have side effects. Run it only against a trusted worktree and review project tests before enabling the runner in CI.
 - All input/output paths must remain within the project root; output files are restricted to `artifacts/`.
+- The semantic-review output must not alias the Harness config, even when both paths are inside `artifacts/`; output invalidation must never delete the config before validation.
 - The semantic-review task may make a provider request only when explicitly configured in the task list and when the required provider environment variables are present. Provider/configuration errors fail closed.
 - The runner does not commit, push, create PRs, merge, deploy, or invoke game/business actions.

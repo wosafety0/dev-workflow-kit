@@ -230,6 +230,8 @@ def main(argv: list[str] | None = None) -> int:
         ):
             if path is not None and path == report_path:
                 raise HarnessRunnerError(f"report-output must not overwrite {label}")
+        if review_output is not None and review_output == config_path:
+            raise HarnessRunnerError("review-output must not overwrite config")
 
         # Invalidate previous successful artifacts before config validation or task
         # execution. Otherwise a blocked run can leave a stale PASS for consumers.
