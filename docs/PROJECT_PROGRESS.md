@@ -256,3 +256,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Exact-head Push CI: [run 40860841336](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40860841336) — success. All **120 offline tests** passed; Python compilation, redacted acceptance-report generation/upload, and the final orchestration gate passed.
 - The workflow now prints only the three required stage outcomes (tests/report/artifact) before evaluating the gate, improving diagnosis without exposing user data or secrets.
 - Exact-head Push CI also passed for the progress-archive commit `b5a0dc4d94c76006a0929c3166c80844b4595ee5`: [run 40860979797](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40860979797), including the 120-test suite, report upload, and final gate. PR #32 remains Draft/unmerged. PR-context CI for the current head is not yet confirmed; do not infer it from the older PR-context run. No consumer pin, PR target, branch topology, release, or deployment changed.
+
+
+## 2026-10-29 — stale-report invalidation on rejected config provenance (PR #32)
+
+- Follow-up review found an ordering regression introduced by config provenance enforcement: an untracked or `artifacts/` config was rejected before prior acceptance artifacts were cleared, potentially leaving an old PASS report available after a blocked run.
+- Moved the config provenance gate to after path-alias checks and stale report/review-output invalidation, while keeping it before config parsing and task execution. This preserves config bytes when paths alias outputs and ensures blocked runs cannot leave stale passing artifacts.
+- Added regression coverage that pre-seeds a passing report, then verifies both `artifacts/harness.json` and ignored `.venv/harness.json` are rejected and the stale report is removed; the task executor is never called.
+- Implementation commit: `7a57238b56a3443624d86fa84bcb3dcf1e774096`; regression-test commit: `a7384851b96dcfcc850f6e66b11915b9ecb128af`; documentation commit: `74c369c9175681af93f0527e9eedad66b90f9c19`.
+- Exact-head Push CI and PR-context CI are pending observation for this code-and-documentation revision. PR #32 remains Draft/unmerged; no consumer pin, target branch, branch topology, release, or deployment changed.
