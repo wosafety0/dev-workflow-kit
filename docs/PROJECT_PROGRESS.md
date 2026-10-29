@@ -322,3 +322,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Safe-boundary decision: no PR retarget, merge, rebase, close/reopen, consumer pin update, or further no-op trigger-probe commits. The trigger gap is recorded as a blocker pending a solution that preserves PR topology.
 - PR #31 remains Draft/open/unmerged. Its latest known exact-head Push and PR-context validation were previously recorded at archive commit `10c5036e2889a9a28e05c3494b964dbb0023b088`; no consumer pins were changed.
 - Next: continue source-level Harness security review and validate the latest archive commit's Push CI. Reassess PR-context CI only if a non-topology-changing route becomes available.
+
+
+## 2026-10-29 — ignored Python unittest source gate
+
+- Fixed the ignored-test regression in `scripts/harness_runner.py`: before allowing `python -m unittest discover -s tests -v`, the Runner enumerates ignored, untracked paths under `tests/` with `git ls-files --others --ignored --exclude-standard -z` and rejects any basename matching Python unittest discovery's `test*.py` pattern. NUL-delimited parsing is used so filenames are handled without line-splitting ambiguity.
+- Added `test_runner_rejects_ignored_python_test_module_before_execution`; it verifies the Runner exits with the policy error, removes any pre-existing report, and never invokes the task runner.
+- Exact-head Push CI for `5dacf82089a383094d9855e77852af0abd0f7868` passed: [run 40889112448](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40889112448). The run completed all **122 offline tests**, including the new regression test.
+- PR #32 remains open and Draft. Its reported base SHA is still `b402101ef41d3f9d4f9533545ea83128ba5843a6`; the latest PR-context run is still for an older head (`b59f83a1d4c394eade420ce4eadced7897f2a92a`, run [40858714785](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40858714785)). Therefore current-head PR-context CI is **not** validated. Do not substitute the successful Push run for that gate.
+- No PR retarget/rebase/merge/close-reopen, consumer pin change, or game action was performed. Next: keep the PR-context gap explicit and continue review only where a meaningful, topology-preserving action is available.
