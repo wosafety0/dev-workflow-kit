@@ -893,8 +893,15 @@ class SemanticReviewValidationTests(unittest.TestCase):
                 "AI_REVIEW_MODEL": "test-model",
                 "HTTP_PROXY": "http://127.0.0.1:1",
                 "HTTPS_PROXY": "http://127.0.0.1:1",
+                "http_proxy": "http://127.0.0.1:1",
+                "https_proxy": "http://127.0.0.1:1",
+                "ALL_PROXY": "http://127.0.0.1:1",
+                "all_proxy": "http://127.0.0.1:1",
+                "NO_PROXY": "",
+                "no_proxy": "",
             }
-            with patch.dict("os.environ", config, clear=True):
+            # Keep Windows-required environment such as SystemRoot for SSLContext setup.
+            with patch.dict("os.environ", config, clear=False):
                 review = call_model(self.payload)
             self.assertEqual(review["status"], "PASS")
             self.assertEqual(server.received_auth, "Bearer test-loopback-key")
