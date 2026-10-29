@@ -183,3 +183,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added a regression test asserting exit 2, no task execution, and intact config content.
 - Hosted CI run [40793868543](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40793868543), job `offline-tests` ID `123185427562`, completed successfully. Decoded job logs confirm 102 offline tests passed; report creation, artifact upload, and final acceptance gate succeeded.
 - PR remains draft/unmerged. No `main` modification, deployment, or model request.
+
+
+### Runner and loopback integration candidate (2026-10-29)
+
+- Draft PR #20: https://github.com/wosafety0/dev-workflow-kit/pull/20; branch `test/runner-loopback-integration-20261029`; head `b44b7f139fdabe62cc215b173d022c5c13cc5c90`; base `fix/runner-output-alias-20261029`.
+- Combined PR #12's loopback HTTP transport/proxy-bypass implementation and acceptance contract with PR #13/#19's runner and output alias protection. Added both loopback endpoint and actual mock-server proxy bypass tests to the combined test module.
+- Initial workflow-run lookup for the integration head returned no runs; combined CI result is **pending/unverified**, not a pass. Next: inspect workflow trigger and obtain hosted CI evidence before merge recommendation.
+- PR #20 is draft/unmerged; no changes to `main`, no live provider model calls, no game operations.
