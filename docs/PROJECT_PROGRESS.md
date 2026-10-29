@@ -246,3 +246,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added regression coverage for config under `artifacts/`, an ignored untracked config under `.venv/`, and acceptance of a normal HEAD-tracked config. Existing symlink and report-contract protections remain unchanged.
 - Code commit: `6c3dea5372a8c233a59990c428c08288c71df602`; regression tests commit: `b9097574e2f84ee2880176f3fd7ab3996c11645e`; documentation commit: `cabcd885e6b53a176532cffb8e3910ce41a7430d`.
 - Validation boundary: changes are committed to the existing PR #32 branch; hosted exact-head Push CI and PR-context CI must be observed for the final code-and-archive head before treating this follow-up as validated. PR #32 remains Draft/unmerged; no consumer pin, PR target, branch topology, release, or deployment changed.
+
+
+## 2026-10-29 — committed-config provenance regression suite passes (PR #32)
+
+- Finalized the config provenance gate while preserving the existing review-output/config alias rejection precedence. Config paths under `artifacts/` are rejected, and other config paths must be present in the current Git HEAD tree before config parsing or stale-output cleanup.
+- Regression coverage includes an `artifacts/` config, an ignored untracked config under `.venv/`, and acceptance of a normal tracked config. The existing alias-protection regression remains intact.
+- Code commit: `ff00e73d29a363e5f3d20b578f68c22331c2fc30`.
+- Exact-head Push CI: [run 40860841336](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40860841336) — success. All **120 offline tests** passed; Python compilation, redacted acceptance-report generation/upload, and the final orchestration gate passed.
+- The workflow now prints only the three required stage outcomes (tests/report/artifact) before evaluating the gate, improving diagnosis without exposing user data or secrets.
+- PR #32 remains Draft/unmerged. This result validates the code commit above; the new progress-archive commit itself still requires its own exact-head CI check. PR-context CI for the current head is not yet confirmed. No consumer pin, PR target, branch topology, release, or deployment changed.
