@@ -180,3 +180,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Isolated follow-up branch: `test/https-redirect-handler-20261029`, based on the fail-fast candidate head `7962697d273e04716e71fcf95536154b03704032`, tracked in Draft PR #24: https://github.com/wosafety0/dev-workflow-kit/pull/24.
 - Exact tested head `afe632edc0f5fdcef3d57289d8ef6da472f49365` passed push CI [40805356218](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40805356218) and PR-context CI [40805372630](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40805372630); both passed Python compilation, **109 offline tests**, redacted report generation, artifact upload, and final gate. The progress archive update itself will receive a new exact-head run.
 - No merge, live model call, game operation, release, or deployment.
+
+### Runner stale-report invalidation (2026-10-29)
+
+- Combined review of the stacked runner/transport fixes identified a report-consumer hazard: when a prior invocation wrote a `passed` artifact and a later invocation failed during configuration preflight, the old report remained on disk. A downstream consumer that read only the artifact could mistake the stale result for the current run.
+- The runner now validates the report output location and unlinks an existing report before reading or validating the config. Added offline regressions for invalid JSON and missing semantic-review arguments; both require exit code 2, no task execution, and absence of the stale report. Updated the runner contract document.
+- Isolated Draft follow-up branch `fix/runner-stale-report-20261029` based on HTTPS regression candidate `58702b8ba7e7fde2c384671677aec8784f216c97`. No provider request, live game operation, merge, release, or deployment. CI evidence must be verified separately.
