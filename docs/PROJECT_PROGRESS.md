@@ -379,3 +379,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added regressions for duplicate input fields (verifying the model is not called and stale PASS output is removed), duplicate provider response keys, and duplicate model-review fields.
 - Final code head `89a7254e45494476665ea50fc5187d0b0ae1c111` passed exact-head Push CI [run 40824547635](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824547635) and PR CI [run 40824552875](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824552875). Both passed 145 offline tests; report verification and the final orchestration gate succeeded.
 - PR #31 remains Draft/open/unmerged. No live model-provider requests were made by these tests, no game actions, deployment, release, or merge occurred; local working-tree synchronization remains unverified.
+
+
+## 2026-10-29 — restore bounded model-provider response reads on the report-verifier branch
+
+- Cross-branch comparison confirmed PR #15 had introduced a 1 MiB model-response cap, but the independent #20 → #22 → #31 line did not inherit it. Added the same bound to the current branch: read at most 1 MiB plus one sentinel byte, then fail closed if oversized. Kept duplicate-key rejection for both provider-envelope JSON and model review JSON, and documented the limit in the stable acceptance contract.
+- Added a regression proving oversized responses are read only up to the configured bound and cannot produce a passing review.
+- Code head `2546705be0c14d38f831934f3491306baf6abf1d` passed exact-head Push CI [run 40824844700](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824844700) and PR CI [run 40824850667](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824850667). Both passed 146 offline tests; report verification and the final orchestration gate succeeded.
+- This restores the response-size guard without merging or rewriting the separate PR #15/#17 branches. PR #31 remains Draft/open/unmerged. No live model-provider requests, game actions, deployment, release, or merge; local working-tree synchronization remains unverified.
