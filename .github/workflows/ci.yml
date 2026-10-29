@@ -38,7 +38,7 @@ jobs:
         env:
           COMMIT_SHA: ${{ github.sha }}
           RULES_PIN: ${{ steps.rules.outputs.pin }}
-          TOOL_VERSION: dev-workflow-kit/harness-runner@${{ github.sha }}
+          TOOL_VERSION: dev-workflow-kit@${{ github.sha }}
           TEST_OUTCOME: ${{ steps.tests.outcome }}
         run: |
           python - <<'PY'
