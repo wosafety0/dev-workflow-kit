@@ -172,3 +172,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Safety boundary: this change reduces unnecessary model calls after a failing prerequisite; it does not itself call a provider, execute game actions, merge, release, or deploy.
 - Exact-head verification for `875d78882c499419a5bf32104393bf28408e5306`: push CI [40804336760](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40804336760) and PR-context CI [40804344244](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40804344244) both succeeded; each passed Python compilation, **108 offline tests**, report generation, artifact upload, and the final gate.
 - CI trigger review found that `pull_request` events did not include base branches matching `fix/**`, so PRs targeting fix branches could miss PR-context checks. Added `fix/**` to `.github/workflows/ci.yml`; the workflow change is under exact-head push CI validation. The current PR's base branch predates this trigger change, so no PR-context run is claimed from that change alone.
+
+### HTTPS redirect-handler regression coverage (2026-10-29)
+
+- The redirect security fix already uses the same `_NoRedirectHandler` for HTTPS and literal-loopback HTTP. The two-server credential-forwarding regression specifically exercised loopback HTTP, so added a separate HTTPS-path test to prevent future removal of the redirect handler from that code path.
+- The new offline test asserts `call_model` installs `_NoRedirectHandler` for an HTTPS endpoint and that the handler refuses a redirect. It uses a mocked response and a non-routable `.invalid` hostname; no network request or credential is used.
+- Isolated follow-up branch: `test/https-redirect-handler-20261029`, based on the fail-fast candidate head `7962697d273e04716e71fcf95536154b03704032`. CI results are pending until exact-head push and PR-context runs complete. No merge, live model call, game operation, release, or deployment.
