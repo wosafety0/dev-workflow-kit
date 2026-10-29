@@ -200,3 +200,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Draft PR #27 (`fix/runner-early-stale-report-20261029`) moves report invalidation immediately after validating the project root and report output path, before timeout and other input-path preflight. Added two offline regressions and updated `docs/HARNESS_RUNNER_V1.md`.
 - Exact code/docs head before this archive: `386b032745e6649d017e20871fd35e8ab6eca5fd`; push CI run `40810871038` completed successfully. PR-context run `40810887822` was still in progress at observation; not yet claimed passed.
 - Limits: argparse failure, invalid project root, and invalid report path cannot guarantee artifact invalidation. Consumers must check exit code, report status, and commit identity. No live model request, game action, deployment, or merge.
+
+## 2026-10-29 — report/config collision preservation (PR #28)
+
+- Reviewed PR #27's earlier invalidation order and identified a destructive edge case: a caller could specify the same existing `artifacts/` file for `--config` and `--report-output`; unlink happened before the equality check.
+- Draft PR #28 resolves config path and checks report/config equality before deleting the old report. Invalid config path still invalidates a safely resolved report, and timeout validation still occurs after invalidation.
+- Added an offline regression that verifies the config file remains byte-for-byte unchanged and no task runs. Updated the runner contract documentation.
+- Pre-archive code/docs head: `7cbc16cd63f8125dbd2b25c40f31f8292f32d198`. CI result not yet asserted. No live model calls, game actions, merge, or deployment.
