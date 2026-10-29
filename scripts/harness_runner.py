@@ -195,6 +195,23 @@ def _task_argv(
         tests_dir = _resolve_trusted_source(root, "tests", "tests directory")
         if not tests_dir.is_dir():
             raise HarnessRunnerError("python-unittest task requires a tests/ directory")
+        # Git status omits ignored files; unittest discovery must not execute them.
+        try:
+            ignored = subprocess.run(
+                ["git", "ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "tests"],
+                cwd=root, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                timeout=10, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            raise HarnessRunnerError("Could not verify ignored Python test source") from None
+        if ignored.returncode != 0:
+            raise HarnessRunnerError("Could not verify ignored Python test source")
+        if any(
+            Path(os.fsdecode(path)).name.startswith("test")
+            and Path(os.fsdecode(path)).suffix == ".py"
+            for path in ignored.stdout.split(b"\\0") if path
+        ):
+            raise HarnessRunnerError("ignored Python test source must not be executed")
         return [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
     if task_id == "semantic-review":
         if review_input is None or review_output is None:
