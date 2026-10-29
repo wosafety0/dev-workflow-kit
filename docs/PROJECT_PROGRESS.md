@@ -191,3 +191,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Combined PR #12's loopback HTTP transport/proxy-bypass implementation and acceptance contract with PR #13/#19's runner and output alias protection. Added both loopback endpoint and actual mock-server proxy bypass tests to the combined test module.
 - Initial workflow-run lookup for the integration head returned no runs; combined CI result is **pending/unverified**, not a pass. Next: inspect workflow trigger and obtain hosted CI evidence before merge recommendation.
 - PR #20 is draft/unmerged; no changes to `main`, no live provider model calls, no game operations.
+
+
+### Integration CI trigger investigation (2026-10-29)
+
+- Reviewed `.github/workflows/ci.yml`: pull-request trigger targets `main`, `feat/**`, `test/**`; the original PR #20 base `fix/runner-output-alias-20261029` was **not** in the PR trigger filter. Push trigger separately includes `test/**`.
+- Retargeted draft PR #20 to `feat/safe-task-runner-20261028` to make the pull-request trigger eligible while preserving PR #19's fix in the integration head. The integration head remains `b44b7f139fdabe62cc215b173d022c5c13cc5c90`.
+- Connector's commit workflow lookup returned no PR-triggered runs after retargeting at inspection time. This lookup only includes pull-request-triggered runs, so it cannot establish whether a push-triggered run occurred. **No CI pass is claimed.**
+- Follow-up: obtain explicit PR-triggered workflow run/job evidence, or inspect run history through an appropriate run-list interface. PR remains draft; no merge or deployment.
