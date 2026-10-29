@@ -306,3 +306,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - PR #32 remains open and Draft. Its API still reports base SHA `b402101ef41d3f9d4f9533545ea83128ba5843a6`, while the live base branch ref was observed at `e4be499e36ed9d8e22ff45065d95f92e0876df34`. The older base commit's CI workflow omits `fix/**`; the live base branch workflow includes it. This is consistent with the missing PR-context event but does not yet prove GitHub's event refresh semantics.
 - This archive update intentionally creates a new head commit on the existing PR branch to test whether a fresh `synchronize` event evaluates the updated base workflow. This does not change the PR target, close/reopen the PR, rebase, merge, or alter consumer pins.
 - Validation requirement: inspect the new commit's Push CI and any newly generated PR-context run separately. If GitHub still emits no PR-context run, retain that as an unresolved platform/event evidence blocker rather than declaring the gate passed.
+
+### CI trigger probe result
+
+- Probe/archive head `6ab6c6b438aa6ae4b638a12863e48acbe9090af5` passed exact-head Push CI: [run 40867026733](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40867026733).
+- After this fresh head update, the PR API still reported base SHA `b402101ef41d3f9d4f9533545ea83128ba5843a6`, and no new PR-context run appeared for the new head. The probe therefore did not close the PR-context gap.
+- A PR comment records this result. Continue to keep PR #32 Draft/unmerged and do not treat Push CI as a substitute for PR-context validation. No PR topology changes or consumer pin changes were made.
