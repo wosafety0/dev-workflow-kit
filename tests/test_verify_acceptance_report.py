@@ -1,4 +1,9 @@
+import json
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 from scripts.verify_acceptance_report import verify_report
 
@@ -44,6 +49,36 @@ class AcceptanceReportVerifierTests(unittest.TestCase):
         report = valid()
         report["unexpected"] = "extra"
         self.assertFalse(verify_report(report, SHA, PIN))
+
+    def test_cli_accepts_matching_report_and_rejects_wrong_sha(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "report.json"
+            path.write_text(json.dumps(valid()), encoding="utf-8")
+            command = [sys.executable, "scripts/verify_acceptance_report.py",
+                       "--report", str(path), "--expected-sha", SHA,
+                       "--expected-rules-pin", PIN]
+            passed = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(passed.returncode, 0, passed.stderr)
+            self.assertIn("verified", passed.stdout)
+            command[command.index("--expected-sha") + 1] = "c" * 40
+            failed = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(failed.returncode, 1)
+            self.assertNotIn("Traceback", failed.stderr)
+
+    def test_cli_fails_closed_for_missing_or_corrupt_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = str(Path(tmp) / "missing.json")
+            command = [sys.executable, "scripts/verify_acceptance_report.py",
+                       "--report", missing, "--expected-sha", SHA,
+                       "--expected-rules-pin", PIN]
+            absent = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(absent.returncode, 1)
+            corrupt_path = Path(tmp) / "corrupt.json"
+            corrupt_path.write_text("{not-json", encoding="utf-8")
+            command[command.index("--report") + 1] = str(corrupt_path)
+            corrupt = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(corrupt.returncode, 1)
+            self.assertNotIn("Traceback", corrupt.stderr)
 
     def test_rejects_malformed_identity(self):
         self.assertFalse(verify_report(valid(), "not-a-sha", PIN))
