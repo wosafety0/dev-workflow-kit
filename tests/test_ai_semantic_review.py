@@ -240,6 +240,25 @@ class SemanticReviewValidationTests(unittest.TestCase):
                 self.assertEqual(main(), 2)
             self.assertFalse(output_path.exists())
 
+
+    def test_duplicate_input_json_keys_fail_closed_before_model_call(self):
+        with tempfile.TemporaryDirectory() as directory:
+            input_path = Path(directory) / "input.json"
+            output_path = Path(directory) / "review.json"
+            raw = json.dumps(self.payload).replace('"task":', '"task": "", "task":', 1)
+            input_path.write_text(raw, encoding="utf-8")
+            output_path.write_text('{"status":"PASS"}', encoding="utf-8")
+            argv = ["ai_semantic_review.py", "--input", str(input_path),
+                    "--output", str(output_path)]
+            with patch("sys.argv", argv), patch(
+                "scripts.ai_semantic_review.call_model"
+            ) as model, patch("sys.stderr", new_callable=StringIO) as stderr:
+                self.assertEqual(main(), 2)
+            self.assertIn("duplicate JSON object key", stderr.getvalue())
+            model.assert_not_called()
+            self.assertFalse(output_path.exists())
+
+
     def test_input_and_output_must_not_be_same_path(self):
         with tempfile.TemporaryDirectory() as directory:
             same_path = Path(directory) / "input.json"
@@ -746,6 +765,8 @@ class SemanticReviewValidationTests(unittest.TestCase):
             b'{"choices":[]}',
             b'{"choices":[{"message":{"content":"not-json"}}]}',
             b'{"choices":[{"message":{"content":null}}]}',
+            b'{"choices":[],"choices":[{"message":{"content":"{}"}}]}',
+            b'{"choices":[{"message":{"content":"{\\"status\\":\\"PASS\\",\\"status\\":\\"NEEDS_CHANGES\\"}"}}]}',
         ]
         for raw in responses:
             with self.subTest(raw=raw):
