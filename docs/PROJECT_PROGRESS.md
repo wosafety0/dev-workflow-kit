@@ -225,3 +225,5 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Safety property: a missing, malformed, failed, stale-commit, or wrong-rules-pin report cannot open the final CI gate. The downstream caller must still check the runner process exit code and artifact provenance independently.
 - Validation is pending hosted CI on this branch; do not treat the implementation as verified until Push and PR runs pass on the exact head SHA.
 - PRs remain draft/unmerged. No model-provider calls, game actions, releases, or deployments were performed.
+
+- First hosted run on intermediate commit `26685fc91aed5809bd43dc642899a37300ca32a1` correctly exposed a test-loop indexing error (the new four-stage gate test iterated seven invalid values as stage indices). The implementation gate stayed closed. Fixed the test to exercise every invalid outcome at each of the four stages in commit `b329a5c3fbf3a6f4e1c163a9cafaecffe1debb4f`; final-head CI is pending.
