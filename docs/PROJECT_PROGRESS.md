@@ -353,3 +353,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Exact-head PR CI passed: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823479931.
 - Both checks passed the 141-test offline suite and final report-verification gate. Earlier failing runs are retained as evidence of the contract mismatch; they are not counted as passing validation.
 - PR #31 remains Draft/open/unmerged. No branch topology changes, live model calls, game actions, deployment, release, or merge.
+
+
+## 2026-10-29 — align standalone consumer verifier with inline workflow
+
+- A consistency audit found that `scripts/verify_consumer_acceptance_report.py` was weaker than the actual reusable workflow: its CLI accepted duplicate JSON keys, and its verifier accepted any non-empty test map instead of requiring exactly `runtime-validation` and `consumer-acceptance-command`.
+- Hardened the standalone helper to reject duplicate object keys during JSON parsing, require the exact two-stage set, and reject blank/untrimmed test names. Added regressions for missing/extra stages and duplicate top-level/nested keys. The reusable workflow remains self-contained; it does not call this helper from the consumer checkout.
+- Exact code head `ce76a71d5378ffdcf2be38ac109e3143738f11ae` passed Push CI [run 40823748577](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823748577) and PR CI [run 40823754559](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40823754559). Both passed 143 offline tests; logs confirm the report verification and final orchestration gate succeeded.
+- The report identity contract is currently aligned on `dev-workflow-kit/harness-runner@<commit SHA>` across the CI report producer, runner, verifier, and regression tests. PR #31 remains Draft/open/unmerged. No live model calls, game actions, deployment, release, or merge; local working-tree synchronization remains unverified.
