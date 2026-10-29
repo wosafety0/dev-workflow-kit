@@ -37,4 +37,4 @@ The workflow passes the actual `steps.*.outcome` values for the test, report, an
 - These unit tests validate the gate's decision logic; they do not simulate GitHub Actions expression evaluation or force a real artifact-service outage.
 - The report builder validates caller-supplied metadata and does not independently authenticate it.
 - A passing offline workflow is not evidence of live model quality or complete defect detection.
-- Third-party Actions are still version-tag pinned in the workflow; immutable full-SHA pinning remains a separate hardening task.
+- The repository's current CI and reusable acceptance workflows pin `actions/checkout` and `actions/setup-python` to reviewed full commit SHAs. When updating a pin, verify the upstream release tag against the selected commit. This does not replace the still-open requirement to exercise real hosted-workflow failure paths.
