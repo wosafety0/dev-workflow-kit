@@ -371,3 +371,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added duplicate-key rejection at config parsing time and a regression with duplicate `commands` keys where the last value would otherwise be valid. The test confirms the runner fails closed, invalidates any stale PASS report, and executes no task.
 - Code head `329103d26c5a57ab3f2c6b9df8b5d9e0f1b6c133` passed exact-head Push CI [run 40824152546](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824152546) and PR CI [run 40824160320](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824160320). Both passed 144 offline tests; logs confirm report verification and the final orchestration gate succeeded.
 - PR #31 remains Draft/open/unmerged. No live model calls, game actions, deployment, release, or merge; local working-tree synchronization remains unverified.
+
+
+## 2026-10-29 — reject duplicate JSON keys in semantic review inputs and responses
+
+- Extended fail-closed duplicate-key handling to the semantic-review client. Review input files, the provider's outer chat-completions JSON, and the model's JSON review content now reject duplicate object keys instead of silently keeping the last value.
+- Added regressions for duplicate input fields (verifying the model is not called and stale PASS output is removed), duplicate provider response keys, and duplicate model-review fields.
+- Final code head `89a7254e45494476665ea50fc5187d0b0ae1c111` passed exact-head Push CI [run 40824547635](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824547635) and PR CI [run 40824552875](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40824552875). Both passed 145 offline tests; report verification and the final orchestration gate succeeded.
+- PR #31 remains Draft/open/unmerged. No live model-provider requests were made by these tests, no game actions, deployment, release, or merge occurred; local working-tree synchronization remains unverified.
