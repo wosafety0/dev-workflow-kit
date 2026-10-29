@@ -225,3 +225,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The PR diff is supported by exact commit comparison: recorded base SHA `f71025d...` to PR head `c37ad36...` is ahead by 12 commits and reports the expected five changed files. The base branch has advanced to `071c168bc9532ba8d8c6a9f4708046e164879568`; comparing that live base to the PR head reports divergence with the PR head 3 commits behind. This stacked-branch/base drift and `mergeable=false` remain genuine issues to resolve.
 - Rescue branch `rescue/pr-33-last-known-head-20261029` remains preserved as an additional snapshot at the recorded `c37ad360...` plus its archive commit. No original PR ref, base, review state, or consumer integration was changed.
 - Validation boundary: PR #22's successful Harness CI run validates PR #22's head only. Current-head PR-context CI for PR #33 is not established by this check. No tests or CI were run in this step.
+
+
+## 2026-10-30 — Direct source/base file verification (PR #33)
+
+- Read `scripts/ai_semantic_review.py` at the exact merge-base SHA `f71025d2303737dafe18ae823f93cad9cdd1249d`, the live base SHA `071c168bc9532ba8d8c6a9f4708046e164879568`, and the actual source branch `fix/runner-loopback-bounded-response-20261029`.
+- The merge-base and live-base file blob SHA is `490479537c35b19336de11020454154f0178f0fb` (21,462 characters). The source branch file blob SHA is `bf72f77855a79428c44296d401d9c4a7f2ee6542` (22,281 characters).
+- The source version contains `MAX_MODEL_RESPONSE_BYTES` and duplicate-JSON-key rejection; the checked base version does not. The source test file blob (`193b9c046ae7e1fd70a734b7d15c65cbed7c802f`, 42,246 characters) differs from the live-base test file (`8c2ab28620683a843235043147828df38be0e215`, 39,727 characters) and includes duplicate-key regression coverage.
+- This is read-only content verification. No branch or PR refs were changed; no tests or CI were run. Exact-head CI remains unverified for the current source branch.
