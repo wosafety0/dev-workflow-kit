@@ -186,3 +186,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Combined review of the stacked runner/transport fixes identified a report-consumer hazard: when a prior invocation wrote a `passed` artifact and a later invocation failed during configuration preflight, the old report remained on disk. A downstream consumer that read only the artifact could mistake the stale result for the current run.
 - The runner now validates the report output location and unlinks an existing report before reading or validating the config. Added offline regressions for invalid JSON and missing semantic-review arguments; both require exit code 2, no task execution, and absence of the stale report. Updated the runner contract document.
 - Isolated Draft follow-up branch `fix/runner-stale-report-20261029` based on HTTPS regression candidate `58702b8ba7e7fde2c384671677aec8784f216c97`. No provider request, live game operation, merge, release, or deployment. CI evidence must be verified separately.
+
+
+### Stale semantic-review output invalidation (2026-10-29)
+
+- Combined runner review found a second artifact-only consumer hazard: a prior `PASS` semantic-review output could survive when an earlier local task fails and semantic review is marked `not_run`.
+- The runner now unlinks a pre-existing semantic-review output after validating paths and before launching tasks. Added an offline regression with a pre-existing `PASS` review artifact, a failed first task, `semantic-review: not_run`, and an assertion that the stale artifact is absent. Updated `docs/HARNESS_RUNNER_V1.md`.
+- Follow-up branch `fix/runner-stale-review-artifact-20261029` is stacked on stale acceptance report candidate `80c1be685de2ca521418aa5622da02eb62911ad1`. No live model requests, game actions, merges, releases, or deployments. CI evidence tracked separately.
