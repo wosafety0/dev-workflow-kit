@@ -426,3 +426,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Extended exact-inline-verifier tests to cover wrong Harness workflow ref/SHA, and updated the consumer report contract. This uses GitHub.com-specific `job.workflow_*` context fields; GitHub documents these fields as unavailable on GitHub Enterprise Server.
 - Exact code head `af86451fc1b56b1f58af765c4a902b268910d243` passed Push CI [run 40826479485](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40826479485) and PR CI [run 40826485217](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40826485217). Both passed **148 offline tests**, including execution of the exact inline verifier with mismatched Harness workflow ref/SHA; report generation, artifact upload, strict verification, and final gate succeeded.
 - The change updates only the reusable workflow source and its contract on the Harness feature branch. It does not change Clamp PR #14's existing immutable pin or activate the new contract in consumer repositories. PR #31 remains Draft/unmerged; no merge, deployment, release, live model request, or game action occurred.
+
+
+## 2026-10-29 — Harness debugging ownership transferred from Clamp to Harness
+
+- User directive: take over Harness debugging associated with the Clamp consumer pilot; do not let the Clamp project perform Harness-related development.
+- Recorded the ownership boundary in `docs/REUSABLE_ACCEPTANCE_WORKFLOW.md`: reusable workflow implementation, report schema/verifier, provenance and identity checks, runtime orchestration, artifact handling, gate logic, Harness regression tests, root-cause fixes, and their CI evidence belong in `wosafety0/dev-workflow-kit`.
+- Consumer responsibility is limited to its immutable Harness SHA pin, Clamp-owned acceptance command/tests, and minimal consumer integration configuration/documentation. A failing Clamp run is evidence to reproduce and fix in Harness first; only after exact-head Harness Push/PR CI passes should the consumer pin be updated and Clamp CI rerun.
+- Posted this explicit boundary to Clamp Draft PR #14: https://github.com/wosafety0/wosafety0clamp/pull/14#issuecomment-6489307339. No Harness implementation changes were made in Clamp, and no Clamp branch or PR was modified by this policy change.
+- This policy documentation commit's exact-head Push/PR CI and test counts will be recorded after verification. PR #31 remains Draft/unmerged; no merge, deployment, release, live model request, or game action.
