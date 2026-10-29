@@ -189,3 +189,7 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Exact branch head: `10a091c086bfa8de9557f329d6f121cbbaddb796`.
 - Exact-head Push CI: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40822592220 — success; offline suite ran 109 tests, including the new duplicate-config regression.
 - PR #32 remains open and unmerged, stacked on `fix/runner-commit-provenance-20261029`. No rebase, retarget, merge, release, live model call, or game action was performed.
+
+
+- Follow-up coverage refinement: added a nested duplicate-key config case (`metadata.mode`) to verify the same strict parser hook rejects duplicate keys below the top level, not only duplicate root fields.
+- Exact-head Push CI for this added regression: https://github.com/wosafety0/dev-workflow-kit/actions/runs/40822740014 — success at `7570b6b0a7ace791922fc9c4776e3f3017c0f314`.
