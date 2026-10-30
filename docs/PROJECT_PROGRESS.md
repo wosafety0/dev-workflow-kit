@@ -1,5 +1,19 @@
 # Project Progress Log
 
+Last updated: 2026-10-30
+
+## Current verified state — 2026-10-30
+
+- Repository: `wosafety0/dev-workflow-kit`
+- Active development branch: `feat/reusable-node-runtime-20261030`
+- Active Harness PR: [#40](https://github.com/wosafety0/dev-workflow-kit/pull/40), Draft/open/unmerged. Current head before this progress-log update: `5b281f28d7b5c09a29cf6c83839a3c1269347e48`.
+- Exact-head Push CI [41046882411](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41046882411) and PR-context CI [41046892321](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41046892321) both succeeded. The offline contract suite, report generation/upload, and final required-stage gate passed.
+- Reusable acceptance workflow supports Python and Node.js with optional pnpm, validates runtime/package-manager inputs, rejects blank consumer commands, propagates consumer test failures, pins actions to full commit SHAs, disables checkout credential persistence, and contract-tests that no permission scope is set to `write`.
+- First consumer pilot: [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2), pinned to Harness SHA `36533dd7726365fd817f48072e49ea055d339947`; reusable acceptance and native lint/type-check CI passed for consumer head `643659014370f85b61964bcbb978833ec6f74428`. PR remains Draft/unmerged.
+- Second consumer pilot: [chatgpt-auto-send-assistant PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1), pinned to the same Harness SHA. Run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209), attempt 2, failed before steps; job [123960822318](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209/job/123960822318) reports runner ID 0, no runner name, and no steps; logs return `BlobNotFound`. GitHub records the intended reusable-workflow SHA in the run metadata, reducing the likelihood of a missing workflow reference but not establishing the root cause. Failure annotations and effective caller Actions policy remain inaccessible through the current connector.
+- The second-consumer acceptance criterion remains incomplete. No Actions settings, permissions, secrets, or repository visibility changed. No PR has been merged and no release or deployment has occurred.
+- Detailed diagnostic evidence and the exact-head archive are maintained in [ROADMAP.md](ROADMAP.md) and the [PR #40 description](https://github.com/wosafety0/dev-workflow-kit/pull/40). The older dated entries below are retained as historical records and must not override this current verified state.
+
 Last updated: 2026-10-28
 
 ## Current repository state
