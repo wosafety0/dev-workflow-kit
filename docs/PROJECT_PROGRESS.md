@@ -238,3 +238,14 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - No Actions settings or repository visibility were changed. The consumer PR remains Draft/unmerged. No application code, secrets, browser actions, external provider APIs, or deployment workflows were invoked.
 - Updated the roadmap to record the blocked attempt while leaving the second-consumer acceptance criterion unchecked. The first public consumer pilot in `AI-Worker-Proxy` remains the only passing consumer pilot.
 - Documentation-only archive commit: `9bfc6187cdf2fa2d927c3d91dae553f494bfbf21`. Its own exact-head Push CI and PR-context CI must pass before this archive update is considered verified.
+
+
+### Reusable workflow bounded security review and archive — 2026-10-30
+
+- Re-read the current reusable workflow, consumer-facing usage/security documentation, stable acceptance contract, and static workflow-contract tests at the PR #40 head.
+- Reviewed the execution boundary: consumer command is transported through an environment variable rather than interpolated directly into the workflow's generated run script; the command is still intentionally executable shell owned by the consuming repository. Documentation correctly warns against sourcing it from untrusted PR text/model output.
+- Confirmed the workflow declares `contents: read`, a 15-minute job timeout, validates runtime/package-manager combinations before executing the consumer command, conditionally selects Python/Node/pnpm setup, and pins every referenced action to a full commit SHA.
+- Reviewed the static tests. They cover read-only permissions, runtime/package-manager allowlists, conditional setup, full-SHA action references, command transport, and timeout. They are source-contract tests rather than a complete execution simulator; the successful independent consumer pilot remains the integration evidence.
+- Bounded audit outcome: no reproducible defect found in the inspected workflow path. This does not establish full security, dependency provenance, live-provider behavior, or production readiness. The second consumer remains blocked before job steps; its cause is still unconfirmed. No access settings, visibility, secrets, application code, or deployment workflow were changed.
+- PR #40 remains Draft/open/unmerged with its base unchanged. No release or merge authorization is implied.
+- This archive-only update requires its own exact-head Push CI and PR-context CI to pass before the archive commit is considered verified.
