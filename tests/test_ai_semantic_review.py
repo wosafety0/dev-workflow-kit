@@ -5,7 +5,7 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.ai_semantic_review import ReviewError, build_messages, main, validate_review
+from scripts.ai_semantic_review import MAX_REVIEW_INPUT_BYTES, ReviewError, build_messages, main, validate_review
 
 
 class SemanticReviewValidationTests(unittest.TestCase):
@@ -249,6 +249,19 @@ class SemanticReviewValidationTests(unittest.TestCase):
             artifact_text = output_path.read_text(encoding="utf-8")
             self.assertTrue(artifact_text.endswith("\n"))
             self.assertEqual(json.loads(artifact_text)["status"], "PASS")
+
+    def test_oversized_stdin_is_rejected_before_model_call(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output_path = Path(directory) / "review.json"
+            with patch("sys.argv", ["ai_semantic_review.py", "--input", "-", "--output", str(output_path)]), patch(
+                "sys.stdin", StringIO("x" * (MAX_REVIEW_INPUT_BYTES + 1))
+            ), patch(
+                "scripts.ai_semantic_review.call_model"
+            ) as model, patch("sys.stderr", new_callable=StringIO) as stderr:
+                self.assertEqual(main(), 2)
+            self.assertIn("4 MiB input limit", stderr.getvalue())
+            model.assert_not_called()
+            self.assertFalse(output_path.exists())
 
     def test_failed_run_removes_previous_pass_artifact(self):
         with tempfile.TemporaryDirectory() as directory:

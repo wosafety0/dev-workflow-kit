@@ -29,6 +29,7 @@ class HarnessRunnerError(ValueError):
 
 _SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 _MAX_TIMEOUT_SECONDS = 3600
+_MAX_REVIEW_INPUT_BYTES = 4 * 1024 * 1024
 
 
 def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -276,9 +277,13 @@ def _run_task(
 def _read_review_input(path: Path, field: str) -> bytes:
     """Read caller-supplied review input once so the exact bytes can be passed to the child."""
     try:
-        return path.read_bytes()
+        with path.open("rb") as source:
+            data = source.read(_MAX_REVIEW_INPUT_BYTES + 1)
     except OSError:
         raise HarnessRunnerError(f"Could not verify {field}") from None
+    if len(data) > _MAX_REVIEW_INPUT_BYTES:
+        raise HarnessRunnerError(f"{field} exceeds the 4 MiB input limit")
+    return data
 
 
 def _write_report(output_path: Path, metadata: dict[str, Any]) -> dict[str, Any]:

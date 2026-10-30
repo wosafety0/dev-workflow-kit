@@ -227,6 +227,20 @@ class HarnessRunnerTests(unittest.TestCase):
         run_task.assert_not_called()
         self.assertEqual(self.config_path.read_bytes(), original_config)
 
+    def test_runner_rejects_oversized_review_input_before_tasks(self):
+        self.write_config(["semantic-review"])
+        review_input = self.root / "review-input.json"
+        review_input.write_bytes(b"x" * (harness_runner._MAX_REVIEW_INPUT_BYTES + 1))
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("4 MiB input limit", stderr)
+        run_task.assert_not_called()
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
+
     def test_runner_rejects_review_input_mutated_by_preceding_task(self):
         self.write_config(["python-unittest", "semantic-review"])
         review_input = self.root / "review-input.json"

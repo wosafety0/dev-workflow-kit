@@ -25,6 +25,7 @@ SEVERITIES = {"critical", "high", "medium", "low", "info"}
 MAX_CHANGED_FILE_PATH_LENGTH = 4096
 MAX_DIFF_LINE_NUMBER = 2_147_483_647
 MAX_MODEL_RESPONSE_BYTES = 1024 * 1024  # 1 MiB; bounded provider response
+MAX_REVIEW_INPUT_BYTES = 4 * 1024 * 1024  # 4 MiB; bounded caller-supplied request
 
 
 def _reject_duplicate_json_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -512,7 +513,14 @@ def main() -> int:
             output_path.unlink()
         except FileNotFoundError:
             pass
-        input_text = sys.stdin.read() if input_path is None else input_path.read_text(encoding="utf-8")
+        if input_path is None:
+            raw_input = sys.stdin.read(MAX_REVIEW_INPUT_BYTES + 1).encode("utf-8")
+        else:
+            with input_path.open("rb") as source:
+                raw_input = source.read(MAX_REVIEW_INPUT_BYTES + 1)
+        if len(raw_input) > MAX_REVIEW_INPUT_BYTES:
+            raise ReviewError("Review input exceeds the 4 MiB input limit")
+        input_text = raw_input.decode("utf-8")
         payload = json.loads(
             input_text,
             object_pairs_hook=_reject_duplicate_json_keys,
