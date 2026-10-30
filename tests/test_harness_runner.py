@@ -528,6 +528,33 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
 
+
+    def test_runner_rejects_ignored_python_source_outside_tests_before_execution(self):
+        # Ignored source outside tests/ can still be imported by tracked test code.
+        ignored_helper = self.root / "scripts" / "helper.py"
+        (self.root / ".gitignore").write_text(
+            "scripts/helper.py\n", encoding="utf-8"
+        )
+        ignored_helper.write_text("RESULT = 'mutable ignored source'\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "add", ".gitignore"], cwd=self.root, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test",
+             "-c", "user.email=harness-test@example.invalid",
+             "commit", "-qm", "ignore mutable scripts helper"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("ignored Python source", stderr)
+        run_task.assert_not_called()
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
+
+
     def test_runner_rejects_tests_directory_symlink_outside_root(self):
         outside = tempfile.TemporaryDirectory()
         self.addCleanup(outside.cleanup)
