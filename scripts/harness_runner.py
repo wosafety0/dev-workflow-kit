@@ -175,6 +175,7 @@ def _git_commit_sha(root: Path) -> str:
     try:
         top = run_git("rev-parse", "--show-toplevel")
         result = run_git("rev-parse", "HEAD")
+        sparse = run_git("config", "--bool", "--get", "core.sparseCheckout")
         status = run_git(
             "-c", "core.fsmonitor=false", "status", "--ignore-submodules=none",
             "--porcelain=v1", "--untracked-files=all", "--", ".", ":(exclude)artifacts",
@@ -188,6 +189,10 @@ def _git_commit_sha(root: Path) -> str:
     sha = result.stdout.strip()
     if result.returncode != 0 or not _SHA_RE.fullmatch(sha):
         raise HarnessRunnerError("Project root must be a Git worktree with a valid HEAD commit")
+    if sparse.returncode == 0 and sparse.stdout.strip().lower() == "true":
+        raise HarnessRunnerError("Sparse checkouts are not supported for acceptance")
+    if sparse.returncode not in (0, 1):
+        raise HarnessRunnerError("Could not verify sparse-checkout state")
     if status.returncode != 0:
         raise HarnessRunnerError("Could not verify clean Git worktree")
     if status.stdout:
