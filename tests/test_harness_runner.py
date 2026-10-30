@@ -390,6 +390,51 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual((status, exit_code), ("failed", None))
 
 
+    def test_git_bound_review_passes_derived_input_and_reports_provenance(self):
+        self.write_config(["semantic-review"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        head = "c" * 40
+        provenance = {
+            "base_sha": "a" * 40,
+            "head_sha": head,
+            "merge_base_sha": "b" * 40,
+            "diff_sha256": "d" * 64,
+            "changed_files": ["tests/test_example.py"],
+        }
+        derived_input = b'{"task":"derived from Git"}\n'
+        with patch("scripts.harness_runner._git_commit_sha", return_value=head), patch(
+            "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
+        ), patch(
+            "scripts.harness_runner._build_git_bound_review_input",
+            return_value=(derived_input, provenance),
+        ), patch(
+            "scripts.harness_runner._run_task", return_value=("passed", 0)
+        ) as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+                "--review-base", provenance["base_sha"],
+                "--review-head", head,
+            )
+        self.assertEqual((code, stderr), (0, ""))
+        self.assertEqual(run_task.call_args.args[3], derived_input)
+        report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["schema_version"], 2)
+        self.assertEqual(report["review_provenance"], provenance)
+
+    def test_git_bound_review_requires_base_and_head_together(self):
+        self.write_config(["semantic-review"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+                "--review-base", "a" * 40,
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("must be supplied together", stderr)
+        run_task.assert_not_called()
+
     def initialize_git_worktree(self):
         """Commit fixture sources once so provenance checks use a real Git worktree."""
         if (self.root / ".git").exists():
