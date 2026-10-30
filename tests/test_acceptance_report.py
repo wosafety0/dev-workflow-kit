@@ -23,6 +23,41 @@ class AcceptanceReportTests(unittest.TestCase):
             "schema_version", "commit_sha", "rules_pin", "tool_version", "tests", "status"
         })
 
+    def test_git_bound_provenance_uses_schema_v2_and_binds_head_to_report_commit(self):
+        metadata = self.valid_metadata()
+        metadata["review_provenance"] = {
+            "base_sha": "b" * 40,
+            "head_sha": "a" * 40,
+            "merge_base_sha": "c" * 40,
+            "diff_sha256": "d" * 64,
+            "changed_files": ["src/z.py", "src/a.py"],
+        }
+        report = build_acceptance_report(metadata)
+        self.assertEqual(report["schema_version"], 2)
+        self.assertEqual(report["review_provenance"]["head_sha"], report["commit_sha"])
+        self.assertEqual(report["review_provenance"]["changed_files"], ["src/a.py", "src/z.py"])
+
+    def test_git_bound_provenance_rejects_mismatched_head_or_unsafe_paths(self):
+        mutations = (
+            lambda p: p.update(head_sha="e" * 40),
+            lambda p: p.update(diff_sha256="not-a-digest"),
+            lambda p: p.update(changed_files=["../outside.py"]),
+            lambda p: p.update(changed_files=["src/a.py", "src/a.py"]),
+        )
+        for mutate in mutations:
+            metadata = self.valid_metadata()
+            provenance = {
+                "base_sha": "b" * 40,
+                "head_sha": "a" * 40,
+                "merge_base_sha": "c" * 40,
+                "diff_sha256": "d" * 64,
+                "changed_files": ["src/a.py"],
+            }
+            mutate(provenance)
+            metadata["review_provenance"] = provenance
+            with self.subTest(provenance=provenance), self.assertRaises(AcceptanceReportError):
+                build_acceptance_report(metadata)
+
     def test_normalizes_commit_sha_case(self):
         metadata = self.valid_metadata()
         metadata["commit_sha"] = "A" * 40
