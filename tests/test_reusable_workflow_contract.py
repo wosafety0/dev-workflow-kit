@@ -55,7 +55,7 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
     def test_consumer_command_is_required(self):
         self.assertRegex(
             self.source,
-            r"(?s)test-command:\\n\\s+description:.*?required: true\\n\\s+type: string",
+            r"(?s)test-command:\n\s+description:.*?required: true\n\s+type: string",
         )
 
     def test_input_validation_precedes_consumer_execution(self):
