@@ -454,6 +454,19 @@ def _build_git_bound_review_input(
     if not _SHA_RE.fullmatch(merge_base):
         raise HarnessRunnerError("Could not verify Git review merge-base")
 
+    raw_diff = _git_bytes_bounded(
+        root,
+        [
+            "diff", "--raw", "--no-renames", "--ignore-submodules=none",
+            merge_base, head_sha, "--",
+        ],
+        "Git review raw change metadata",
+    )
+    if re.search(rb"(?m)^:\\d{6} 160000 |^:160000 \\d{6} ", raw_diff):
+        raise HarnessRunnerError(
+            "Git-bound semantic review does not support submodule pointer changes"
+        )
+
     diff_bytes = _git_bytes_bounded(
         root,
         [
