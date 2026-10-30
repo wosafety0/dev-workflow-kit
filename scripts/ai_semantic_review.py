@@ -147,24 +147,30 @@ def _diff_sections(
         if parsed:
             old_path, new_path = parsed.groups()
         else:
-            # Git paths may contain spaces. Resolve those unambiguously against the
-            # declared changed-file set, or against explicit rename metadata.
-            rename_from = re.search(r"(?m)^rename from (.+)$", section)
-            rename_to = re.search(r"(?m)^rename to (.+)$", section)
-            if rename_from and rename_to:
-                old_path, new_path = rename_from.group(1), rename_to.group(1)
-                if header.group(0) != f"diff --git a/{old_path} b/{new_path}":
-                    raise ReviewError("Git rename metadata does not match its path header")
-            elif expected_paths:
-                candidates = [
-                    path for path in expected_paths
-                    if header.group(0) == f"diff --git a/{path} b/{path}"
-                ]
-                if len(candidates) != 1:
-                    raise ReviewError("Unsupported or malformed or ambiguous Git diff path header")
-                old_path = new_path = candidates[0]
+            # Git quotes paths containing spaces. Accept only the simple quoted form
+            # with literal spaces; escaped/control-character path forms remain unsupported.
+            quoted = re.fullmatch(r'diff --git "a/([^"\\]+)" "b/([^"\\]+)"', header.group(0))
+            if quoted and any(char.isspace() for path in quoted.groups() for char in path):
+                old_path, new_path = quoted.groups()
             else:
-                raise ReviewError("Unsupported or malformed Git diff path header")
+                # Resolve unquoted paths with spaces against the declared changed-file
+                # set, or against explicit rename metadata, and reject ambiguity.
+                rename_from = re.search(r"(?m)^rename from (.+)$", section)
+                rename_to = re.search(r"(?m)^rename to (.+)$", section)
+                if rename_from and rename_to:
+                    old_path, new_path = rename_from.group(1), rename_to.group(1)
+                    if header.group(0) != f"diff --git a/{old_path} b/{new_path}":
+                        raise ReviewError("Git rename metadata does not match its path header")
+                elif expected_paths:
+                    candidates = [
+                        path for path in expected_paths
+                        if header.group(0) == f"diff --git a/{path} b/{path}"
+                    ]
+                    if len(candidates) != 1:
+                        raise ReviewError("Unsupported or malformed or ambiguous Git diff path header")
+                    old_path = new_path = candidates[0]
+                else:
+                    raise ReviewError("Unsupported or malformed Git diff path header")
         _validate_hunk_integrity(section)
         old_header = re.search(r"(?m)^--- (.+)$", section)
         new_header = re.search(r"(?m)^\+\+\+ (.+)$", section)
@@ -179,6 +185,10 @@ def _diff_sections(
             sections.append((new_path, section))
             continue
         old_file, new_file = old_header.group(1), new_header.group(1)
+        if old_file.startswith('"') and old_file.endswith('"'):
+            old_file = old_file[1:-1]
+        if new_file.startswith('"') and new_file.endswith('"'):
+            new_file = new_file[1:-1]
         if old_file != ("/dev/null" if old_file == "/dev/null" else "a/" + old_path):
             raise ReviewError("Git diff old-file header does not match its path")
         if new_file != ("/dev/null" if new_file == "/dev/null" else "b/" + new_path):
