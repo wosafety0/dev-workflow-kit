@@ -37,6 +37,20 @@ class AcceptanceReportTests(unittest.TestCase):
         self.assertEqual(report["review_provenance"]["head_sha"], report["commit_sha"])
         self.assertEqual(report["review_provenance"]["changed_files"], ["src/a.py", "src/z.py"])
 
+    def test_git_bound_provenance_allows_internal_spaces_in_valid_paths(self):
+        metadata = self.valid_metadata()
+        metadata["review_provenance"] = {
+            "base_sha": "b" * 40,
+            "head_sha": "a" * 40,
+            "merge_base_sha": "c" * 40,
+            "diff_sha256": "d" * 64,
+            "changed_files": ["src/my file.py"],
+        }
+        report = build_acceptance_report(metadata)
+        self.assertEqual(
+            report["review_provenance"]["changed_files"], ["src/my file.py"]
+        )
+
     def test_git_bound_provenance_rejects_mismatched_head_or_unsafe_paths(self):
         mutations = (
             lambda p: p.update(head_sha="e" * 40),
@@ -44,6 +58,7 @@ class AcceptanceReportTests(unittest.TestCase):
             lambda p: p.update(changed_files=["../outside.py"]),
             lambda p: p.update(changed_files=["C:/outside.py"]),
             lambda p: p.update(changed_files=["C:relative.py"]),
+            lambda p: p.update(changed_files=["src/" + chr(0x85) + "a.py"]),
             lambda p: p.update(changed_files=["src/a.py", "src/a.py"]),
         )
         for mutate in mutations:
