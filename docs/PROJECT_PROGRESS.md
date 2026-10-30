@@ -200,3 +200,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Corrected a doubled backslash in the candidate's CI summary `printf` format so the newline escape is `\n`; GitHub Contents API write and read-back confirmed the exact corrected line.
 - Candidate head after this correction: `fbf62b4c0ee8ed42f9476ba6a22377287bddf9ef`.
 - Exact-head combined status is still empty and the available workflow-run connector returned no runs; therefore CI remains unverified. Do not claim tests or CI passed.
+
+
+### 2026-10-30 exact-head CI validation (PR #35)
+- Opened validation-only Draft PR #35 against the current PR #18 base `e4be499e36ed9d8e22ff45065d95f92e0876df34`; original PR #32 remains untouched.
+- Exact candidate head `6075daf1179fdb928940b2efc0b43b74d9f16b0a` ran Harness CI #659: [run 40989039532](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40989039532) completed successfully.
+- Verified all reported job steps succeeded: Python compilation, offline contract tests, redacted acceptance report generation, artifact upload, and final required-stage gate.
+- This is CI evidence for the candidate head before this progress-only archive commit. The archive commit will trigger a fresh CI run; only its result can validate the final archived head.
+- Draft PR #35: https://github.com/wosafety0/dev-workflow-kit/pull/35. No merge performed.
