@@ -369,3 +369,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Both runs completed `offline-tests` successfully: Python compilation, all offline contract tests, redacted acceptance report generation/upload, and the final required-stage gate.
 - The roadmap and progress archive now record this verified state. The next resulting documentation commit requires its own exact-head CI check; second-consumer acceptance remains incomplete and the cause of its pre-step failure remains unknown.
 - PR #40 remains Draft/open/unmerged. No Actions settings, permissions, visibility, merge, release, or deployment changed.
+
+
+### Latest verified archive head — 2026-10-30
+
+- Roadmap archive commit `4301cf21c0c40775c86fce2fde92d215b951e725` is the current PR #40 head.
+- Exact-head Push CI [41056216278](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41056216278) and PR-context CI [41056224728](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41056224728) both passed. Each `offline-tests` job completed Python compilation, all offline contract tests, redacted acceptance report generation/upload, and the final required-stage gate.
+- Push artifact `acceptance-report` ID `12976009690` was present and unexpired when checked; digest `sha256:2f68ebe4f2bd7c5e81ea9bd05aaefa3e109debe7dcfe3844049fc907dc25859e`, expiry `2026-11-13T12:33:27Z`. It is a temporary CI artifact.
+- Second consumer PR #1 remains blocked before job steps with root cause and effective Actions policy unknown. Its acceptance criterion is not met.
+- PR #40 and both consumer PRs remain Draft/open/unmerged. No settings, permissions, visibility, merge, release, or deployment changed.
