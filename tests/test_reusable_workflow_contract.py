@@ -13,7 +13,7 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
 
     def test_workflow_permissions_are_read_only(self):
         self.assertRegex(self.source, r"(?m)^permissions:\n  contents: read\s*$")
-        self.assertNotRegex(self.source, r"(?m)^\s+(?:issues|pull-requests|actions|contents):\s*write\b")
+        self.assertNotRegex(self.source, r"(?m)^\s+[a-zA-Z0-9_-]+:\s*write\b")
 
     def test_checkout_does_not_persist_credentials(self):
         self.assertRegex(
