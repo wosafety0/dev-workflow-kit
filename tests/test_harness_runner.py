@@ -568,6 +568,23 @@ class HarnessRunnerTests(unittest.TestCase):
         run_task.assert_not_called()
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
+    def test_git_commit_sha_rejects_sparse_checkout_before_acceptance(self):
+        def git(*args):
+            return subprocess.run(
+                ["git", *args], cwd=self.root, check=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            ).stdout.strip()
+
+        git("sparse-checkout", "init", "--cone")
+        git("sparse-checkout", "set", "docs", "scripts")
+        self.assertEqual(git("config", "--bool", "--get", "core.sparseCheckout"), "true")
+        self.assertFalse((self.root / "tests" / "test_example.py").exists())
+
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError, "Sparse checkouts are not supported"
+        ):
+            harness_runner._git_commit_sha(self.root)
+
     def test_git_commit_sha_detects_dirty_submodule_despite_local_ignore_config(self):
         child = self.root / "child-source"
         child.mkdir()
