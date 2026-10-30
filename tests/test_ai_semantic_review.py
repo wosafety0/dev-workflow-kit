@@ -493,12 +493,12 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def test_rejects_content_diff_with_renamed_paths_but_no_rename_metadata(self):
         payload = dict(self.payload)
         payload["diff"] = (
-            "diff --git a/old_name.py b/new_name.py\\n"
-            "--- a/old_name.py\\n"
-            "+++ b/new_name.py\\n"
-            "@@ -1 +1 @@\\n"
-            "-old value\\n"
-            "+new value\\n"
+            "diff --git a/old_name.py b/new_name.py\n"
+            "--- a/old_name.py\n"
+            "+++ b/new_name.py\n"
+            "@@ -1 +1 @@\n"
+            "-old value\n"
+            "+new value\n"
         )
         payload["changed_files"] = ["new_name.py"]
         with self.assertRaisesRegex(ReviewError, "changes paths without rename metadata"):
@@ -507,13 +507,13 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def test_rejects_incomplete_rename_metadata(self):
         payload = dict(self.payload)
         payload["diff"] = (
-            "diff --git a/old_name.py b/new_name.py\\n"
-            "rename from old_name.py\\n"
-            "--- a/old_name.py\\n"
-            "+++ b/new_name.py\\n"
-            "@@ -1 +1 @@\\n"
-            "-old value\\n"
-            "+new value\\n"
+            "diff --git a/old_name.py b/new_name.py\n"
+            "rename from old_name.py\n"
+            "--- a/old_name.py\n"
+            "+++ b/new_name.py\n"
+            "@@ -1 +1 @@\n"
+            "-old value\n"
+            "+new value\n"
         )
         payload["changed_files"] = ["new_name.py"]
         with self.assertRaisesRegex(ReviewError, "rename metadata does not match"):
