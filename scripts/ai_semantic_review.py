@@ -176,6 +176,12 @@ def _diff_sections(
         new_header = re.search(r"(?m)^\+\+\+ (.+)$", section)
         rename_from = re.search(r"(?m)^rename from (.+)$", section)
         rename_to = re.search(r"(?m)^rename to (.+)$", section)
+        if (rename_from is None) != (rename_to is None):
+            raise ReviewError("Git rename metadata does not match its path header")
+        if old_path != new_path and not (rename_from and rename_to):
+            raise ReviewError("Git diff changes paths without rename metadata")
+        if old_path == new_path and rename_from and rename_to:
+            raise ReviewError("Git rename metadata does not match its path header")
         if not old_header or not new_header:
             # Pure renames have metadata but no ---/+++ content headers.
             if not (rename_from and rename_to):
