@@ -555,6 +555,36 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
 
+
+    def test_runner_rejects_ignored_python_source_created_during_task(self):
+        (self.root / ".gitignore").write_text(
+            "scripts/generated_helper.py\n", encoding="utf-8"
+        )
+        subprocess.run(
+            ["git", "add", ".gitignore"], cwd=self.root, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test",
+             "-c", "user.email=harness-test@example.invalid",
+             "commit", "-qm", "ignore generated helper"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+
+        def create_ignored_source(*_args):
+            (self.root / "scripts" / "generated_helper.py").write_text(
+                "RESULT = 'generated mutable source'\n", encoding="utf-8"
+            )
+            return "passed", 0
+
+        with patch("scripts.harness_runner._run_task", side_effect=create_ignored_source):
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("ignored Python source", stderr)
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
+
+
     def test_runner_rejects_tests_directory_symlink_outside_root(self):
         outside = tempfile.TemporaryDirectory()
         self.addCleanup(outside.cleanup)
