@@ -459,6 +459,7 @@ def _build_git_bound_review_input(
         [
             "-c", "core.quotePath=false", "diff",
             "--text", "--no-ext-diff", "--no-textconv", "--no-renames", "--no-color",
+            "--ignore-submodules=none",
             "--unified=3", merge_base, head_sha, "--",
         ],
         "Git-generated semantic-review diff",
@@ -472,7 +473,7 @@ def _build_git_bound_review_input(
 
     names_bytes = _git_bytes_bounded(
         root,
-        ["diff", "--no-ext-diff", "--no-textconv", "--no-renames", "--name-only", "-z",
+        ["diff", "--no-ext-diff", "--no-textconv", "--no-renames", "--ignore-submodules=none", "--name-only", "-z",
          merge_base, head_sha, "--"],
         "Git review changed-file list",
     )
