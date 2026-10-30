@@ -442,3 +442,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Exact-head hosted Harness CI is green for PR #23 head `7962697...` ([run 40804425695](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40804425695)) and PR #24 head `58702b8...` ([run 40805458873](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40805458873)); inspected job steps confirm Python compilation, offline contract tests, redacted report generation, artifact upload, and final gate all succeeded.
 - PR #24 is downstream of the loopback/redirect chain and is not a prerequisite for PR #32's provenance-based candidate. Keep these chains separate unless intentionally building a combined integration branch; do not infer that PR #32 candidate includes PR #23/#24.
 - Original PR #32 remains open/draft/unmerged at its recorded head/base; candidate PR #35 remains open/draft/unmerged and mergeable. No PR or branch topology was changed in this review.
+
+
+## 2026-10-30 — unified validation candidate PR #37
+- Created Draft PR #37: https://github.com/wosafety0/dev-workflow-kit/pull/37, based on PR #24's tested head `58702b8ba7e7fde2c384671677aec8784f216c97`.
+- Exact archived candidate head `ea05b0813ed25abe5354b7f2bf8d2655a86bf181` passed Harness CI [run 40990643340](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40990643340). Python compilation, offline contract tests, redacted report generation, artifact upload, and final gate all succeeded.
+- Candidate combines PR #32 config/path/source protections with PR #33 bounded response/duplicate-key protections while preserving PR #24 redirect handling and fail-fast execution. The shared runner test suite combines expanded path/provenance tests with loopback and Windows path assertions.
+- Compare against PR #24 base: 15 commits ahead, 0 behind; intended net diff is 8 files including CI trigger coverage for `integration/**` branches.
+- Validation-only Draft; do not merge based solely on CI. Original PR #32 remains open/draft/unmerged and its branch was not altered.
