@@ -469,3 +469,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Final PR #37 head after the candidate progress archive: `04f455b23e5b17956705a76b5ef74d263956a96c`.
 - Exact-head Push Harness CI [run 40991648743](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40991648743) and PR-context CI [run 40991653272](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40991653272) both succeeded, including compilation, offline contract tests, redacted report build/upload, and final gate.
 - Final read-back confirms PR #37 has 34 unique runner test methods, all 14 PR #24 base methods, all 31 PR #32 candidate methods, plus the loopback preflight test. PR #37 remains Draft/unmerged; original PR #32 remains unchanged.
+
+ 
+## 2026-10-30 — unified candidate ignored-source provenance fix
+- Static audit of unified PR #37 found the ignored-source check blocked ignored `test*.py` files but did not block ignored helper modules such as `tests/helper.py`, which tracked tests could import while the Git worktree still appeared clean.
+- Corrected on PR #37 candidate branch `integration/pr24-pr33-pr32-20261030`: head `bf0b96b2c8dfbcaf623f6b57d09614dc6422ee0b`. The runner now blocks all ignored `.py` files under `tests/`; regression coverage includes an ignored helper module and the existing ignored-test case.
+- Exact-head Push CI [run 40992682760](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40992682760) and PR-context CI [run 40992686555](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40992686555) both succeeded, including compilation, offline contract tests, report generation/upload, and final gate.
+- This is a follow-up finding/fix on the unified validation candidate; it does not alter the original PR #32/#33 source refs, and does not authorize merging PR #37.
