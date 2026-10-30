@@ -335,3 +335,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Regression-test head: `56127a867fa8c5ee8c281c0021b4b1b729c24714`. Exact-head Push CI [41011071189](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41011071189) and PR-context CI [41011076799](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41011076799) both succeeded. Both runs completed compilation, the offline contract suite, redacted acceptance report generation, artifact upload, and the final required-stage gate.
 - Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
 
+
+### Git-bound review: fail closed on changed submodule pointers (2026-10-30)
+
+- Continued the bounded audit of repository-local Git configuration. A local `diff.ignoreSubmodules=all` or `submodule.<name>.ignore=all` setting could otherwise make a submodule pointer change disappear from the strict review diff, while the parent repository's diff does not contain the submodule's internal source.
+- Strict review now explicitly uses `--ignore-submodules=none` for raw change metadata, generated diff, and changed-file listing. It inspects bounded raw Git change metadata and rejects changes involving Git mode `160000` with a clear fail-closed error; submodule source is not recursively reviewed by this Harness.
+- Added a real temporary-Git-repository regression with a changed submodule commit and both repository-local ignore settings enabled. The test verifies strict review rejects the submodule pointer change rather than treating the commit metadata as a complete source review.
+- Exact implementation/test head `c717152db535b1b22b1bcea53e259d55a13f0181` passed GitHub Actions Push CI [run 41011490948](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41011490948) and PR-context CI [run 41011496030](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41011496030). Both ran all 167 offline contract tests successfully and passed the final required-stage gate.
+- Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
