@@ -133,6 +133,60 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 2)
                 self.assertIn("::error::", result.stderr)
 
+    def test_runtime_validation_accepts_supported_combinations(self):
+        import os
+        import subprocess
+
+        step = self.source.split(
+            "      - name: Validate runtime and package-manager inputs", 1
+        )[1].split("      - name: Set up Python", 1)[0]
+        script = step.split("        run: |\\n", 1)[1]
+        script = "\\n".join(
+            line[10:] if line.startswith("          ") else line
+            for line in script.splitlines()
+        )
+        for runtime, manager in (
+            ("python", "none"),
+            ("node", "none"),
+            ("node", "pnpm"),
+        ):
+            with self.subTest(runtime=runtime, manager=manager):
+                env = dict(
+                    os.environ,
+                    ACCEPTANCE_RUNTIME=runtime,
+                    ACCEPTANCE_PACKAGE_MANAGER=manager,
+                )
+                result = subprocess.run(
+                    ["bash", "-euo", "pipefail", "-c", script],
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_consumer_command_failure_is_propagated(self):
+        import os
+        import subprocess
+
+        step = self.source.split(
+            "      - name: Run consumer-owned acceptance command", 1
+        )[1]
+        script = step.split("        run: |\\n", 1)[1]
+        script = "\\n".join(
+            line[10:] if line.startswith("          ") else line
+            for line in script.splitlines()
+        )
+        env = dict(os.environ, ACCEPTANCE_COMMAND="exit 7")
+        result = subprocess.run(
+            ["bash", "-euo", "pipefail", "-c", script],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 7)
+
     def test_job_has_a_bounded_timeout(self):
         self.assertIn("timeout-minutes: 15", self.source)
 
