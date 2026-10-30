@@ -41,9 +41,15 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [x] Define a document precedence and stale-content maintenance policy (`docs/DOCUMENT_PRECEDENCE.md`).
 - [ ] Tag an initial 0.x release only after acceptance criteria pass on the exact release candidate and the release scope is reviewed.
 
+### Latest consumer pin verification — 2026-10-31
+
+- The first consumer now tests the latest reviewed Harness workflow SHA `37dc07c7d7055a740c754ab543eeecc9e01d9db0`, whose reusable workflow file blob is `a5fccae44358222a0d453c33afbe90f95d29f191`.
+- Consumer branch head `4fc0c7f52070acef35afb5184bf82e3910577ccb` passed the reusable Node.js 26 + pnpm 11.4.0 acceptance workflow [41098792395](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098792395) and both native lint/type-check runs [41098791776](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098791776) and [41098781379](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098781379).
+- Only the consumer workflow's immutable Harness pin changed; no application behavior, secrets, settings, deployment, or provider API was touched. The separate private consumer's pre-step failure remains unresolved.
+
 ## Stage 4 — consumer integration
 
-- [x] Validate a first consumer pilot through a separate PR pinned to a tested toolkit SHA: [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2), pinned to Harness commit `36533dd7726365fd817f48072e49ea055d339947`; the reusable-workflow run passed on consumer head `643659014370f85b61964bcbb978833ec6f74428`. The PR remains Draft/unmerged.
+- [x] Validate the first consumer pilot through a separate Draft PR at the latest reviewed reusable-workflow pin: [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2), Harness commit `37dc07c7d7055a740c754ab543eeecc9e01d9db0`, consumer head `4fc0c7f52070acef35afb5184bf82e3910577ccb`; exact-head reusable acceptance [41098792395](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098792395), native lint/type-check [41098791776](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098791776) and [41098781379](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098781379) all passed. The PR remains Draft/unmerged.
 - [ ] Preserve each consumer's project-specific tests, safety constraints, and archive paths.
 
 ### Latest Harness head and archive verification — 2026-10-30
