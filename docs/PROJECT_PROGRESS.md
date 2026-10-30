@@ -259,3 +259,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - This corrects the earlier diagnosis wording: the failure remains unresolved and must not be counted as a passing consumer. No repository settings were read or changed; no permission change is authorized or implied.
 - Roadmap wording updated to preserve this distinction. The second-consumer acceptance criterion remains unchecked.
 - This documentation-only archive commit must pass its own exact-head CI before it is considered verified.
+
+
+### Cross-branch roadmap consistency correction — 2026-10-30
+
+- Compared the current PR #40 branch's roadmap with the independently maintained Draft PR #39 evidence correction. The PR #40 branch still marked hosted failure injection as pending even though the verified historical run `40712433963` demonstrates a real artifact-upload step failure and the final gate failing closed.
+- Corrected the PR #40 branch's Stage 2 checkbox and retained the explicit limitation that this is not a GitHub Artifact service outage test. This aligns current-facing roadmap wording with the evidence without implying that the separate PR #39 is merged.
+- Documentation-only change; no workflow or runtime behavior changed. The new archive head must pass exact-head CI before it is considered verified.
