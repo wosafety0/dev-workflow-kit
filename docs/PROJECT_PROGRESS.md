@@ -2,6 +2,13 @@
 
 Last updated: 2026-10-31
 
+## Latest consumer pin verification — 2026-10-31
+
+- Updated the Draft consumer pilot [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2) to pin the reusable acceptance workflow to the reviewed Harness commit `37dc07c7d7055a740c754ab543eeecc9e01d9db0` (workflow blob SHA `a5fccae44358222a0d453c33afbe90f95d29f191`). The pin change is isolated to the consumer's acceptance workflow; no application source, deployment configuration, secrets, or provider behavior changed.
+- Consumer commit: `4fc0c7f52070acef35afb5184bf82e3910577ccb`.
+- Exact consumer-head Harness Acceptance Pilot [run 41098792395](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098792395) succeeded. Both exact-head native lint/type-check runs [41098791776](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098791776) and [41098781379](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098781379) also succeeded.
+- This verifies the latest reviewed reusable workflow on a second runtime configuration (Node.js 26 with pnpm 11.4.0) and the consumer's own lint, type-check, and formatting checks. The consumer PR remains Draft/open/unmerged. This does not resolve the separate private consumer's pre-step failure.
+
 ## Current verified state — 2026-10-31
 
 - Repository: `wosafety0/dev-workflow-kit`
