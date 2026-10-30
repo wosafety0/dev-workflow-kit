@@ -59,6 +59,17 @@ class HarnessRunnerTests(unittest.TestCase):
             code = harness_runner.main(args)
         return code, stdout.getvalue(), stderr.getvalue()
 
+    def test_git_executable_ignores_caller_controlled_path(self):
+        with patch.dict(harness_runner.os.environ, {"PATH": "/tmp/untrusted-bin"}), patch(
+            "scripts.harness_runner.shutil.which", return_value="/trusted/bin/git"
+        ) as which:
+            argv = harness_runner._git_argv("status", "--porcelain")
+        self.assertEqual(
+            argv,
+            [str(Path("/trusted/bin/git").resolve()), "status", "--porcelain"],
+        )
+        which.assert_called_once_with("git", path=harness_runner.os.defpath)
+
     def test_python_unittest_maps_to_fixed_argv_and_writes_allowlisted_report(self):
         with patch("scripts.harness_runner._git_commit_sha", return_value="a" * 40), patch(
             "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
