@@ -266,3 +266,15 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Compared the current PR #40 branch's roadmap with the independently maintained Draft PR #39 evidence correction. The PR #40 branch still marked hosted failure injection as pending even though the verified historical run `40712433963` demonstrates a real artifact-upload step failure and the final gate failing closed.
 - Corrected the PR #40 branch's Stage 2 checkbox and retained the explicit limitation that this is not a GitHub Artifact service outage test. This aligns current-facing roadmap wording with the evidence without implying that the separate PR #39 is merged.
 - Documentation-only change; no workflow or runtime behavior changed. The new archive head must pass exact-head CI before it is considered verified.
+
+
+### Exact-head CI confirmation and continued bounded review — 2026-10-30
+
+- Queried GitHub Actions run records directly for the current heads of Draft PRs #38, #39, and #40. Both Push-triggered and PR-context runs completed successfully for each exact head:
+  - PR #38 head `98edf6412d9866f4d6fe17d4c3029b4a14864945`: Push [41020283705](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41020283705), PR-context [41020289268](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41020289268).
+  - PR #39 head `cb261105b6bf02066bf489dd0a1dc89628ed3f34`: Push [41020704784](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41020704784), PR-context [41020712090](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41020712090).
+  - PR #40 head `5fa141fecbb4083379b3ff1ec79de97e7ecd671a`: Push [41022545518](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41022545518), PR-context [41022554053](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41022554053).
+- Re-inspected the current reusable workflow and consumer-facing documentation. No new reproducible defect was identified in the bounded source-contract review. This is not a full security audit or a production-readiness claim.
+- Rechecked second-consumer run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209) and its job record: the job failed before any runner was assigned and contains an empty step list; no runner logs or actionable error are exposed through the available read-only API. The exact cause remains unconfirmed. Repository Actions policy/settings could not be inspected with the available read-only surface, and no settings were changed.
+- All three Harness PRs remain Draft/open/unmerged, with their existing base branch unchanged. No release, merge, deployment, permission change, or local-worktree sync is claimed.
+- This archive-only commit requires its own Push and PR-context CI to pass on the exact resulting commit before this new archive is considered verified.
