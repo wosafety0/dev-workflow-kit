@@ -476,3 +476,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Corrected on PR #37 candidate branch `integration/pr24-pr33-pr32-20261030`: head `bf0b96b2c8dfbcaf623f6b57d09614dc6422ee0b`. The runner now blocks all ignored `.py` files under `tests/`; regression coverage includes an ignored helper module and the existing ignored-test case.
 - Exact-head Push CI [run 40992682760](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40992682760) and PR-context CI [run 40992686555](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40992686555) both succeeded, including compilation, offline contract tests, report generation/upload, and final gate.
 - This is a follow-up finding/fix on the unified validation candidate; it does not alter the original PR #32/#33 source refs, and does not authorize merging PR #37.
+
+
+## 2026-10-30 — broaden ignored-source provenance guard beyond tests/
+- Follow-up review found the initial PR #37 correction still checked only `tests/`; ignored Python helper modules under `scripts/` or repository-root paths could also be importable by tracked tests.
+- Final correction on PR #37 candidate head `2ee839b9c8cada2fe3c5646d6eae57bc83a138e4`: reject ignored `.py` files across the project tree, excluding generated `artifacts/`, common virtual-environment directories (`.venv`, `venv`, `env`, `.tox`), and `__pycache__`. Added regression coverage for ignored helpers under both `tests/` and `scripts/`; updated runner and acceptance-contract docs.
+- Exact-head Push CI [run 40992914390](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40992914390) and PR-context CI [run 40992921060](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40992921060) both succeeded for the final head, including compilation, offline tests, report generation/upload, and final gate.
+- Dependency/runtime environment contents are not attested by the source commit. The unified candidate remains Draft/unmerged; this archive does not change original PR #32/#33 refs or authorize merge.
