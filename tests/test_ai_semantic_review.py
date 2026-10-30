@@ -249,6 +249,9 @@ class SemanticReviewValidationTests(unittest.TestCase):
             ):
                 self.assertEqual(main(), 0)
             self.assertTrue(output_path.exists())
+            artifact_text = output_path.read_text(encoding="utf-8")
+            self.assertTrue(artifact_text.endswith("\n"))
+            self.assertEqual(json.loads(artifact_text)["status"], "PASS")
             with patch("sys.argv", argv), patch(
                 "scripts.ai_semantic_review.call_model",
                 side_effect=ReviewError("simulated model failure"),

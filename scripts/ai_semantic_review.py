@@ -474,7 +474,7 @@ def _write_json_atomically(output_path: Path, artifact: dict[str, Any]) -> None:
             delete=False,
         ) as temporary:
             json.dump(artifact, temporary, ensure_ascii=False, indent=2)
-            temporary.write("\\n")
+            temporary.write("\n")
             temporary_path = Path(temporary.name)
         # Recheck the final path after the potentially long provider request.
         _reject_symlink_components(output_path, "output")
