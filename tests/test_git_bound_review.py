@@ -273,6 +273,52 @@ class GitBoundReviewTests(unittest.TestCase):
                     Path("."), self.source, BASE, HEAD, HEAD
                 )
 
+    def test_real_criss_cross_history_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def git(*args):
+                return subprocess.run(
+                    ["git", *args], cwd=root, check=True,
+                    capture_output=True, text=True,
+                ).stdout.strip()
+
+            git("init", "-q")
+            git("config", "user.name", "Harness Test")
+            git("config", "user.email", "harness-test@example.invalid")
+            (root / "base.txt").write_text("base\\n", encoding="utf-8")
+            git("add", "base.txt")
+            git("commit", "-qm", "common root")
+            root_sha = git("rev-parse", "HEAD")
+
+            git("checkout", "-qb", "left")
+            (root / "left.txt").write_text("left\\n", encoding="utf-8")
+            git("add", "left.txt")
+            git("commit", "-qm", "left child")
+            left_sha = git("rev-parse", "HEAD")
+
+            git("checkout", "-qb", "right", root_sha)
+            (root / "right.txt").write_text("right\\n", encoding="utf-8")
+            git("add", "right.txt")
+            git("commit", "-qm", "right child")
+            right_sha = git("rev-parse", "HEAD")
+
+            git("checkout", "left")
+            git("merge", "--no-ff", "-m", "merge right into left", "right")
+            left_merge = git("rev-parse", "HEAD")
+            git("checkout", "right")
+            git("merge", "--no-ff", "-m", "merge left into right", left_sha)
+            right_merge = git("rev-parse", "HEAD")
+            bases = git("merge-base", "--all", left_merge, right_merge).splitlines()
+            self.assertEqual(set(bases), {left_sha, right_sha})
+
+            with self.assertRaisesRegex(
+                harness_runner.HarnessRunnerError, "ambiguous merge-base"
+            ):
+                harness_runner._build_git_bound_review_input(
+                    root, self.source, left_merge, right_merge, right_merge
+                )
+
     def test_rejects_malformed_review_context_json(self):
         with patch.object(
             harness_runner, "_resolve_git_commit", side_effect=[BASE, HEAD]
