@@ -47,12 +47,13 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [ ] Preserve each consumer's project-specific tests, safety constraints, and archive paths.
 
 ### Latest Harness head and archive verification — 2026-10-30
-- Current PR #40 branch head observed before this documentation update: `4cd2d694faddb655a482f5d26905f3bbe9ff8bd7`.
-- Exact-head Push CI [41025416154](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41025416154) and PR-context CI [41025420927](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41025420927) both succeeded.
-- The troubleshooting guidance commit `a84a6b39ebbdd0819c8ff19068449890e1a28b41` also passed Push CI [41025355542](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41025355542) and PR-context CI [41025363651](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41025363651).
-- The second consumer remains blocked; no root cause is established and no access settings were changed.
-- [ ] Pilot with a second, unrelated repository without copying the core. An isolated attempt was made in `wosafety0/chatgpt-auto-send-assistant` [Draft PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1), pinned to the same tested SHA. Both attempt 1 and a retry of only the failed job ([run 41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209), attempt 2) failed before any job steps; attempt 2 job [123960822318](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209/job/123960822318) has an empty step list and the log endpoint returned `BlobNotFound`. The caller repository is private and the reusable workflow repository is public. GitHub's current documentation says a private caller can use a public reusable workflow when the caller's Actions policy allows public reusable workflows; therefore, repository visibility alone does not explain this failure. The caller repository's Actions permissions/policy is a plausible diagnostic target, but remains unverified. No settings, permissions, or visibility were changed; the second-consumer acceptance item remains incomplete.
-- [ ] Publish a reusable-MVP decision based on actual evidence.
+
+- Latest verified branch head before this roadmap correction: `499c3a9504f6749217abdb33bd3d08aa1239cb83`.
+- Exact-head Push CI [41051708763](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41051708763) and PR-context CI [41051716159](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41051716159) both completed successfully for that exact SHA. The offline contract suite, acceptance report generation/upload, and final required-stage gate passed.
+- This commit corrected the current progress-log record only; the latest implementation/test head remains `fb6629687e6a5e8089344be24be3b8cab4308a44`, with exact-head Push CI [41051196710](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41051196710) and PR-context CI [41051203929](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41051203929) successful.
+- The first consumer pilot remains successful on consumer head `643659014370f85b61964bcbb978833ec6f74428`; see [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2).
+- The second consumer remains blocked before job steps. Run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209) attempt 2 still has no runner steps and unavailable logs; the effective caller Actions policy and root cause remain unverified. Its acceptance checkbox stays unchecked.
+- PR #40 remains Draft/open/unmerged. No Actions settings, permissions, repository visibility, merge, release, or deployment changed.
 
 ## Non-negotiable acceptance rules
 
