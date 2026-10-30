@@ -256,7 +256,7 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
 
     changed_files = set(payload["changed_files"])
     sections = _validate_diff_integrity(payload)
-    rules = payload["global_rules"] + "\n" + payload["project_instructions"]
+    rule_sources = (payload["global_rules"], payload["project_instructions"])
     for finding in review["findings"]:
         if not isinstance(finding, dict) or set(finding) != {
             "severity", "title", "file", "line_start", "line_end",
@@ -276,7 +276,7 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
                 raise ReviewError(f"{key} must be a positive integer")
         if finding["line_end"] < finding["line_start"]:
             raise ReviewError("Finding line range is reversed")
-        if finding["rule_quote"] not in rules:
+        if not any(finding["rule_quote"] in source for source in rule_sources):
             raise ReviewError("Finding rule_quote is not an exact substring of supplied instructions")
 
         matching_sections = [

@@ -69,6 +69,14 @@ class SemanticReviewValidationTests(unittest.TestCase):
             "src/client.py",
         )
 
+    def test_rejects_rule_quote_spanning_global_and_project_instruction_boundary(self):
+        review = self.finding()
+        review["findings"][0]["rule_quote"] = (
+            "不得将未验证结果声明为成功。\\n网络请求必须设置明确超时。"
+        )
+        with self.assertRaisesRegex(ReviewError, "not an exact substring"):
+            validate_review(self.payload, review)
+
     def test_rejects_finding_evidence_not_in_diff(self):
         review = self.finding()
         review["findings"][0]["evidence"] = "requests.get(url)"
