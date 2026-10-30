@@ -720,12 +720,12 @@ class SemanticReviewValidationTests(unittest.TestCase):
         path = "src/my file.py"
         payload["changed_files"] = [path]
         payload["diff"] = (
-            f"diff --git a/{path} b/{path}\\n"
-            f"--- a/{path}\\n"
-            f"+++ b/{path}\\n"
-            "@@ -1 +1 @@\\n"
-            "-old\\n"
-            "+new\\n"
+            f"diff --git a/{path} b/{path}\n"
+            f"--- a/{path}\n"
+            f"+++ b/{path}\n"
+            "@@ -1 +1 @@\n"
+            "-old\n"
+            "+new\n"
         )
         self.assertEqual(validate_review(payload, self.pass_review())["status"], "PASS")
 
