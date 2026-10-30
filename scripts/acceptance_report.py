@@ -49,6 +49,7 @@ def _validate_review_provenance(value: Any, commit_sha: str) -> dict[str, Any]:
         parts = path.split("/")
         if (
             path.startswith("/")
+            or re.match(r"^[A-Za-z]:", path) is not None
             or "\\" in path
             or any(part in {"", ".", ".."} for part in parts)
             or any(ord(char) < 32 or ord(char) == 127 for char in path)
