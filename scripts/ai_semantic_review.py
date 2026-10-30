@@ -184,7 +184,7 @@ def _diff_sections(
                 raise ReviewError("Git rename metadata does not match its path header")
             sections.append((new_path, section))
             continue
-        old_file, new_file = old_header.group(1), new_header.group(1)
+        old_file, new_file = old_header.group(1).split("\t", 1)[0], new_header.group(1).split("\t", 1)[0]
         if old_file.startswith('"') and old_file.endswith('"'):
             old_file = old_file[1:-1]
         if new_file.startswith('"') and new_file.endswith('"'):
@@ -192,7 +192,7 @@ def _diff_sections(
         if old_file != ("/dev/null" if old_file == "/dev/null" else "a/" + old_path):
             raise ReviewError("Git diff old-file header does not match its path")
         if new_file != ("/dev/null" if new_file == "/dev/null" else "b/" + new_path):
-            raise ReviewError(f"Git diff new-file header does not match its path ({new_file!r} versus {new_path!r})")
+            raise ReviewError("Git diff new-file header does not match its path")
         if rename_from and rename_from.group(1) != old_path:
             raise ReviewError("Git rename-from metadata does not match its path")
         if rename_to and rename_to.group(1) != new_path:
