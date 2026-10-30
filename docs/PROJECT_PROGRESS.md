@@ -286,3 +286,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Attempt 2 again failed before any steps: job [123960822318](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209/job/123960822318) is completed with failure and an empty step list. The job-log endpoint returned `BlobNotFound`; no actionable error message or runner logs were exposed.
 - The repeated pre-step failure makes a one-off transient failure less likely, but does not identify the root cause. The caller repository's Actions policy/permissions remain an unverified diagnostic target; repository visibility alone is not sufficient evidence.
 - The second-consumer criterion remains incomplete. No settings, permissions, visibility, consumer code, or Harness implementation were changed during the retry. This documentation archive must pass Push and PR-context CI on its exact resulting commit before it is treated as verified.
+
+
+### Reusable-workflow access troubleshooting guidance — 2026-10-30
+
+- Added a bounded troubleshooting section to `docs/REUSABLE_ACCEPTANCE_WORKFLOW.md` for failures that occur before a reusable job's steps start.
+- The checklist distinguishes evidence from diagnosis: verify the exact workflow path and immutable SHA; inspect attempts, job status, annotations and available logs; inspect effective caller/organization policy before any setting change; prefer the narrowest authorized access change; preserve exact caller and reusable SHAs plus run evidence.
+- The text explicitly warns that an empty step list or unavailable log blob is not a root-cause explanation, and that private-caller/public-workflow visibility alone is insufficient to identify a failure cause.
+- Documentation-only commit `a84a6b39ebbdd0819c8ff19068449890e1a28b41` passed exact-head Push CI [41025355542](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41025355542) and PR-context CI [41025363651](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41025363651).
+- The second consumer remains blocked pending actionable evidence or a separately authorized settings review. No repository settings, permissions, visibility, application code, or deployment behavior were changed.
+- This progress-archive commit itself must pass exact-head Push and PR-context CI before the latest archive is considered verified.
