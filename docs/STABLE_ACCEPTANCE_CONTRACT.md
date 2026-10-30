@@ -77,3 +77,11 @@ Remote GitHub changes are not considered synchronized to a local worktree withou
 Consumers should pin the toolkit to a reviewed immutable commit SHA until a versioned distribution mechanism exists. Each consumer must retain its own project instructions, allowlists, safety checks, acceptance tests, and required progress/archive paths. Do not copy this contract as a substitute for project-specific rules.
 
 This document is a living 0.x contract. A change that weakens a fail-closed rule requires explicit rationale, corresponding tests, and review of the resulting risk; it must not happen implicitly as a side effect of refactoring.
+
+
+## Runner configuration integrity
+
+- Harness configuration must reject duplicate JSON object keys at every nesting level.
+- The config must be tracked by the current Git HEAD and must not resolve under generated `artifacts/`; a blocked run must invalidate stale passing report/review artifacts before configuration validation.
+- Config, report, review-input, and review-output paths reject symlink components. Trusted test, semantic-review, and contract sources must resolve inside the project root, outside `artifacts/`, and contain no symlinked source paths.
+- The runner must preserve fail-fast task ordering and revalidate the Git worktree and generated output paths before writing the final acceptance report.
