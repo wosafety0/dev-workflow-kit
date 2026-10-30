@@ -462,7 +462,7 @@ def _build_git_bound_review_input(
         ],
         "Git review raw change metadata",
     )
-    if re.search(rb"(?m)^:\\d{6} 160000 |^:160000 \\d{6} ", raw_diff):
+    if re.search(rb"(?m)^:\d{6} 160000 |^:160000 \d{6} ", raw_diff):
         raise HarnessRunnerError(
             "Git-bound semantic review does not support submodule pointer changes"
         )
