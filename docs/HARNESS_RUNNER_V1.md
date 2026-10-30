@@ -27,7 +27,7 @@ The runner writes `artifacts/acceptance-report.json`. It requires the project ro
 Configuration supplies only task IDs. The runner maps them to fixed argument vectors and never invokes a shell:
 
 - `python-unittest`: `python -m unittest discover -s tests -v` using the current Python interpreter.
-- `semantic-review`: `python scripts/ai_semantic_review.py --input <path> --output <path>`; both paths must be supplied explicitly with `--review-input` and `--review-output`.
+- `semantic-review`: the runner invokes `python scripts/ai_semantic_review.py --input - --output <path>` and supplies the preflighted review-input byte snapshot over standard input; callers still supply the source and artifact paths with `--review-input` and `--review-output`. The standalone CLI also accepts a file path for direct use.
 
 If `semantic-review` is configured, a caller must pass both review paths. Review input must already exist. Its bytes and SHA-256 fingerprint are captured before task execution and the source path is rechecked immediately before semantic review. The exact preflight bytes are passed to the review subprocess over standard input, so a concurrent path replacement after the recheck cannot change the payload the model receives; if a preceding task changes the source file, the run is blocked. Review output and the acceptance report must be files under `artifacts/`. Output paths may not overwrite the config, review input, or one another. All configured tasks are preflighted before any task runs.
 
