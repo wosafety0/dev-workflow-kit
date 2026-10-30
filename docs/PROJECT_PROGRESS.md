@@ -14,6 +14,14 @@ Last updated: 2026-10-30
 - The second-consumer acceptance criterion remains incomplete. No Actions settings, permissions, secrets, or repository visibility changed. No PR has been merged and no release or deployment has occurred.
 - Detailed diagnostic evidence and the exact-head archive are maintained in [ROADMAP.md](ROADMAP.md) and the [PR #40 description](https://github.com/wosafety0/dev-workflow-kit/pull/40). The older dated entries below are retained as historical records and must not override this current verified state.
 
+## Roadmap verification-state correction — 2026-10-30
+
+- Corrected the current-facing `docs/ROADMAP.md` section that still labelled an older commit and its CI runs as the latest Harness verification.
+- The roadmap correction commit is `62564820b97dbb620f50cfe5de5ac1cf1d642451`; it records the then-current branch head `499c3a9504f6749217abdb33bd3d08aa1239cb83` and its successful exact-head Push [41051708763](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41051708763) and PR-context [41051716159](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41051716159).
+- The latest implementation/test head remains `fb6629687e6a5e8089344be24be3b8cab4308a44`, with Push [41051196710](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41051196710) and PR-context [41051203929](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41051203929) successful.
+- The second consumer remains blocked before job steps with root cause unconfirmed. No Actions settings, permissions, visibility, merge, release, or deployment changed.
+- Branch head before this progress-log update: `62564820b97dbb620f50cfe5de5ac1cf1d642451`. Exact-head CI for this documentation correction must be checked before calling it verified.
+
 ## Strict-shell failure propagation regression — 2026-10-30
 
 - Added two offline contract tests that execute the extracted consumer-command wrapper and verify that `false | true` fails under `pipefail`, and that a command after a failed statement is not executed under `-e`.
