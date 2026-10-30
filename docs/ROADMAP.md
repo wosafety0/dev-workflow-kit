@@ -43,7 +43,7 @@ When current-facing documents conflict, follow the latest applicable, verified p
 
 ## Stage 4 — consumer integration
 
-- [ ] Integrate a consumer through a separate PR pinned to a tested toolkit SHA.
+- [x] Validate a first consumer pilot through a separate PR pinned to a tested toolkit SHA: [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2), pinned to Harness commit `36533dd7726365fd817f48072e49ea055d339947`; the reusable-workflow run passed on consumer head `643659014370f85b61964bcbb978833ec6f74428`. The PR remains Draft/unmerged.
 - [ ] Preserve each consumer's project-specific tests, safety constraints, and archive paths.
 - [ ] Pilot with a second, unrelated repository without copying the core.
 - [ ] Publish a reusable-MVP decision based on actual evidence.
