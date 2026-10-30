@@ -568,6 +568,35 @@ class HarnessRunnerTests(unittest.TestCase):
         run_task.assert_not_called()
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
+    def test_git_commit_sha_detects_dirty_submodule_despite_local_ignore_config(self):
+        child = self.root / "child-source"
+        child.mkdir()
+
+        def git(cwd, *args):
+            return subprocess.run(
+                ["git", *args], cwd=cwd, check=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            ).stdout.strip()
+
+        git(child, "init", "-q")
+        git(child, "config", "user.name", "Harness Test")
+        git(child, "config", "user.email", "harness-test@example.invalid")
+        (child / "module.py").write_text("VALUE = 1\\n", encoding="utf-8")
+        git(child, "add", "module.py")
+        git(child, "commit", "-qm", "submodule base")
+
+        git(self.root, "-c", "protocol.file.allow=always", "submodule", "add", "-q",
+            str(child), "deps/sub")
+        git(self.root, "commit", "-qam", "add submodule")
+        (self.root / "deps/sub/module.py").write_text("VALUE = 2\\n", encoding="utf-8")
+        git(self.root, "config", "diff.ignoreSubmodules", "all")
+        git(self.root, "config", "submodule.deps/sub.ignore", "all")
+
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError, "Git worktree must be clean"
+        ):
+            harness_runner._git_commit_sha(self.root)
+
     def test_runner_rejects_untracked_source_but_allows_artifact_files(self):
         self.initialize_git_worktree()
         (self.root / "artifacts" / "old-output.json").write_text("{}",
