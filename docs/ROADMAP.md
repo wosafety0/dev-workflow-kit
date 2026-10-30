@@ -90,3 +90,11 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - Current PR #40 head `d081fcf74863fbcccbea027a8e1f1b2137197cdf` passed Push CI [41035581115](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41035581115) and PR-context CI [41035591455](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41035591455).
 - Both runs completed successfully for this exact SHA. The current head is therefore verified; earlier wording that this commit's CI had not appeared is historical and superseded.
 - The second consumer remains blocked before runner steps with root cause unknown. Its acceptance criterion remains unchecked. PR #40 and consumer PRs remain Draft/unmerged; no settings, permissions, visibility, release, merge, or deployment changed.
+
+
+### Exact-head CI verification — 2026-10-30
+
+- Archive commit `5da6a9d2ad3c1787d3148fdce877a71740ac2fea` passed Push CI [41036222709](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41036222709) and PR-context CI [41036230850](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41036230850), both for the exact same SHA.
+- Both runs completed `offline-tests` successfully: Python compilation, all offline contract tests, redacted acceptance report generation/upload, and the final required-stage gate.
+- The roadmap and progress archive now record this verified state. The next resulting documentation commit requires its own exact-head CI check; second-consumer acceptance remains incomplete and the cause of its pre-step failure remains unknown.
+- PR #40 remains Draft/open/unmerged. No Actions settings, permissions, visibility, merge, release, or deployment changed.
