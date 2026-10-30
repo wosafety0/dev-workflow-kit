@@ -49,6 +49,8 @@ def _git_environment() -> dict[str, str]:
     # Do not let user/system Git config silently alter provenance commands.
     environment["GIT_CONFIG_NOSYSTEM"] = "1"
     environment["GIT_CONFIG_GLOBAL"] = os.devnull
+    # Ignore the legacy per-repository grafts file, which can rewrite commit ancestry.
+    environment["GIT_GRAFT_FILE"] = os.devnull
     return environment
 
 
