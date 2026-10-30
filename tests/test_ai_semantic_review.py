@@ -89,6 +89,13 @@ class SemanticReviewValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ReviewError, "does not belong to the cited file"):
             validate_review(self.payload, review)
 
+    def test_rejects_overly_broad_line_range(self):
+        review = self.finding()
+        review["findings"][0]["line_start"] = 1
+        review["findings"][0]["line_end"] = 100
+        with self.assertRaisesRegex(ReviewError, "line range is broader"):
+            validate_review(self.payload, review)
+
     def test_rejects_line_range_not_covering_evidence(self):
         review = self.finding()
         review["findings"][0]["line_start"] = 2

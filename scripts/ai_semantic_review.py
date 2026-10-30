@@ -291,8 +291,15 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
         ))
         if not evidence_lines:
             raise ReviewError("Finding evidence could not be mapped to a source line in the diff")
-        if not all(finding["line_start"] <= line <= finding["line_end"] for line in evidence_lines):
+        expected_line_start = min(evidence_lines)
+        expected_line_end = max(evidence_lines)
+        if finding["line_start"] > expected_line_start or finding["line_end"] < expected_line_end:
             raise ReviewError("Finding line range does not cover the cited diff evidence")
+        if (
+            finding["line_start"] != expected_line_start
+            or finding["line_end"] != expected_line_end
+        ):
+            raise ReviewError("Finding line range is broader than the cited diff evidence")
 
     if review["status"] == "PASS" and review["findings"]:
         raise ReviewError("PASS is forbidden when findings are present")
