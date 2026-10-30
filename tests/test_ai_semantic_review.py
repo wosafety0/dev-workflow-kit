@@ -269,6 +269,51 @@ class SemanticReviewValidationTests(unittest.TestCase):
                 self.assertEqual(main(), 2)
             self.assertTrue(same_path.exists())
 
+
+    def test_rejects_symlink_output_without_touching_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            input_path = root / "input.json"
+            target_path = root / "important.txt"
+            output_path = root / "review.json"
+            input_path.write_text(json.dumps(self.payload), encoding="utf-8")
+            target_path.write_text("preserve this file\n", encoding="utf-8")
+            try:
+                output_path.symlink_to(target_path)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlink creation is unavailable in this environment")
+            argv = ["ai_semantic_review.py", "--input", str(input_path),
+                    "--output", str(output_path)]
+            with patch("sys.argv", argv), patch(
+                "scripts.ai_semantic_review.call_model"
+            ) as model, patch("sys.stderr", new_callable=StringIO) as stderr:
+                self.assertEqual(main(), 2)
+            self.assertIn("symlinked paths", stderr.getvalue())
+            self.assertEqual(target_path.read_text(encoding="utf-8"), "preserve this file\n")
+            self.assertTrue(output_path.is_symlink())
+            model.assert_not_called()
+
+    def test_rejects_symlinked_input_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target_path = root / "real-input.json"
+            input_path = root / "input.json"
+            output_path = root / "review.json"
+            target_path.write_text(json.dumps(self.payload), encoding="utf-8")
+            try:
+                input_path.symlink_to(target_path)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlink creation is unavailable in this environment")
+            with patch("sys.argv", ["ai_semantic_review.py", "--input", str(input_path),
+                                    "--output", str(output_path)]), patch(
+                "scripts.ai_semantic_review.call_model"
+            ) as model, patch("sys.stderr", new_callable=StringIO) as stderr:
+                self.assertEqual(main(), 2)
+            self.assertIn("symlinked paths", stderr.getvalue())
+            self.assertFalse(output_path.exists())
+            model.assert_not_called()
+
+
     def test_rejects_rule_quote_not_in_supplied_rules(self):
         review = self.finding()
         review["findings"][0]["rule_quote"] = "Always use magic."
