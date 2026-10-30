@@ -176,8 +176,8 @@ def _git_commit_sha(root: Path) -> str:
         top = run_git("rev-parse", "--show-toplevel")
         result = run_git("rev-parse", "HEAD")
         status = run_git(
-            "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "--untracked-files=all",
-            "--", ".", ":(exclude)artifacts",
+            "-c", "core.fsmonitor=false", "status", "--ignore-submodules=none",
+            "--porcelain=v1", "--untracked-files=all", "--", ".", ":(exclude)artifacts",
         )
     except (OSError, subprocess.TimeoutExpired):
         raise HarnessRunnerError("Could not verify Git commit provenance") from None
