@@ -332,3 +332,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Corrected `docs/ROADMAP.md` in archive commit `aec27ae1d2d345d5a7eb1057a12f4542dcd596ed` to supersede the earlier pending-CI wording with the observed exact-head evidence. This entry documents the evidence for `d081fcf...`; the subsequent archive commits still require their own exact-head verification.
 - First consumer pilot remains passing only for its recorded consumer/Harness SHAs. Second consumer `chatgpt-auto-send-assistant` remains blocked before runner steps with cause unknown; do not count it as passing.
 - No repository Actions settings, permissions, visibility, merge, release, deployment, or local-worktree synchronization changed. PR #40 and both consumer PRs remain Draft/unmerged.
+
+
+### Exact-head CI verification — 2026-10-30
+
+- Archive commit `5da6a9d2ad3c1787d3148fdce877a71740ac2fea` passed Push CI [41036222709](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41036222709) and PR-context CI [41036230850](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41036230850), both for the exact same SHA.
+- Both runs completed `offline-tests` successfully: Python compilation, all offline contract tests, redacted acceptance report generation/upload, and the final required-stage gate.
+- The roadmap and progress archive now record this verified state. The next resulting documentation commit requires its own exact-head CI check; second-consumer acceptance remains incomplete and the cause of its pre-step failure remains unknown.
+- PR #40 remains Draft/open/unmerged. No Actions settings, permissions, visibility, merge, release, or deployment changed.
