@@ -114,8 +114,14 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         )
         for runtime, manager in (
             ("ruby", "none"),
+            ("", "none"),
+            ("Node", "none"),
+            ("node ", "none"),
             ("node", "npm"),
+            ("node", ""),
             ("python", "pnpm"),
+            ("python", "PNPM"),
+            ("python", " "),
         ):
             with self.subTest(runtime=runtime, manager=manager):
                 env = dict(
