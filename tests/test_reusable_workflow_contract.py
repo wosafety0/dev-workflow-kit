@@ -15,6 +15,12 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         self.assertRegex(self.source, r"(?m)^permissions:\n  contents: read\s*$")
         self.assertNotRegex(self.source, r"(?m)^\s+(?:issues|pull-requests|actions|contents):\s*write\b")
 
+    def test_checkout_does_not_persist_credentials(self):
+        self.assertRegex(
+            self.source,
+            r"(?s)- name: Check out consuming repository\\n\\s+uses: actions/checkout@[0-9a-f]{40} # v5\\n\\s+with:\\n\\s+persist-credentials: false",
+        )
+
     def test_runtime_is_explicit_and_defaults_to_python(self):
         self.assertRegex(self.source, r"(?s)runtime:\n\s+description:.*?required: false\n\s+type: string\n\s+default: python")
         self.assertIn("python|node)", self.source)
