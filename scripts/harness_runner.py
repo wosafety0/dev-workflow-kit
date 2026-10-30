@@ -312,6 +312,43 @@ def _write_report(output_path: Path, metadata: dict[str, Any]) -> dict[str, Any]
     return report
 
 
+def _invalidate_safe_outputs(
+    root: Path | None,
+    outputs: list[tuple[Path, str]],
+    protected_paths: tuple[str | None, ...],
+) -> None:
+    """Remove stale generated outputs on blocked runs without unlinking input aliases."""
+    if root is None:
+        return
+    protected_resolved: set[Path] = set()
+    aliasing_uncertain = False
+    for value in protected_paths:
+        if value is None:
+            continue
+        candidate = Path(value)
+        if not candidate.is_absolute():
+            candidate = root / candidate
+        try:
+            protected_resolved.add(candidate.resolve(strict=False))
+        except (OSError, RuntimeError):
+            # If aliasing cannot be ruled out, preserve outputs rather than risk input loss.
+            aliasing_uncertain = True
+            break
+    if aliasing_uncertain:
+        return
+
+    for output, raw_output in outputs:
+        try:
+            _reject_symlink_path(root, raw_output, "generated output")
+            _require_artifact_path(root, output, "generated output")
+            if output.resolve(strict=False) in protected_resolved:
+                continue
+            output.unlink()
+        except (HarnessRunnerError, OSError, RuntimeError, ValueError):
+            # Cleanup is best-effort; never replace the original blocked-run error.
+            pass
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", default=".", help="Project root (default: current directory)")
@@ -330,6 +367,8 @@ def main(argv: list[str] | None = None) -> int:
         help=f"Per-task timeout in seconds (1-{_MAX_TIMEOUT_SECONDS}; default 600)",
     )
     args = parser.parse_args(argv)
+    root: Path | None = None
+    safe_outputs: list[tuple[Path, str]] = []
 
     try:
         if not 1 <= args.timeout_seconds <= _MAX_TIMEOUT_SECONDS:
@@ -339,22 +378,29 @@ def main(argv: list[str] | None = None) -> int:
         root = Path(args.project_root).resolve()
         if not root.is_dir():
             raise HarnessRunnerError("project-root must be an existing directory")
-        config_path = _resolve_inside_root(root, args.config, "config")
-        _reject_symlink_path(root, args.config, "config")
         report_path = _resolve_inside_root(root, args.report_output, "report-output")
         _reject_symlink_path(root, args.report_output, "report-output")
+        _require_artifact_path(root, report_path, "report-output")
+        safe_outputs.append((report_path, args.report_output))
+        review_output = (
+            _resolve_inside_root(root, args.review_output, "review-output")
+            if args.review_output is not None else None
+        )
+        if args.review_output is not None and review_output is not None:
+            _reject_symlink_path(root, args.review_output, "review-output")
+            _require_artifact_path(root, review_output, "review-output")
+            safe_outputs.append((review_output, args.review_output))
+
+        # Resolve output paths first so later input/path errors can invalidate stale
+        # generated artifacts. Cleanup protects any output that aliases an input path.
+        config_path = _resolve_inside_root(root, args.config, "config")
+        _reject_symlink_path(root, args.config, "config")
         review_input = (
             _resolve_inside_root(root, args.review_input, "review-input")
             if args.review_input is not None else None
         )
         if args.review_input is not None:
             _reject_symlink_path(root, args.review_input, "review-input")
-        review_output = (
-            _resolve_inside_root(root, args.review_output, "review-output")
-            if args.review_output is not None else None
-        )
-        if args.review_output is not None:
-            _reject_symlink_path(root, args.review_output, "review-output")
         if review_input is not None and review_output is not None and review_input == review_output:
             raise HarnessRunnerError("review-input and review-output must be different paths")
         if review_output is not None and review_output == config_path:
@@ -490,9 +536,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Acceptance status: {report['status']}")
         return 0 if report["status"] == "passed" else 1
     except (HarnessRunnerError, HarnessConfigError, AcceptanceReportError) as exc:
+        _invalidate_safe_outputs(root, safe_outputs, (args.config, args.review_input))
         print(f"Harness run blocked: {exc}", file=sys.stderr)
         return 2
     except OSError:
+        _invalidate_safe_outputs(root, safe_outputs, (args.config, args.review_input))
         print("Harness run blocked: filesystem operation failed", file=sys.stderr)
         return 2
 

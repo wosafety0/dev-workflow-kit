@@ -301,6 +301,8 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(report["status"], "failed")
 
     def test_rejects_path_traversal_before_running_tasks(self):
+        report_path = self.root / "artifacts" / "report.json"
+        report_path.write_text('{"status": "passed"}', encoding="utf-8")
         with patch("scripts.harness_runner._run_task") as run_task:
             stdout = StringIO()
             stderr = StringIO()
@@ -312,6 +314,7 @@ class HarnessRunnerTests(unittest.TestCase):
                 ])
         self.assertEqual(code, 2)
         self.assertIn("safe repository-relative path", stderr.getvalue())
+        self.assertFalse(report_path.exists(), "stale passing report must be invalidated")
         run_task.assert_not_called()
 
     def test_invalid_config_fails_closed_without_running_tasks(self):
@@ -349,6 +352,32 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertFalse(report_path.exists())
         self.assertFalse(review_path.exists())
         run_task.assert_not_called()
+
+    def test_blocked_post_task_integrity_removes_semantic_review_pass_artifact(self):
+        self.write_config(["python-unittest", "semantic-review"])
+        review_input = self.root / "artifacts" / "review-input.json"
+        review_input.write_text("{}", encoding="utf-8")
+        review_output = self.root / "artifacts" / "review.json"
+        tracked_source = self.root / "tests" / "test_example.py"
+
+        def fake_task(argv, _root, _timeout, _stdin_data=None):
+            if "ai_semantic_review.py" in " ".join(argv):
+                review_output.write_text('{"status": "PASS"}', encoding="utf-8")
+                tracked_source.write_text(
+                    tracked_source.read_text(encoding="utf-8") + "# changed during review\n",
+                    encoding="utf-8",
+                )
+            return "passed", 0
+
+        with patch("scripts.harness_runner._run_task", side_effect=fake_task):
+            code, _, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("Git worktree must be clean", stderr)
+        self.assertFalse(review_output.exists(), "blocked run must not leave a PASS review artifact")
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
     def test_timeout_is_a_failed_task_without_echoing_process_output(self):
         with patch(
