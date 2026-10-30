@@ -191,5 +191,32 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         self.assertIn("timeout-minutes: 15", self.source)
 
 
+    def test_consumer_command_success_is_propagated_and_output_is_visible(self):
+        import os
+        import subprocess
+
+        step = self.source.split(
+            "      - name: Run consumer-owned acceptance command", 1
+        )[1]
+        script = step.split("        run: |\\n", 1)[1]
+        script = "\\n".join(
+            line[10:] if line.startswith("          ") else line
+            for line in script.splitlines()
+        )
+        env = dict(
+            os.environ,
+            ACCEPTANCE_COMMAND="printf 'consumer-command-ok\\n'",
+        )
+        result = subprocess.run(
+            ["bash", "-euo", "pipefail", "-c", script],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("consumer-command-ok", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
