@@ -308,3 +308,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Regression-test commit: `893d7294cb36093f6f078913b513e25d89d88481`. Added a unit test asserting these four overrides are absent from the derived Git environment.
 - Exact implementation/test head `893d7294cb36093f6f078913b513e25d89d88481` passed GitHub Actions push run [41006559844](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41006559844) and pull-request run [41006566427](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41006566427).
 - Scope remains limited: this does not claim full Git environment isolation, independently attest the runtime, or prove protection against concurrent filesystem mutation. No local tests, live provider requests, credentials, merge, release, deployment, or game actions were performed.
+
+### Git provenance: isolate all inherited Git environment overrides (2026-10-30)
+
+- Implementation commit `4fd2114256c1d97dd50ec4cd503eecb777d801b9`: provenance Git subprocesses discard all inherited `GIT_*` variables and then explicitly set `GIT_NO_REPLACE_OBJECTS=1`; ordinary non-Git process environment remains available.
+- Regression-test commit `af18eaf5e5179d7d868eebebeee41fc63eaa2004`: extended environment isolation assertions for Git object directories, alternate objects, and Git config injection variables, alongside repository/worktree/index overrides.
+- Exact implementation/test head `af18eaf5e5179d7d868eebebeee41fc63eaa2004` passed GitHub Actions [push run 41007110682](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41007110682) and [PR run 41007112836](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41007112836), both conclusion `success`.
+- This does not independently attest the executable, Git config files, runtime, concurrent filesystem mutation, or artifact contents. No local tests, live provider requests, credentials, merge, release, deployment, or game actions are claimed.
