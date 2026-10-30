@@ -206,3 +206,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Inspected `.github/workflows/ci.yml` on the current-base reconstruction candidate. The `push` filter includes `fix/**`, and the `pull_request` target filter includes `fix/**`; the required-stage gate uses a folded shell command and appears structurally consistent in the retrieved excerpt.
 - Exact-head combined status is empty and the available workflow-run connector returned no runs; therefore CI remains unverified. No tests were run locally in this connector-only pass.
 - Candidate head before this progress-only archive: `06858e97bd0a3657c2a379f97807003876b15202`.
+
+
+### 2026-10-30 exact-head CI validation (PR #34)
+- Confirmed validation-only Draft PR #34 targets the current PR #22 base `071c168bc9532ba8d8c6a9f4708046e164879568`; original PR #33 remains untouched.
+- Exact candidate head `0d2d82cd881be69bb949789bce6b079395a2f5a4` ran Harness CI #658: [run 40988770798](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40988770798) completed successfully.
+- Verified all reported job steps succeeded: Python compilation, offline contract tests, redacted acceptance report generation, artifact upload, and final required-stage gate.
+- This is CI evidence for the candidate head before this progress-only archive commit. The archive commit will trigger a fresh CI run; only its result can validate the final archived head.
+- Draft PR #34: https://github.com/wosafety0/dev-workflow-kit/pull/34. No merge performed.
