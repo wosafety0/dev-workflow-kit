@@ -20,6 +20,19 @@ Run:
 python scripts/harness_runner.py --config examples/harness-config.json
 ```
 
+For semantic review, the default remains caller-supplied input. To opt into strict Git-bound review, supply both immutable, full 40-character commit SHAs:
+
+```bash
+python scripts/harness_runner.py \
+  --config examples/harness-config-semantic-review.json \
+  --review-input artifacts/review-context.json \
+  --review-output artifacts/semantic-review.json \
+  --review-base <base-commit-sha> \
+  --review-head <checked-out-head-sha>
+```
+
+In strict mode, the review-context JSON provides `task`, `global_rules`, and `project_instructions`; any caller-provided `diff` or `changed_files` values are replaced. The runner verifies both commit objects, requires `--review-head` to equal the clean checked-out `HEAD`, computes the merge base, and generates a bounded diff and changed-file list directly from Git. The generated diff is validated against the semantic-review parser before tasks run. A passing strict-mode acceptance report uses schema version 2 and records `review_provenance` (base/head/merge-base SHAs, diff SHA-256, and changed paths). Ordinary runs retain schema version 1. The strict diff limit is 4 MiB; unsupported or ambiguous diff/path formats fail closed.
+
 The runner writes `artifacts/acceptance-report.json`. It requires the project root to be the Git repository root with a valid HEAD and a clean worktree outside generated `artifacts/`. The `--config` file must be tracked by the current HEAD and must not resolve under `artifacts/`; prior passing artifacts are invalidated before config validation. Duplicate JSON object keys at every nesting level are rejected. For an opt-in live model test, see [SEMANTIC_REVIEW_SMOKE_TEST.md](SEMANTIC_REVIEW_SMOKE_TEST.md) and the semantic-review example config/input.
 
 ## Task mapping
@@ -44,7 +57,7 @@ If `semantic-review` is configured, a caller must pass both review paths. Review
 
 The runner reuses `scripts/acceptance_report.py` and emits only the current commit SHA, SHA-256 pin of the stable acceptance contract, runner version label, per-task status, and overall status. It never copies task output, environment variables, API keys, or raw logs into the report.
 
-A passing runner result establishes only that the configured fixed tasks exited successfully on the recorded commit. The semantic-review input is caller-supplied: its SHA-256 fingerprint guarantees only that the payload is unchanged between preflight and review, not that its diff corresponds to the current Git `HEAD`. The report's `commit_sha` identifies the runner worktree, not the reviewed diff's target commit unless the caller separately establishes that linkage. It is not proof that semantic review detects every defect and is not authorization to merge, deploy, or perform project actions.
+A passing runner result establishes only that the configured fixed tasks exited successfully on the recorded commit. In compatibility mode, the semantic-review input is caller-supplied: its SHA-256 fingerprint guarantees only that the payload is unchanged between preflight and review, not that its diff corresponds to the current Git `HEAD`. In strict Git-bound mode, the runner derives the diff from the requested immutable base/head commits, requires head to equal the checked-out `HEAD`, and records the verified range and diff digest in acceptance-report schema v2. Neither mode proves that semantic review detects every defect or authorizes merge, deployment, or project actions.
 
 ## Security boundaries
 
