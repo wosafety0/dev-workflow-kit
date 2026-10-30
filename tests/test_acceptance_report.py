@@ -7,7 +7,7 @@ class AcceptanceReportTests(unittest.TestCase):
     def valid_metadata(self):
         return {
             "commit_sha": "a" * 40,
-            "rules_pin": "sha256:rules-v1",
+            "rules_pin": "sha256:" + "b" * 64,
             "tool_version": "dev-workflow-kit/0.1.0",
             "tests": {"unit": "passed", "policy": "passed"},
         }
@@ -43,6 +43,21 @@ class AcceptanceReportTests(unittest.TestCase):
             metadata = self.valid_metadata()
             metadata["commit_sha"] = sha
             with self.subTest(sha=sha), self.assertRaises(AcceptanceReportError):
+                build_acceptance_report(metadata)
+
+    def test_rejects_malformed_rules_pin(self):
+        for value in (
+            "sha256:",
+            "sha256:rules-v1",
+            "sha256:" + "g" * 64,
+            "SHA256:" + "b" * 64,
+            "sha256:" + "b" * 63,
+        ):
+            metadata = self.valid_metadata()
+            metadata["rules_pin"] = value
+            with self.subTest(value=value), self.assertRaisesRegex(
+                AcceptanceReportError, "lowercase SHA-256 digest"
+            ):
                 build_acceptance_report(metadata)
 
     def test_rejects_empty_or_untrimmed_required_text(self):

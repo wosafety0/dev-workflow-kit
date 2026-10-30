@@ -61,7 +61,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_python_unittest_maps_to_fixed_argv_and_writes_allowlisted_report(self):
         with patch("scripts.harness_runner._git_commit_sha", return_value="a" * 40), patch(
-            "scripts.harness_runner._rules_pin", return_value="sha256:contract"
+            "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
         ), patch(
             "scripts.harness_runner._run_task", return_value=("passed", 0)
         ) as run_task:
@@ -85,7 +85,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_runner_executes_fixed_task_end_to_end(self):
         with patch("scripts.harness_runner._git_commit_sha", return_value="c" * 40), patch(
-            "scripts.harness_runner._rules_pin", return_value="sha256:contract"
+            "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
         ):
             code, stdout, stderr = self.run_runner()
 
@@ -98,7 +98,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_task_failure_writes_failed_report_and_returns_one(self):
         with patch("scripts.harness_runner._git_commit_sha", return_value="b" * 40), patch(
-            "scripts.harness_runner._rules_pin", return_value="sha256:contract"
+            "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
         ), patch(
             "scripts.harness_runner._run_task", return_value=("failed", 23)
         ):
@@ -115,7 +115,7 @@ class HarnessRunnerTests(unittest.TestCase):
         self.write_config(["python-unittest", "semantic-review"])
         (self.root / "review-input.json").write_text("{}", encoding="utf-8")
         with patch("scripts.harness_runner._git_commit_sha", return_value="f" * 40), patch(
-            "scripts.harness_runner._rules_pin", return_value="sha256:contract"
+            "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
         ), patch(
             "scripts.harness_runner._run_task", return_value=("failed", 23)
         ) as run_task:
@@ -153,7 +153,7 @@ class HarnessRunnerTests(unittest.TestCase):
         self.write_config(["python-unittest", "semantic-review"])
         (self.root / "review-input.json").write_text("{}", encoding="utf-8")
         with patch("scripts.harness_runner._git_commit_sha", return_value="d" * 40), patch(
-            "scripts.harness_runner._rules_pin", return_value="sha256:contract"
+            "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
         ), patch(
             "scripts.harness_runner._run_task",
             side_effect=[("passed", 0), ("passed", 0)],
@@ -238,7 +238,7 @@ class HarnessRunnerTests(unittest.TestCase):
             return "passed", 0
 
         with patch("scripts.harness_runner._git_commit_sha", return_value="a" * 40), patch(
-            "scripts.harness_runner._rules_pin", return_value="sha256:contract"
+            "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
         ), patch(
             "scripts.harness_runner._run_task", side_effect=mutate_review_input
         ) as run_task:
@@ -266,7 +266,7 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(endpoint, "http://127.0.0.1:1235/v1/chat/completions")
         self.assertEqual((key, model), ("fixture-key", "fixture-model"))
         with patch("scripts.harness_runner._git_commit_sha", return_value="e" * 40), patch(
-            "scripts.harness_runner._rules_pin", return_value="sha256:contract"
+            "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
         ), patch(
             "scripts.harness_runner._run_task",
             side_effect=[("passed", 0), ("failed", 1)],
