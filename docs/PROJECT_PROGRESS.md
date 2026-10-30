@@ -540,3 +540,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Current PR #37 head: `49191bd53c998a9af31862cb1ff75d46a16a769b`.
 - Exact-head Push CI [40996142543](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40996142543) and PR-context CI [40996147886](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40996147886) both succeeded for the same SHA. Both completed compilation, offline contract tests, redacted report generation/upload, and the final required-stage gate.
 - No local tests or live provider calls are claimed. PR #37 remains Draft/open/unmerged; no candidate PRs were merged, closed, or retargeted.
+
+## 2026-10-30 — bounded semantic-review input
+- Added a 4 MiB maximum for caller-supplied semantic-review input in both the Harness runner and standalone CLI. The runner reads at most limit+1 bytes into its verified snapshot; the CLI rejects oversized file or stdin input before JSON parsing/model invocation.
+- Added regression tests that oversized input is rejected and the model/task runner is not called; updated `docs/HARNESS_RUNNER_V1.md` to document the cap and stdin snapshot contract.
+- Current PR #37 head: `90564d4550142af0fb776c0e7aaa78b92698357d`.
+- Exact-head Push CI [40996448203](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40996448203) and PR-context CI [40996455446](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40996455446) both succeeded for the same SHA. Compilation, offline contract tests, redacted acceptance report generation/upload, and final required-stage gate all succeeded.
+- This head includes the prior atomic JSON newline fix and verified stdin byte-snapshot flow. No local tests or live provider calls are claimed; PR #37 remains Draft/open/unmerged.
