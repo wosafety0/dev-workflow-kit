@@ -410,3 +410,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Built isolated current-base reconstruction `reconcile/pr-32-on-current-base-20261030` from `e4be499e36ed9d8e22ff45065d95f92e0876df34`, and a CI-intended branch `fix/reconcile-pr-32-current-base-20261030` at commit `ec37ca93e225aef668472e52bd4db485c107fe23`.
 - The candidate compare shows 7 changed files, 8 commits ahead, 0 behind; ahead count includes candidate commits and is not a patch-size metric. Files match the expected PR #32 scope. Exact-head CI is not yet visible: combined status is empty and the available workflow-run query returned no runs (it filters to PR-triggered runs).
 - Original PR #32 and all rescue snapshots remain untouched. Candidate is not approved for merge; tests/CI remain unverified.
+
+
+### 2026-10-30 reconciliation candidate final validation
+- Candidate branch `fix/reconcile-pr-32-current-base-20261030` now has final archived head `8ac03e05414c36366d96bee87aa482cc45cefbf4`, based on current PR #18 head `e4be499e36ed9d8e22ff45065d95f92e0876df34`.
+- Validation-only Draft PR #35: https://github.com/wosafety0/dev-workflow-kit/pull/35 (open, draft, unmerged; GitHub reports mergeable=true).
+- Exact-head Harness CI run [40989078845](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40989078845) completed successfully. Verified Python compilation, offline contract tests, redacted acceptance report generation, artifact upload, and final required-stage gate all succeeded.
+- Original PR #32 remains unchanged/open/draft at head `9d3fb4bce16ff75dbfd6003103c3e4d67b02f126`; its old base SHA differs from PR #18's current head, and GitHub still reports mergeable=false. No merge, close, retarget, or force-push was performed.
