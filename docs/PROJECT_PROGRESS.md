@@ -214,3 +214,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Verified all reported job steps succeeded: Python compilation, offline contract tests, redacted acceptance report generation, artifact upload, and final required-stage gate.
 - This is CI evidence for the candidate head before this progress-only archive commit. The archive commit will trigger a fresh CI run; only its result can validate the final archived head.
 - Draft PR #34: https://github.com/wosafety0/dev-workflow-kit/pull/34. No merge performed.
+
+
+### 2026-10-30 cross-PR diff audit
+- Compared candidate and original PR #33 source/test blobs. `tests/test_ai_semantic_review.py` SHA `193b9c046ae7e1fd70a734b7d15c65cbed7c802f` and shared `tests/test_harness_runner.py` SHA `45d2208a9c871076418f5375241878d71c259be9` match exactly.
+- `scripts/ai_semantic_review.py` differs from the original source blob only at duplicate-key handler behavior: candidate raises `ReviewError` instead of bare `ValueError`, preserving the module's fail-closed error contract. Provider envelopes are bounded to 1 MiB plus a sentinel byte; duplicate keys are rejected in the envelope, model content, and review input. Offline CI passed; no live provider call or local test run was performed.
+- The stable acceptance contract records both duplicate-key rejection and the response-size bound. Cross-PR note: the shared runner test file differs from PR #32's expanded test suite because these PRs sit on different stacked parents. Do not combine by replacing the file wholesale; selectively retain PR #32's expanded coverage and PR #33's resolved-path expectations if a unified branch is ever required.
