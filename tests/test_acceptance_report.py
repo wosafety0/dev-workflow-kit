@@ -37,6 +37,61 @@ class AcceptanceReportTests(unittest.TestCase):
         self.assertEqual(report["review_provenance"]["head_sha"], report["commit_sha"])
         self.assertEqual(report["review_provenance"]["changed_files"], ["src/a.py", "src/z.py"])
 
+    def test_ci_context_emits_schema_v3_and_binds_tested_commit(self):
+        metadata = self.valid_metadata()
+        metadata["ci_context"] = {
+            "tested_commit_sha": "a" * 40,
+            "run_id": 123,
+            "run_attempt": 2,
+            "event_name": "pull_request",
+            "pull_request_head_sha": "e" * 40,
+        }
+        report = build_acceptance_report(metadata)
+        self.assertEqual(report["schema_version"], 3)
+        self.assertEqual(report["ci_context"]["tested_commit_sha"], report["commit_sha"])
+        self.assertEqual(report["ci_context"]["run_id"], 123)
+        self.assertEqual(report["ci_context"]["run_attempt"], 2)
+        self.assertEqual(report["ci_context"]["event_name"], "pull_request")
+        self.assertEqual(report["ci_context"]["pull_request_head_sha"], "e" * 40)
+
+    def test_ci_context_requires_pr_head_only_for_pull_request_event(self):
+        metadata = self.valid_metadata()
+        metadata["ci_context"] = {
+            "tested_commit_sha": "a" * 40,
+            "run_id": 1,
+            "run_attempt": 1,
+            "event_name": "push",
+            "pull_request_head_sha": None,
+        }
+        self.assertEqual(build_acceptance_report(metadata)["schema_version"], 3)
+        for event_name, pr_head in (("push", "e" * 40), ("workflow_dispatch", "e" * 40),
+                                    ("pull_request", None), ("pull_request", "bad-sha")):
+            broken = self.valid_metadata()
+            broken["ci_context"] = {
+                "tested_commit_sha": "a" * 40,
+                "run_id": 1,
+                "run_attempt": 1,
+                "event_name": event_name,
+                "pull_request_head_sha": pr_head,
+            }
+            with self.subTest(event_name=event_name, pr_head=pr_head), self.assertRaises(AcceptanceReportError):
+                build_acceptance_report(broken)
+
+    def test_ci_context_rejects_invalid_run_metadata(self):
+        for field, value in (("run_id", 0), ("run_attempt", -1), ("run_id", True),
+                             ("event_name", "schedule"), ("tested_commit_sha", "f" * 40)):
+            metadata = self.valid_metadata()
+            metadata["ci_context"] = {
+                "tested_commit_sha": "a" * 40,
+                "run_id": 1,
+                "run_attempt": 1,
+                "event_name": "push",
+                "pull_request_head_sha": None,
+            }
+            metadata["ci_context"][field] = value
+            with self.subTest(field=field, value=value), self.assertRaises(AcceptanceReportError):
+                build_acceptance_report(metadata)
+
     def test_git_bound_provenance_allows_internal_spaces_in_valid_paths(self):
         metadata = self.valid_metadata()
         metadata["review_provenance"] = {
