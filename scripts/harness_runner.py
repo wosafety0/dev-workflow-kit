@@ -207,11 +207,10 @@ def _task_argv(
         if ignored.returncode != 0:
             raise HarnessRunnerError("Could not verify ignored Python test source")
         if any(
-            Path(os.fsdecode(path)).name.startswith("test")
-            and Path(os.fsdecode(path)).suffix == ".py"
+            Path(os.fsdecode(path)).suffix == ".py"
             for path in ignored.stdout.split(b"\0") if path
         ):
-            raise HarnessRunnerError("ignored Python test source must not be executed")
+            raise HarnessRunnerError("ignored Python source must not be executed")
         return [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
     if task_id == "semantic-review":
         if review_input is None or review_output is None:
