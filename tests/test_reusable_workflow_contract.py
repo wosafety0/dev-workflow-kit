@@ -273,5 +273,27 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         self.assertNotIn("must-not-run", result.stdout)
 
 
+    def test_workflow_call_is_exposed(self):
+        self.assertRegex(self.source, r"(?m)^on:\\s*$")
+        self.assertRegex(self.source, r"(?m)^  workflow_call:\\s*$")
+
+    def test_input_defaults_are_stable(self):
+        expected_defaults = {
+            "runtime": "python",
+            "python-version": '"3.12"',
+            "node-version": '"24"',
+            "package-manager": "none",
+            "pnpm-version": '"11.4.0"',
+        }
+        for input_name, expected_default in expected_defaults.items():
+            with self.subTest(input_name=input_name):
+                block = self.source.split(f"      {input_name}:\\n", 1)[1]
+                block = block.split("\\n      ", 1)[0]
+                self.assertRegex(
+                    block,
+                    rf"(?m)^        default: {re.escape(expected_default)}\\s*$",
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
