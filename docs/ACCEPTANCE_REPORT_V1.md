@@ -1,13 +1,13 @@
 # Redacted Acceptance Report (v1)
 
-Status: deterministic metadata validator and report builder; not a test runner.
+Status: deterministic metadata validator and report builder; not a test runner. Schema v1 remains the compatibility-mode format; the opt-in Git-bound runner emits schema v2.
 
 ## Required input
 
 The caller supplies exactly four fields:
 
 - `commit_sha`: full 40-character Git commit SHA.
-- `rules_pin`: non-empty, trimmed identifier for the reviewed rules revision.
+- `rules_pin`: lowercase SHA-256 content pin in the form `sha256:` followed by exactly 64 lowercase hexadecimal characters.
 - `tool_version`: non-empty, trimmed toolkit version.
 - `tests`: a non-empty object mapping test names to `passed`, `failed`, `skipped`, or `not_run`.
 
@@ -16,7 +16,7 @@ Example input:
 ```json
 {
   "commit_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "rules_pin": "sha256:rules-v1",
+  "rules_pin": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   "tool_version": "dev-workflow-kit/0.1.0",
   "tests": {
     "offline-unit-tests": "passed",
@@ -36,6 +36,17 @@ The test step uses `continue-on-error` only so the report can still be produced 
 The report contains only `schema_version`, `commit_sha`, `rules_pin`, `tool_version`, normalized `tests`, and overall `status`. Test names are sorted for deterministic output and the commit SHA is normalized to lowercase.
 
 Overall status is `passed` only when every declared test status is exactly `passed`. A `failed`, `skipped`, or `not_run` test produces overall `failed`. Missing or malformed required data and unknown input keys are rejected. This strict allowlist prevents arbitrary input fields—including credentials, environment dumps, and raw logs—from being copied into the report.
+
+## Schema v2 — optional Git-bound review
+
+When the runner is invoked with both `--review-base` and `--review-head`, it emits schema version 2 and adds exactly one top-level field, `review_provenance`, containing:
+
+- `base_sha`, `head_sha`, and `merge_base_sha`: full Git commit SHAs.
+- `diff_sha256`: lowercase SHA-256 of the exact Git diff bytes supplied to the semantic reviewer.
+- `changed_files`: sorted, unique repository-relative paths derived from Git.
+
+The runner requires the requested head to equal the clean checked-out `HEAD` and derives the merge base, diff, and changed-file list from Git; caller-provided `diff` and `changed_files` are not trusted in this mode. The report formatter validates the provenance fields' structure but does not independently recompute Git ancestry or the diff digest. Without both strict-mode flags, schema v1 and caller-supplied review input remain supported.
+
 
 ## Boundaries
 
