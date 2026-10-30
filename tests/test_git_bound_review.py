@@ -138,6 +138,7 @@ class GitBoundReviewTests(unittest.TestCase):
         self.assertEqual(environment["GIT_NO_REPLACE_OBJECTS"], "1")
         self.assertEqual(environment["GIT_CONFIG_NOSYSTEM"], "1")
         self.assertEqual(environment["GIT_CONFIG_GLOBAL"], harness_runner.os.devnull)
+        self.assertEqual(environment["GIT_GRAFT_FILE"], harness_runner.os.devnull)
 
     def test_git_replace_refs_cannot_change_reviewed_commit_content(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -260,6 +261,40 @@ class GitBoundReviewTests(unittest.TestCase):
                     root, self.source, base_sha, head_sha, head_sha
                 )
 
+
+    def test_repository_grafts_cannot_rewrite_review_ancestry(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def git(*args):
+                return subprocess.run(
+                    ["git", *args], cwd=root, check=True,
+                    capture_output=True, text=True,
+                ).stdout.strip()
+
+            git("init", "-q")
+            git("config", "user.name", "Harness Test")
+            git("config", "user.email", "harness-test@example.invalid")
+            source = root / "source.py"
+            source.write_text("VALUE = 'old'\\n", encoding="utf-8")
+            git("add", "source.py")
+            git("commit", "-qm", "base")
+            base_sha = git("rev-parse", "HEAD")
+            source.write_text("VALUE = 'new'\\n", encoding="utf-8")
+            git("add", "source.py")
+            git("commit", "-qm", "head")
+            head_sha = git("rev-parse", "HEAD")
+
+            grafts = root / ".git" / "info" / "grafts"
+            grafts.parent.mkdir(parents=True, exist_ok=True)
+            grafts.write_text(head_sha + "\\n", encoding="utf-8")
+
+            task_bytes, provenance = harness_runner._build_git_bound_review_input(
+                root, self.source, base_sha, head_sha, head_sha
+            )
+            payload = json.loads(task_bytes.decode("utf-8"))
+            self.assertIn("+VALUE = 'new'", payload["diff"])
+            self.assertEqual(provenance["merge_base_sha"], base_sha)
 
     def test_rejects_multiple_best_merge_bases(self):
         multiple_bases = BASE + chr(10) + HEAD
