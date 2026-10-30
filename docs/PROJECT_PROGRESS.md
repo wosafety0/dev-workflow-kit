@@ -432,3 +432,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Remaining evidence-quality improvement (not a current gate failure): make standalone acceptance reports self-identify their CI run/event/attempt and, when applicable, PR source head separately from the actual tested commit. Artifact identity is currently recoverable from GitHub's run/artifact metadata, not fully represented inside the report.
 - Scope limit: this is repository-source and hosted-CI evidence review; it does not attest installed dependency/runtime integrity, guarantee model defect detection, or establish production readiness.
 - PR #38 remains Draft, open, and unmerged. No default-branch change or release was made.
+
+
+### Acceptance report CI identity — 2026-10-30
+
+- Added optional, strictly validated `ci_context` metadata to the acceptance-report builder. Existing reports without CI context retain schema v1 (ordinary) or v2 (Git-bound review); reports carrying CI context use schema v3.
+- Schema v3 records the actual tested commit SHA, positive workflow run ID and attempt, an allowlisted event name (`push`, `pull_request`, or `workflow_dispatch`), and the PR source-head SHA only for pull-request events. The tested commit must match the report's root `commit_sha`; pull-request source head is separately represented to avoid conflating it with GitHub's synthetic merge commit.
+- Added regression tests for schema selection, tested-commit binding, valid push/PR context, missing or extraneous PR head, invalid event values, and malformed run metadata. Updated `.github/workflows/ci.yml` to populate context from GitHub's event/run environment and documented the report behavior in `docs/HARNESS_RUNNER_V1.md`.
+- Implementation commits: `1aaf5af5e444ad2b900c913e1e14617337677fde` (report validator), `048f250650c471747b500019d1d4c0edff024140` (regression tests), `15121683a1cd0df738746c8bf3ad745c32f8800c` (CI workflow), and `06aab3cf5037d5fc36ac79c1211f5cd40e466831` (documentation).
+- Verification status at archive time: the connector did not yet expose a Push CI run for the new head; PR-context CI was also not yet listed. No test pass is claimed for this change until exact-head Push CI and PR-context CI complete successfully. The previous CI run-list wrapper only exposes pull-request-triggered runs, and combined commit status returned no status records; these empty responses are not evidence of success or failure.
+- PR #38 remains Draft/open/unmerged, with its base unchanged. No merge, release, deployment, or game action was performed.
