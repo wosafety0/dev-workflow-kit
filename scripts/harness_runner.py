@@ -309,9 +309,18 @@ def _run_task(
         # to replace committed Harness modules during acceptance.
         task_environment = os.environ.copy()
         for name in tuple(task_environment):
-            if name == "PYTHONPATH" or name == "PYTHONHOME" or name.startswith("PYTHON"):
+            if (
+                name == "PYTHONPATH"
+                or name == "PYTHONHOME"
+                or name.startswith("PYTHON")
+                or name.startswith("GIT_")
+            ):
                 task_environment.pop(name, None)
         task_environment["PYTHONNOUSERSITE"] = "1"
+        task_environment["GIT_NO_REPLACE_OBJECTS"] = "1"
+        task_environment["GIT_CONFIG_NOSYSTEM"] = "1"
+        task_environment["GIT_CONFIG_GLOBAL"] = os.devnull
+        task_environment["GIT_GRAFT_FILE"] = os.devnull
         run_options["env"] = task_environment
         result = subprocess.run(argv, **run_options)
     except subprocess.TimeoutExpired:
