@@ -261,6 +261,18 @@ class GitBoundReviewTests(unittest.TestCase):
                 )
 
 
+    def test_rejects_multiple_best_merge_bases(self):
+        multiple_bases = BASE + chr(10) + HEAD
+        with patch.object(
+            harness_runner, "_resolve_git_commit", side_effect=[BASE, HEAD]
+        ), patch.object(harness_runner, "_git_text", return_value=multiple_bases):
+            with self.assertRaisesRegex(
+                harness_runner.HarnessRunnerError, "ambiguous merge-base"
+            ):
+                harness_runner._build_git_bound_review_input(
+                    Path("."), self.source, BASE, HEAD, HEAD
+                )
+
     def test_rejects_malformed_review_context_json(self):
         with patch.object(
             harness_runner, "_resolve_git_commit", side_effect=[BASE, HEAD]
