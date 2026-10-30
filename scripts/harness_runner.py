@@ -195,21 +195,37 @@ def _task_argv(
         tests_dir = _resolve_trusted_source(root, "tests", "tests directory")
         if not tests_dir.is_dir():
             raise HarnessRunnerError("python-unittest task requires a tests/ directory")
-        # Git status omits ignored files; unittest discovery must not execute them.
+        # Git status omits ignored files; imported Python source can still affect test results.
         try:
             ignored = subprocess.run(
-                ["git", "ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "tests"],
+                [
+                    "git", "ls-files", "--others", "--ignored", "--exclude-standard",
+                    "-z", "--", ".",
+                ],
                 cwd=root, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                 timeout=10, check=False,
             )
         except (OSError, subprocess.TimeoutExpired):
-            raise HarnessRunnerError("Could not verify ignored Python test source") from None
+            raise HarnessRunnerError("Could not verify ignored Python source") from None
         if ignored.returncode != 0:
-            raise HarnessRunnerError("Could not verify ignored Python test source")
-        if any(
-            Path(os.fsdecode(path)).suffix == ".py"
-            for path in ignored.stdout.split(b"\0") if path
-        ):
+            raise HarnessRunnerError("Could not verify ignored Python source")
+        generated_or_environment_dirs = {
+            ".venv", "venv", "env", ".tox", "artifacts", "__pycache__",
+        }
+        ignored_python_sources = []
+        for raw_path in ignored.stdout.split(b"\0"):
+            if not raw_path:
+                continue
+            ignored_path = Path(os.fsdecode(raw_path))
+            if ignored_path.suffix != ".py":
+                continue
+            if any(
+                part in generated_or_environment_dirs or part.startswith(".venv")
+                for part in ignored_path.parts[:-1]
+            ):
+                continue
+            ignored_python_sources.append(ignored_path)
+        if ignored_python_sources:
             raise HarnessRunnerError("ignored Python source must not be executed")
         return [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
     if task_id == "semantic-review":
