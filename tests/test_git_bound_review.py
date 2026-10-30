@@ -254,7 +254,7 @@ class GitBoundReviewTests(unittest.TestCase):
             git(root, "config", "submodule.deps/sub.ignore", "all")
             with self.assertRaisesRegex(
                 harness_runner.HarnessRunnerError,
-                "failed semantic-review input validation",
+                "does not support submodule pointer changes",
             ):
                 harness_runner._build_git_bound_review_input(
                     root, self.source, base_sha, head_sha, head_sha
