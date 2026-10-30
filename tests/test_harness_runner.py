@@ -396,6 +396,11 @@ class HarnessRunnerTests(unittest.TestCase):
             "PYTHONHOME": "/tmp/untrusted-python",
             "PYTHONUSERBASE": "/tmp/untrusted-user-base",
             "PYTHONINSPECT": "1",
+            "GIT_DIR": "/tmp/untrusted-git",
+            "GIT_WORK_TREE": "/tmp/untrusted-worktree",
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "core.fsmonitor",
+            "GIT_CONFIG_VALUE_0": "true",
         }
         with patch.dict(harness_runner.os.environ, overrides), patch(
             "scripts.harness_runner.subprocess.run",
@@ -409,6 +414,10 @@ class HarnessRunnerTests(unittest.TestCase):
         for key in overrides:
             self.assertNotIn(key, task_env)
         self.assertEqual(task_env["PYTHONNOUSERSITE"], "1")
+        self.assertEqual(task_env["GIT_NO_REPLACE_OBJECTS"], "1")
+        self.assertEqual(task_env["GIT_CONFIG_NOSYSTEM"], "1")
+        self.assertEqual(task_env["GIT_CONFIG_GLOBAL"], harness_runner.os.devnull)
+        self.assertEqual(task_env["GIT_GRAFT_FILE"], harness_runner.os.devnull)
 
     def test_timeout_is_a_failed_task_without_echoing_process_output(self):
         with patch(
