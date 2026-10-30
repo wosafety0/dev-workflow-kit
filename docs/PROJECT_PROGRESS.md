@@ -450,3 +450,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Candidate combines PR #32 config/path/source protections with PR #33 bounded response/duplicate-key protections while preserving PR #24 redirect handling and fail-fast execution. The shared runner test suite combines expanded path/provenance tests with loopback and Windows path assertions.
 - Compare against PR #24 base: 15 commits ahead, 0 behind; intended net diff is 8 files including CI trigger coverage for `integration/**` branches.
 - Validation-only Draft; do not merge based solely on CI. Original PR #32 remains open/draft/unmerged and its branch was not altered.
+
+
+## 2026-10-30 — final unified candidate audit and exact-head CI
+- Final audited PR #37 head: `169fa027fecfa0f361da751f86e7df4d2251b4ff`; exact-head Harness CI [run 40990807374](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40990807374) succeeded. Python compilation, offline contract tests, redacted report build, artifact upload, and final required-stage gate all succeeded.
+- Diff audit confirms the semantic-review implementation matches PR #33 candidate blob `4a29f02f370704e6b61d2a8ddfe718eb31d99e26`; all 31 PR #32 candidate runner tests are retained, plus the loopback preflight regression (32 runner tests total). Net changed-file list is 8 intended files; no unrelated source modules in the net diff.
+- Candidate remains Draft/unmerged; originals #24/#32/#33 and candidates #34–#36 remain open/draft/unmerged. No live provider call, release, or deployment.
