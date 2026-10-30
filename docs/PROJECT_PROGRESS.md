@@ -230,3 +230,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The consumer workflow runs frozen pnpm installation, ESLint, TypeScript type-check, and Prettier check. It requests only `contents: read`; the deployment workflow, secrets, provider APIs, Cloudflare actions, and application code were untouched. PR #2 remains Draft/unmerged.
 - Updated Stage 4 in `docs/ROADMAP.md` to record that a first immutable-SHA consumer pilot has been validated. A second unrelated consumer, review/acceptance of the pilot PR, and release decision remain pending.
 - This progress entry is an archive-only commit and triggers fresh Harness CI; its new head must be independently verified before claiming the archive commit itself is CI-verified. No Harness PR was merged, no release or deployment was performed, and no game action occurred.
+
+### Second consumer attempt — access restriction unresolved — 2026-10-30
+
+- Added an isolated consumer workflow in `wosafety0/chatgpt-auto-send-assistant` Draft PR [#1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1), pinned to tested Harness implementation SHA `36533dd7726365fd817f48072e49ea055d339947`. The workflow invokes only the repository's existing `npm test` command and requests `contents: read`.
+- Hosted Harness run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209) failed before any job steps and exposed no runner logs. GitHub repository metadata confirms `chatgpt-auto-send-assistant` is private, while `dev-workflow-kit` is public. This is consistent with a cross-repository reusable-workflow access restriction, but the exact failure cause remains unconfirmed; do not treat the run as a passing consumer test.
+- No Actions settings or repository visibility were changed. The consumer PR remains Draft/unmerged. No application code, secrets, browser actions, external provider APIs, or deployment workflows were invoked.
+- Updated the roadmap to record the blocked attempt while leaving the second-consumer acceptance criterion unchecked. The first public consumer pilot in `AI-Worker-Proxy` remains the only passing consumer pilot.
+- Documentation-only archive commit: `9bfc6187cdf2fa2d927c3d91dae553f494bfbf21`. Its own exact-head Push CI and PR-context CI must pass before this archive update is considered verified.
