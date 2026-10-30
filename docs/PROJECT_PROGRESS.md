@@ -417,3 +417,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Validation-only Draft PR #35: https://github.com/wosafety0/dev-workflow-kit/pull/35 (open, draft, unmerged; GitHub reports mergeable=true).
 - Exact-head Harness CI run [40989078845](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40989078845) completed successfully. Verified Python compilation, offline contract tests, redacted acceptance report generation, artifact upload, and final required-stage gate all succeeded.
 - Original PR #32 remains unchanged/open/draft at head `9d3fb4bce16ff75dbfd6003103c3e4d67b02f126`; its old base SHA differs from PR #18's current head, and GitHub still reports mergeable=false. No merge, close, retarget, or force-push was performed.
+
+
+### 2026-10-30 final diff-audit and latest-head CI follow-up
+- Final candidate head is now `6055555ce94dc15441048b753744db18feaee59a` on `fix/reconcile-pr-32-current-base-20261030`; validation-only Draft PR #35 remains open and GitHub reports `mergeable=true`.
+- Latest exact-head Harness CI [run 40989353911](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40989353911) completed successfully. Verified compilation, offline contract tests, redacted report generation, artifact upload, and final required-stage gate all succeeded.
+- Audit confirmed the candidate's `scripts/harness_runner.py` and `tests/test_harness_runner.py` blobs are identical to original PR #32. The candidate's CI workflow additionally fixes the printf newline escape. Original PR #32 remains open/draft at its original head/base and mergeable=false; no original PR state was changed.
+- Cross-PR overlap in `tests/test_harness_runner.py` is documented: if a combined branch is needed later, merge PR #33's resolved-path assertions selectively and retain PR #32's expanded suite.
