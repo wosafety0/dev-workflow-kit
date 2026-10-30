@@ -178,3 +178,40 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The workflow trigger correction at `6fc5e5f8a8a41f6bace8585c3932d807cc9446c1` received a successful Harness CI run: [run 40858808116](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40858808116).
 - The hosted job completed Python compilation, offline tests, acceptance-report generation/upload, and the final orchestration gate. The run was retrieved through the PR-context run listing for this branch; it is not treated as separate Push CI evidence.
 - This branch is the base of PR #32, so the workflow filter correction here is what enables downstream stacked fix PRs to receive PR-context CI. PR #18 remains Draft/unmerged; no branch topology change or consumer pin update occurred.
+
+
+## 2026-10-30 — Candidate reconstruction on current base (PR #32)
+
+- Created isolated candidate branch `reconcile/pr-32-on-current-base-20261030` from current recorded base SHA `e4be499e36ed9d8e22ff45065d95f92e0876df34`; original PR and rescue refs remain unchanged.
+- Applied the source branch's runner implementation and regression suite, plus the three non-progress documentation files. Applied the PR-context branch-filter/gate logging changes as targeted edits to the current base CI workflow so other current workflow content is preserved.
+- Candidate head after these file updates: to be verified from GitHub ref metadata and compare output. This is a reconstruction candidate, not a validated replacement for PR #32.
+- Tests and exact-head CI have not yet been confirmed. Do not merge or retarget the original PR based on this candidate alone.
+
+
+## 2026-10-30 — trigger exact-head Push CI for PR #32 reconstruction candidate
+
+- Candidate branch `fix/reconcile-pr-32-current-base-20261030` is a copy of the isolated reconstruction `reconcile/pr-32-on-current-base-20261030`; the original PR and rescue refs remain untouched.
+- This archive commit is intended to trigger the repository's Push CI for the candidate head. Results must be queried by exact commit SHA before the candidate is considered validated.
+- Candidate remains non-mergeable until CI and patch review are complete. No original PR retarget or merge was performed.
+
+
+### 2026-10-30 CI trigger/config verification follow-up
+- Inspected `.github/workflows/ci.yml` on the current-base reconstruction candidate. The `push` filter includes `fix/**`, and the `pull_request` target filter includes `fix/**`.
+- Corrected a doubled backslash in the candidate's CI summary `printf` format so the newline escape is `\n`; GitHub Contents API write and read-back confirmed the exact corrected line.
+- Candidate head after this correction: `fbf62b4c0ee8ed42f9476ba6a22377287bddf9ef`.
+- Exact-head combined status is still empty and the available workflow-run connector returned no runs; therefore CI remains unverified. Do not claim tests or CI passed.
+
+
+### 2026-10-30 exact-head CI validation (PR #35)
+- Opened validation-only Draft PR #35 against the current PR #18 base `e4be499e36ed9d8e22ff45065d95f92e0876df34`; original PR #32 remains untouched.
+- Exact candidate head `6075daf1179fdb928940b2efc0b43b74d9f16b0a` ran Harness CI #659: [run 40989039532](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40989039532) completed successfully.
+- Verified all reported job steps succeeded: Python compilation, offline contract tests, redacted acceptance report generation, artifact upload, and final required-stage gate.
+- This is CI evidence for the candidate head before this progress-only archive commit. The archive commit will trigger a fresh CI run; only its result can validate the final archived head.
+- Draft PR #35: https://github.com/wosafety0/dev-workflow-kit/pull/35. No merge performed.
+
+
+### 2026-10-30 cross-PR diff audit
+- Compared candidate implementation/test blobs with original PR #32 head: `scripts/harness_runner.py` SHA `55b39b22113df5a07da7d6e0dcd9108baf1276df` and `tests/test_harness_runner.py` SHA `98d5ac1f0b661106533c90003e0476edc26065a7` match exactly. The candidate preserves the complete expanded provenance, duplicate-key, path-collision, and symlink regression suite from the original PR.
+- Reviewed output-path preflight: resolved paths are checked for input/output equality and collisions with config/report outputs; config and output symlink checks are repeated before report writing. Offline CI passed, but no separate local run was performed.
+- The CI workflow's `printf` newline escape was corrected on the candidate only; the original PR branch remains unchanged.
+- Cross-PR note: PR #33 independently modifies `tests/test_harness_runner.py` for Windows-normalized path assertions. These candidate branches are based on different stacked parents; do not squash/rebase them together by wholesale file replacement. If a future combined branch is needed, preserve PR #32's expanded suite and merge PR #33's `.resolve()` expectations selectively.
