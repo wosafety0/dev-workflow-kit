@@ -351,3 +351,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added regression coverage where the preceding task mutates the review input; expected result is blocked execution, only the first task runs, and no review/acceptance artifact remains. Updated `docs/HARNESS_RUNNER_V1.md`.
 - Exact-head Push CI [40994253760](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40994253760) and PR-context CI [40994260335](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40994260335) both succeeded for this exact SHA; compilation, offline tests, report generation/upload, and final gate completed successfully.
 - No local tests or live provider requests are claimed. PR #37 remains Draft/open/unmerged; no original candidate PR was merged, closed, or retargeted.
+
+## 2026-10-30 — rule-quote boundary validation and exact-head checkpoint
+- A second static review found that semantic-review rule quotes were checked against `global_rules + "\\n" + project_instructions`, allowing a fabricated quote to span the boundary between two separate instruction fields. Validation now requires the entire quote to occur inside one source field.
+- Added a regression test using a quote composed from the end of the global rules and the start of the project instructions; updated runner documentation.
+- Current PR #37 head: `6f2263b1c821c5eb3882f43902debcab336f42a8`. This head also includes the earlier review-input SHA-256 guard and mutation regression test.
+- Exact-head Push CI [40994473127](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40994473127) and PR-context CI [40994478252](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40994478252) both succeeded for the same exact SHA. Each completed compile, offline contract tests, redacted report generation, artifact upload, and final required-stage gate.
+- These are hosted GitHub CI results only; no local test execution or live provider request is claimed. PR #37 remains Draft/open/unmerged. No original PR was merged, closed, or retargeted.
