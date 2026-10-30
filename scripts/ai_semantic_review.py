@@ -209,7 +209,10 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
         elif old_line is not None and new_line is not None and line:
             prefix = line[0]
             if prefix == " ":
-                mapped_spans.append((line_start, line_end, {old_line, new_line}, "context"))
+                # Findings cite the resulting file's coordinates. Deleted files have no
+                # resulting-side coordinates, so use the old-file line numbers there.
+                context_line = old_line if re.search(r"(?m)^\+\+\+ /dev/null$", section) else new_line
+                mapped_spans.append((line_start, line_end, {context_line}, "context"))
                 old_line += 1
                 new_line += 1
             elif prefix == "-":

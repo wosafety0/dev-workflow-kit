@@ -538,7 +538,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
         finding["line_end"] = 7
         self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
 
-    def test_context_evidence_requires_both_old_and_new_coordinates(self):
+    def test_context_evidence_uses_resulting_file_coordinates(self):
         payload = dict(self.payload)
         payload["diff"] = (
             "diff --git a/src/client.py b/src/client.py\n"
@@ -553,12 +553,13 @@ class SemanticReviewValidationTests(unittest.TestCase):
         review = self.finding()
         finding = review["findings"][0]
         finding["evidence"] = " context target"
-        finding["line_start"] = 10
-        finding["line_end"] = 10
-        with self.assertRaisesRegex(ReviewError, "does not cover the cited diff evidence"):
-            validate_review(payload, review)
+        finding["line_start"] = 20
         finding["line_end"] = 20
         self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+        finding["line_start"] = 10
+        finding["line_end"] = 20
+        with self.assertRaisesRegex(ReviewError, "does not cover the cited diff evidence"):
+            validate_review(payload, review)
 
     def test_repeated_evidence_across_hunks_is_rejected_as_ambiguous(self):
         payload = dict(self.payload)
