@@ -392,3 +392,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added a regression test that injects `PYTHONPATH`, `PYTHONHOME`, `PYTHONUSERBASE`, and `PYTHONINSPECT` and verifies none reach the task subprocess while `PYTHONNOUSERSITE=1` is set.
 - Exact implementation/test head `ce490949dcc16dd14c11de16787a899e97ce44c0` passed GitHub Actions Push CI [run 41014360849](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41014360849) and PR-context CI [run 41014365771](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41014365771). Both workflow runs completed successfully.
 - Verification boundary: GitHub-hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+
+### Git-bound review: resolve Git executable outside caller-controlled PATH (2026-10-30)
+
+- Continued the Git provenance audit after isolating Git environment variables and repository-local configuration. Git subprocesses were still invoked by the bare executable name `git`, so a caller-controlled `PATH` could select a different executable and undermine the provenance checks themselves.
+- Added a single `_git_argv()` helper that resolves Git using the platform default executable search path (`os.defpath`) rather than the inherited `PATH`, canonicalizes the executable path, and fails closed if Git cannot be found. All Harness Git metadata/provenance subprocesses now use this helper.
+- Added a regression test that sets an untrusted ambient `PATH` and verifies executable resolution uses `os.defpath` instead.
+- Exact implementation/test head `b77c52fce7ef46595910b7abccee17c213d5117e` passed GitHub Actions Push CI [run 41014953208](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41014953208) and PR-context CI [run 41014960597](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41014960597). Both completed all required stages successfully; Push CI reports all 175 offline contract tests passed.
+- Verification boundary: GitHub-hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
