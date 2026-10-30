@@ -402,3 +402,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Current PR #37 head: `ab05ccd42f5650f893a1a68523c4d8399e13069e`.
 - Exact-head Push CI [40997442576](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40997442576) and PR-context CI [40997448652](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40997448652) both succeeded for the same SHA. Compilation, offline contract tests, redacted report generation/upload, and the final required-stage gate passed.
 - The current head also includes rejection of repeated/ambiguous evidence, a 4 MiB review-input cap, verified stdin byte snapshots, and the earlier acceptance-report and CLI hardening. No local tests or live provider requests are claimed. PR #37 remains Draft/open/unmerged.
+
+## 2026-10-30 — blocked-run artifact invalidation
+- Static audit found stale PASS artifacts could survive early path-validation failures because the runner resolved config/review inputs before establishing output paths, and a successful semantic-review artifact could survive a later post-task provenance failure.
+- The runner now establishes safe output paths first, then performs input/config path validation. On blocked exceptions it best-effort removes safely established report/review outputs, while preserving any output path that resolves to a config or review-input path; if aliasing cannot be ruled out, cleanup conservatively preserves outputs.
+- Added regression coverage for path-traversal config input with a stale report and for a semantic-review PASS artifact followed by tracked-source mutation. Updated runner security-boundary documentation.
+- Current PR #37 head: `d035dea4426e2dbbb39b22770fc206a5671bfc68`.
+- Exact-head Push CI [40998000310](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40998000310) and PR-context CI [40998004781](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40998004781) both succeeded for the same SHA. Compilation, offline tests, redacted acceptance report generation/upload, and final required-stage gate passed.
+- This head also includes the 4 MiB semantic-review input cap, byte-snapshot handoff over stdin, ambiguous-evidence rejection, exact resulting-file context line mapping, and prior acceptance/CLI hardening. No local tests or live provider requests are claimed. PR #37 remains Draft/open/unmerged.
