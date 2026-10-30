@@ -48,12 +48,12 @@ When current-facing documents conflict, follow the latest applicable, verified p
 
 ### Latest Harness head and archive verification — 2026-10-30
 
-- Latest verified branch head before this roadmap correction: `499c3a9504f6749217abdb33bd3d08aa1239cb83`.
-- Exact-head Push CI [41051708763](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41051708763) and PR-context CI [41051716159](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41051716159) both completed successfully for that exact SHA. The offline contract suite, acceptance report generation/upload, and final required-stage gate passed.
-- This commit corrected the current progress-log record only; the latest implementation/test head remains `fb6629687e6a5e8089344be24be3b8cab4308a44`, with exact-head Push CI [41051196710](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41051196710) and PR-context CI [41051203929](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41051203929) successful.
-- The first consumer pilot remains successful on consumer head `643659014370f85b61964bcbb978833ec6f74428`; see [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2).
-- The second consumer remains blocked before job steps. Run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209) attempt 2 still has no runner steps and unavailable logs; the effective caller Actions policy and root cause remain unverified. Its acceptance checkbox stays unchecked.
-- PR #40 remains Draft/open/unmerged. No Actions settings, permissions, repository visibility, merge, release, or deployment changed.
+- Latest verified branch head: `3d35cec03aa8bdfbba10a9289434efaf5df0bb64`. This is a documentation/archive commit; the exact-head CI runs verify the resulting repository tree, not a release or merge.
+- Exact-head Push CI [41052301408](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41052301408) and PR-context CI [41052308799](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41052308799) both succeeded for that exact SHA. The offline test job completed compilation, all offline contract tests, redacted acceptance report generation/upload, and the final required-stage gate.
+- The reusable acceptance workflow supports Python and Node.js with optional pnpm, validates runtime/package-manager inputs before the consumer command, rejects blank commands, runs the consumer-owned command under Bash strict mode, pins actions to full commit SHAs, and disables checkout credential persistence.
+- First consumer pilot: [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2), pinned to Harness SHA `36533dd7726365fd817f48072e49ea055d339947`; its reusable acceptance run and native lint/type-check runs passed on consumer head `643659014370f85b61964bcbb978833ec6f74428`. The PR remains Draft/unmerged.
+- Second consumer pilot: [chatgpt-auto-send-assistant PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) remains blocked before job steps. Both attempts lack usable runner logs; the effective caller Actions policy and root cause remain unverified. Do not count this as a pass. No settings or visibility were changed.
+- PR #40 remains Draft/open/unmerged. The second-consumer acceptance criterion and initial 0.x release decision remain pending. No merge, release, deployment, or repository access-policy change occurred.
 
 ## Non-negotiable acceptance rules
 
