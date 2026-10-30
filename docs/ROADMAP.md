@@ -83,3 +83,10 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - Push CI [41034922115](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41034922115) and PR-context CI [41034929136](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41034929136) both succeeded for this exact head. Both completed Python compilation, offline contract tests, redacted acceptance report generation/upload, and the final gate.
 - Hardened `.github/workflows/reusable-acceptance.yml` with `persist-credentials: false` on the SHA-pinned checkout step, and added a contract test to prevent accidental removal. This reduces unnecessary credential persistence; it is not evidence that a credential leak occurred.
 - The second consumer still fails before steps with no assigned runner and unavailable logs. Root cause and effective caller Actions policy remain unknown; its acceptance checkbox remains unchecked. No settings, permissions, repository visibility, merge, release, or deployment changed. PR #40 remains Draft/open/unmerged.
+
+
+### Exact-head CI confirmation — 2026-10-30
+
+- Current PR #40 head `d081fcf74863fbcccbea027a8e1f1b2137197cdf` passed Push CI [41035581115](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41035581115) and PR-context CI [41035591455](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41035591455).
+- Both runs completed successfully for this exact SHA. The current head is therefore verified; earlier wording that this commit's CI had not appeared is historical and superseded.
+- The second consumer remains blocked before runner steps with root cause unknown. Its acceptance criterion remains unchecked. PR #40 and consumer PRs remain Draft/unmerged; no settings, permissions, visibility, release, merge, or deployment changed.
