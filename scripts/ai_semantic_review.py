@@ -161,7 +161,7 @@ def _diff_sections(
                     if header.group(0) == f"diff --git a/{path} b/{path}"
                 ]
                 if len(candidates) != 1:
-                    raise ReviewError("Unsupported or ambiguous Git diff path header")
+                    raise ReviewError("Unsupported or malformed or ambiguous Git diff path header")
                 old_path = new_path = candidates[0]
             else:
                 raise ReviewError("Unsupported or malformed Git diff path header")
