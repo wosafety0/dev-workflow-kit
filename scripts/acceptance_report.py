@@ -17,6 +17,10 @@ _ALLOWED_TEST_STATUSES = {"passed", "failed", "skipped", "not_run"}
 _PROVENANCE_KEYS = {
     "base_sha", "head_sha", "merge_base_sha", "diff_sha256", "changed_files",
 }
+_CI_CONTEXT_KEYS = {
+    "tested_commit_sha", "run_id", "run_attempt", "event_name", "pull_request_head_sha",
+}
+_ALLOWED_CI_EVENTS = {"push", "pull_request", "workflow_dispatch"}
 
 
 def _required_text(value: Any, field: str) -> str:
@@ -63,12 +67,49 @@ def _validate_review_provenance(value: Any, commit_sha: str) -> dict[str, Any]:
     return normalized
 
 
+def _validate_ci_context(value: Any, commit_sha: str) -> dict[str, Any]:
+    if not isinstance(value, dict) or set(value) != _CI_CONTEXT_KEYS:
+        raise AcceptanceReportError("ci_context must contain exactly the required fields")
+    tested_sha = _required_text(value["tested_commit_sha"], "ci_context.tested_commit_sha")
+    if not _SHA_RE.fullmatch(tested_sha) or tested_sha.lower() != commit_sha.lower():
+        raise AcceptanceReportError("ci_context.tested_commit_sha must equal commit_sha")
+    for field in ("run_id", "run_attempt"):
+        number = value[field]
+        if type(number) is not int or number < 1:
+            raise AcceptanceReportError(f"ci_context.{field} must be a positive integer")
+    event_name = _required_text(value["event_name"], "ci_context.event_name")
+    if event_name not in _ALLOWED_CI_EVENTS:
+        raise AcceptanceReportError("ci_context.event_name is not an allowed GitHub event")
+    pr_head = value["pull_request_head_sha"]
+    if event_name == "pull_request":
+        if not isinstance(pr_head, str) or not _SHA_RE.fullmatch(pr_head):
+            raise AcceptanceReportError("ci_context.pull_request_head_sha must be a full Git SHA for pull_request")
+        normalized_pr_head = pr_head.lower()
+    else:
+        if pr_head is not None:
+            raise AcceptanceReportError("ci_context.pull_request_head_sha must be null outside pull_request events")
+        normalized_pr_head = None
+    return {
+        "tested_commit_sha": tested_sha.lower(),
+        "run_id": value["run_id"],
+        "run_attempt": value["run_attempt"],
+        "event_name": event_name,
+        "pull_request_head_sha": normalized_pr_head,
+    }
+
+
 def build_acceptance_report(metadata: Any) -> dict[str, Any]:
-    """Build schema v1 normally, or schema v2 when Git-bound review provenance is present."""
+    """Build schema v1, v2 for Git-bound provenance, or v3 with CI run context."""
     if not isinstance(metadata, dict):
         raise AcceptanceReportError("metadata must be a JSON object")
     keys = set(metadata)
-    if keys not in (_REQUIRED_ROOT_KEYS, _REQUIRED_ROOT_KEYS | {"review_provenance"}):
+    allowed_keys = {
+        frozenset(_REQUIRED_ROOT_KEYS),
+        frozenset(_REQUIRED_ROOT_KEYS | {"review_provenance"}),
+        frozenset(_REQUIRED_ROOT_KEYS | {"ci_context"}),
+        frozenset(_REQUIRED_ROOT_KEYS | {"review_provenance", "ci_context"}),
+    }
+    if frozenset(keys) not in allowed_keys:
         raise AcceptanceReportError("metadata must contain exactly the required fields")
 
     commit_sha = _required_text(metadata["commit_sha"], "commit_sha")
@@ -96,8 +137,9 @@ def build_acceptance_report(metadata: Any) -> dict[str, Any]:
 
     normalized_tests = dict(sorted(normalized_tests.items()))
     overall = "passed" if all(s == "passed" for s in normalized_tests.values()) else "failed"
+    schema_version = 3 if "ci_context" in metadata else (2 if "review_provenance" in metadata else 1)
     report = {
-        "schema_version": 2 if "review_provenance" in metadata else 1,
+        "schema_version": schema_version,
         "commit_sha": commit_sha.lower(),
         "rules_pin": rules_pin,
         "tool_version": tool_version,
@@ -108,4 +150,6 @@ def build_acceptance_report(metadata: Any) -> dict[str, Any]:
         report["review_provenance"] = _validate_review_provenance(
             metadata["review_provenance"], commit_sha
         )
+    if "ci_context" in metadata:
+        report["ci_context"] = _validate_ci_context(metadata["ci_context"], commit_sha)
     return report
