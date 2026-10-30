@@ -31,6 +31,15 @@ _SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 _MAX_TIMEOUT_SECONDS = 3600
 
 
+def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON object key")
+        result[key] = value
+    return result
+
+
 def _resolve_inside_root(root: Path, value: str, field: str) -> Path:
     if not isinstance(value, str) or not value.strip() or value != value.strip():
         raise HarnessRunnerError(f"{field} must be a non-empty trimmed repository-relative path")
@@ -60,10 +69,53 @@ def _require_artifact_path(root: Path, path: Path, field: str) -> None:
         raise HarnessRunnerError(f"{field} must identify a file inside artifacts/")
 
 
-def _git_commit_sha(root: Path) -> str:
+def _reject_symlink_path(root: Path, value: str, field: str) -> None:
+    """Reject symlinks in a repository-relative input or output path."""
+    current = root / value
+    while current != root:
+        if current.is_symlink():
+            raise HarnessRunnerError(f"{field} must not use symlinked paths")
+        current = current.parent
+
+
+def _resolve_trusted_source(root: Path, value: str, field: str) -> Path:
+    """Resolve committed executable/rule inputs, excluding mutable symlink targets and artifacts."""
+    resolved = _resolve_inside_root(root, value, field)
+    candidate = root / value
+    current = candidate
+    while current != root:
+        if current.is_symlink():
+            raise HarnessRunnerError(f"{field} must not use symlinked source paths")
+        current = current.parent
+
+    if resolved.is_dir():
+        for directory, subdirectories, filenames in os.walk(resolved, followlinks=False):
+            entries = [Path(directory) / name for name in (*subdirectories, *filenames)]
+            if any(entry.is_symlink() for entry in entries):
+                raise HarnessRunnerError(f"{field} must not contain symlinked source paths")
+
+    artifact_root = (root / "artifacts").resolve()
     try:
+        resolved.relative_to(artifact_root)
+    except ValueError:
+        return resolved
+    raise HarnessRunnerError(f"{field} must not resolve inside artifacts/")
+
+
+def _require_tracked_config(root: Path, config_path: Path) -> None:
+    """Require the config to be a committed file outside generated artifacts/."""
+    artifact_root = (root / "artifacts").resolve()
+    try:
+        config_path.relative_to(artifact_root)
+    except ValueError:
+        pass
+    else:
+        raise HarnessRunnerError("config must not resolve inside artifacts/")
+
+    try:
+        relative = config_path.relative_to(root.resolve()).as_posix()
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
+            ["git", "ls-tree", "-r", "--name-only", "HEAD", "--", f":(literal){relative}"],
             cwd=root,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -72,15 +124,60 @@ def _git_commit_sha(root: Path) -> str:
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired):
-        raise HarnessRunnerError("Could not determine the project Git commit SHA") from None
+        raise HarnessRunnerError("Could not verify tracked Harness config") from None
+    if result.returncode != 0 or relative not in result.stdout.splitlines():
+        raise HarnessRunnerError("config must be tracked by the current Git HEAD")
+
+
+def _git_commit_sha(root: Path) -> str:
+    """Require that the report's commit describes the exact checked-out source.
+
+    Git status checks tracked changes and untracked files, excluding only generated
+    artifacts/. Normal interpreter caches should be covered by the project's
+    .gitignore. No filenames or file contents are included in error messages.
+    """
+    def run_git(*args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", *args],
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+
+    try:
+        top = run_git("rev-parse", "--show-toplevel")
+        result = run_git("rev-parse", "HEAD")
+        status = run_git(
+            "status", "--porcelain=v1", "--untracked-files=all",
+            "--", ".", ":(exclude)artifacts",
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise HarnessRunnerError("Could not verify Git commit provenance") from None
+    if top.returncode != 0 or not top.stdout.strip() or (
+        Path(top.stdout.strip()).resolve() != root.resolve()
+    ):
+        raise HarnessRunnerError("project-root must be the Git repository root")
     sha = result.stdout.strip()
     if result.returncode != 0 or not _SHA_RE.fullmatch(sha):
         raise HarnessRunnerError("Project root must be a Git worktree with a valid HEAD commit")
+    if status.returncode != 0:
+        raise HarnessRunnerError("Could not verify clean Git worktree")
+    if status.stdout:
+        raise HarnessRunnerError(
+            "Git worktree must be clean outside artifacts/ before acceptance"
+        )
     return sha.lower()
 
 
 def _rules_pin(root: Path) -> str:
-    contract = root / "docs" / "STABLE_ACCEPTANCE_CONTRACT.md"
+    contract = _resolve_trusted_source(
+        root, "docs/STABLE_ACCEPTANCE_CONTRACT.md", "stable acceptance contract"
+    )
+    if not contract.is_file():
+        raise HarnessRunnerError("Could not read docs/STABLE_ACCEPTANCE_CONTRACT.md")
     try:
         digest = hashlib.sha256(contract.read_bytes()).hexdigest()
     except OSError:
@@ -95,13 +192,33 @@ def _task_argv(
     review_output: Path | None,
 ) -> list[str]:
     if task_id == "python-unittest":
+        tests_dir = _resolve_trusted_source(root, "tests", "tests directory")
+        if not tests_dir.is_dir():
+            raise HarnessRunnerError("python-unittest task requires a tests/ directory")
+        # Git status omits ignored files; unittest discovery must not execute them.
+        try:
+            ignored = subprocess.run(
+                ["git", "ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "tests"],
+                cwd=root, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                timeout=10, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            raise HarnessRunnerError("Could not verify ignored Python test source") from None
+        if ignored.returncode != 0:
+            raise HarnessRunnerError("Could not verify ignored Python test source")
+        if any(
+            Path(os.fsdecode(path)).name.startswith("test")
+            and Path(os.fsdecode(path)).suffix == ".py"
+            for path in ignored.stdout.split(b"\0") if path
+        ):
+            raise HarnessRunnerError("ignored Python test source must not be executed")
         return [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
     if task_id == "semantic-review":
         if review_input is None or review_output is None:
             raise HarnessRunnerError(
                 "semantic-review requires both --review-input and --review-output"
             )
-        script = root / "scripts" / "ai_semantic_review.py"
+        script = _resolve_trusted_source(root, "scripts/ai_semantic_review.py", "semantic-review script")
         if not script.is_file():
             raise HarnessRunnerError("semantic-review task requires scripts/ai_semantic_review.py")
         return [
@@ -188,15 +305,21 @@ def main(argv: list[str] | None = None) -> int:
         if not root.is_dir():
             raise HarnessRunnerError("project-root must be an existing directory")
         config_path = _resolve_inside_root(root, args.config, "config")
+        _reject_symlink_path(root, args.config, "config")
         report_path = _resolve_inside_root(root, args.report_output, "report-output")
+        _reject_symlink_path(root, args.report_output, "report-output")
         review_input = (
             _resolve_inside_root(root, args.review_input, "review-input")
             if args.review_input is not None else None
         )
+        if args.review_input is not None:
+            _reject_symlink_path(root, args.review_input, "review-input")
         review_output = (
             _resolve_inside_root(root, args.review_output, "review-output")
             if args.review_output is not None else None
         )
+        if args.review_output is not None:
+            _reject_symlink_path(root, args.review_output, "review-output")
         if review_input is not None and review_output is not None and review_input == review_output:
             raise HarnessRunnerError("review-input and review-output must be different paths")
         if review_output is not None and review_output == config_path:
@@ -209,9 +332,27 @@ def main(argv: list[str] | None = None) -> int:
             if path is not None and path == report_path:
                 raise HarnessRunnerError(f"report-output must not overwrite {label}")
 
+        # Invalidate previous successful artifacts before config validation or task
+        # execution, so a blocked run cannot leave a stale PASS for consumers.
+        _require_artifact_path(root, report_path, "report-output")
+        if review_output is not None:
+            _require_artifact_path(root, review_output, "review-output")
+        for output in (report_path, review_output):
+            if output is not None:
+                try:
+                    output.unlink()
+                except FileNotFoundError:
+                    pass
+
+        _require_tracked_config(root, config_path)
+
+
         try:
-            raw_config = json.loads(config_path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeError, json.JSONDecodeError):
+            raw_config = json.loads(
+                config_path.read_text(encoding="utf-8"),
+                object_pairs_hook=_reject_duplicate_json_keys,
+            )
+        except (OSError, UnicodeError, ValueError):
             raise HarnessRunnerError("Could not read a valid JSON Harness config") from None
         config = validate_harness_config(raw_config)
 
@@ -258,6 +399,19 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(f"Task {task_id}: {status}{suffix}")
             failed = status != "passed"
+
+        # Tests or hooks may edit tracked/untracked source or move HEAD. Never
+        # attribute such a run to the original commit in a passing report.
+        if _git_commit_sha(root) != commit_sha:
+            raise HarnessRunnerError("Git HEAD changed during task execution")
+
+        # Revalidate generated output paths immediately before report emission.
+        _reject_symlink_path(root, args.report_output, "report-output")
+        _require_artifact_path(root, report_path, "report-output")
+        if args.review_output is not None:
+            _reject_symlink_path(root, args.review_output, "review-output")
+            if review_output is not None:
+                _require_artifact_path(root, review_output, "review-output")
 
         metadata = {
             "commit_sha": commit_sha,
