@@ -212,6 +212,55 @@ class GitBoundReviewTests(unittest.TestCase):
             self.assertIn("+VALUE = 'new'", payload["diff"])
             self.assertEqual(provenance["changed_files"], ["source.py"])
 
+
+    def test_local_config_cannot_hide_changed_submodule_from_review(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            child = root / "child"
+            child.mkdir()
+
+            def git(cwd, *args):
+                return subprocess.run(
+                    ["git", *args], cwd=cwd, check=True,
+                    capture_output=True, text=True,
+                )
+
+            git(child, "init", "-q")
+            git(child, "config", "user.name", "Harness Test")
+            git(child, "config", "user.email", "harness-test@example.invalid")
+            (child / "module.py").write_text("VALUE = 1\\n", encoding="utf-8")
+            git(child, "add", "module.py")
+            git(child, "commit", "-qm", "submodule base")
+
+            git(root, "init", "-q")
+            git(root, "config", "user.name", "Harness Test")
+            git(root, "config", "user.email", "harness-test@example.invalid")
+            git(root, "-c", "protocol.file.allow=always", "submodule", "add", "-q",
+                str(child), "deps/sub")
+            git(root, "commit", "-qam", "superproject base")
+            base_sha = git(root, "rev-parse", "HEAD").stdout.strip()
+
+            git(root / "deps/sub", "config", "user.name", "Harness Test")
+            git(root / "deps/sub", "config", "user.email", "harness-test@example.invalid")
+            (root / "deps/sub/module.py").write_text("VALUE = 2\\n", encoding="utf-8")
+            git(root / "deps/sub", "add", "module.py")
+            git(root / "deps/sub", "commit", "-qm", "submodule head")
+            git(root, "add", "deps/sub")
+            git(root, "commit", "-qm", "superproject head")
+            head_sha = git(root, "rev-parse", "HEAD").stdout.strip()
+
+            # Both repository-local settings would otherwise hide the gitlink change.
+            git(root, "config", "diff.ignoreSubmodules", "all")
+            git(root, "config", "submodule.deps/sub.ignore", "all")
+            with self.assertRaisesRegex(
+                harness_runner.HarnessRunnerError,
+                "failed semantic-review input validation",
+            ):
+                harness_runner._build_git_bound_review_input(
+                    root, self.source, base_sha, head_sha, head_sha
+                )
+
+
     def test_rejects_malformed_review_context_json(self):
         with patch.object(
             harness_runner, "_resolve_git_commit", side_effect=[BASE, HEAD]
