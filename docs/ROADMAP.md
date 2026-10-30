@@ -36,6 +36,7 @@ When current-facing documents conflict, follow the latest applicable, verified p
 ## Stage 3 — versioned distribution
 
 - [x] Add a minimal reusable acceptance workflow with read-only repository permissions and an explicit consumer-owned test command (`.github/workflows/reusable-acceptance.yml`).
+- [x] Extend the reusable acceptance workflow with explicit Python/Node.js runtime selection and optional pinned pnpm setup; reject unsupported runtime/package-manager combinations before the consumer command runs.
 - [x] Document immutable 40-character SHA pinning, security boundaries, and upgrade/rollback procedure (`docs/REUSABLE_ACCEPTANCE_WORKFLOW.md`).
 - [x] Define a document precedence and stale-content maintenance policy (`docs/DOCUMENT_PRECEDENCE.md`).
 - [ ] Tag an initial 0.x release only after acceptance criteria pass on the exact release candidate and the release scope is reviewed.
