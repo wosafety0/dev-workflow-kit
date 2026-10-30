@@ -192,6 +192,10 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
         cursor = offset + 1
     if not offsets:
         return set()
+    if len(offsets) != 1:
+        raise ReviewError(
+            "Evidence is ambiguous because the exact substring appears multiple times in the cited diff section"
+        )
 
     mapped_spans = []
     offset = 0

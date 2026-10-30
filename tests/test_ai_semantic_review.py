@@ -83,6 +83,28 @@ class SemanticReviewValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ReviewError, "does not belong to the cited file"):
             validate_review(self.payload, review)
 
+    def test_rejects_ambiguous_evidence_repeated_in_same_file(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/src/client.py b/src/client.py\n"
+            "--- a/src/client.py\n"
+            "+++ b/src/client.py\n"
+            "@@ -1,2 +1,2 @@\n"
+            "-old first\n"
+            "+duplicate target\n"
+            "@@ -20,2 +20,2 @@\n"
+            "-old second\n"
+            "+duplicate target\n"
+        )
+        payload["changed_files"] = ["src/client.py"]
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["evidence"] = "+duplicate target"
+        finding["line_start"] = 1
+        finding["line_end"] = 21
+        with self.assertRaisesRegex(ReviewError, "Evidence is ambiguous"):
+            validate_review(payload, review)
+
     def test_rejects_evidence_borrowed_from_another_file(self):
         review = self.finding()
         review["findings"][0]["file"] = "README.md"
