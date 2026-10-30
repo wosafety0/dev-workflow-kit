@@ -219,3 +219,15 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Restored both original regression tests without changing the runner implementation. The unified runner test module now contains 34 test methods, includes every one of the 14 test methods from PR #24's base file, all 31 methods from PR #32's candidate suite, and the additional loopback preflight regression. No duplicate test method names were found.
 - Exact corrected head `731c39a5a8c9d1a21312b2c959a6e6dc3c732123` passed Harness CI [run 40991595301](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40991595301): Python compilation, all offline contract tests, redacted acceptance report build/upload, and final required-stage gate succeeded.
 - This was a source-level inventory plus hosted CI verification; no local tests or live provider requests were run. PR #37 remains Draft/unmerged; original PRs and earlier candidates remain unchanged.
+
+
+## 2026-10-30 — optional Git-bound semantic-review mode
+
+- Created isolated branch `feat/optional-git-bound-review-20261030` from unified candidate head `d035dea4426e2dbbb39b22770fc206a5671bfc68`; PR #37 and all earlier candidate branches remain unchanged.
+- Preserved compatibility mode: caller-supplied semantic-review JSON remains accepted when neither `--review-base` nor `--review-head` is supplied.
+- Added opt-in strict mode requiring both full 40-character commit SHAs. The runner verifies both are commit objects, requires the requested head to equal the clean checked-out `HEAD`, derives the merge base and diff directly from Git, bounds Git diff/name-list reads to 4 MiB, replaces caller-provided `diff` and `changed_files`, and validates the generated input against the semantic-review parser before task execution.
+- Strict-mode acceptance reports use schema version 2 and include base/head/merge-base SHAs, SHA-256 of the exact Git diff bytes, and changed-file paths. Ordinary compatibility-mode reports remain schema version 1.
+- Added regression coverage for caller-diff replacement, generated diff/file-list consistency, malformed review context, checked-out-head mismatch, paired flag requirements, acceptance-report provenance validation, and a runner integration test using a real local Git commit range.
+- Exact implementation head before this archive update: `7beb710a7938b5d714cbd80355f97babf841af95`. Exact-head GitHub Harness CI [run 41002885521](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41002885521) completed successfully: Python compilation, offline contract tests, redacted acceptance report generation/upload, and final required-stage gate all passed.
+- This is hosted CI evidence; no local tests, live provider request, credential use, merge, release, deployment, or game action is claimed. The archive update will trigger a fresh exact-head CI run.
+- Remaining boundaries: strict mode attests the Git diff bytes supplied to the review, not model-review completeness, dependency/runtime identity, or authorization to merge/deploy. Diff/path formats unsupported by the semantic-review parser fail closed.
