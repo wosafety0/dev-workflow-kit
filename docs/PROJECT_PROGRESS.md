@@ -305,3 +305,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Re-read run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209), attempt 2, and job [123960822318](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209/job/123960822318): the run is failed, the step list is empty, and the job-log endpoint returns `BlobNotFound`. No runner-level cause is exposed.
 - The GitHub connector cannot read the private repository's Actions permissions settings endpoint; therefore the effective caller/organization policy is still unknown. A policy restriction remains a hypothesis, not a finding.
 - No consumer code, repository settings, visibility, or permissions were changed. PR #1 remains Draft/unmerged. This archive-only change must pass Push and PR-context CI on its resulting exact Harness branch head before this entry is considered CI-verified.
+
+
+### Latest exact-head verification and roadmap consistency — 2026-10-30
+
+- Current PR #40 branch head verified from GitHub: `010bdc400597ca7840bdf4928cd9cdeaae7dbd3b`.
+- Push CI [41032611297](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41032611297) and PR-context CI [41032618160](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41032618160) both passed on that exact head. Each `offline-tests` job completed compilation, all offline contract tests, redacted acceptance report generation/upload, and the final gate.
+- The older roadmap/progress notes saying a later archive commit still needed exact-head verification are historical; this entry supersedes them for the verified head above.
+- The first independent consumer pilot remains passing at its recorded immutable Harness SHA. The second consumer remains blocked before steps with no actionable logs; the cause and effective Actions policy remain unverified. Do not count it as passing.
+- PR #40 and both consumer PRs remain Draft/open/unmerged. No repository settings, permissions, visibility, release, deployment, or local-worktree synchronization changed.
