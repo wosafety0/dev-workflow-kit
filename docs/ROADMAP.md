@@ -98,3 +98,11 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - Both runs completed `offline-tests` successfully: Python compilation, all offline contract tests, redacted acceptance report generation/upload, and the final required-stage gate.
 - The roadmap and progress archive now record this verified state. The next resulting documentation commit requires its own exact-head CI check; second-consumer acceptance remains incomplete and the cause of its pre-step failure remains unknown.
 - PR #40 remains Draft/open/unmerged. No Actions settings, permissions, visibility, merge, release, or deployment changed.
+
+
+### Permission-contract hardening and second-consumer diagnostic update — 2026-10-30
+
+- Current Harness PR #40 head before this archive: `1cd44edbc71dfaff4eb4d03b67d9d7d7eec87244`. The permission contract test now rejects any permission key set to `write`, not only a short allowlist. Exact-head Push CI [41041286644](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41041286644) and PR-context CI [41041302017](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41041302017) both succeeded.
+- New read-only inspection of consumer run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209) confirms GitHub recorded the reusable-workflow reference at the intended immutable SHA `36533dd7726365fd817f48072e49ea055d339947`. This reduces the likelihood of a missing path/ref as the explanation, but does not prove the caller's effective Actions policy is permissive.
+- Attempt 2 job [123960822318](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209/job/123960822318) still has `runner_id: 0`, no runner name, and an empty step list. The log endpoint returns `BlobNotFound`; the annotations endpoint is not accessible through the current GitHub connector. Effective caller/org policy and the failure annotation text remain unverified. Root cause is still unknown; no settings, permissions, or visibility were changed.
+- This update is an evidence clarification, not a second-consumer pass. Its acceptance checkbox remains unchecked. All PRs remain Draft/unmerged; no release or deployment occurred.
