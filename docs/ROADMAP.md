@@ -68,7 +68,7 @@ When current-facing documents conflict, follow the latest applicable, verified p
 ### Second-consumer source cross-check — 2026-10-30
 - Revalidated the caller workflow and reusable workflow at the exact pinned Harness SHA. The reusable file exists, declares `workflow_call`, and exposes the input names/types used by the consumer; no obvious workflow path, immutable pin, or input mismatch was found.
 - The second-consumer run still fails before steps with an empty step list and unavailable logs. Effective Actions policy settings could not be read through the available connector, so the cause remains unknown. Do not mark the second-consumer criterion complete or change visibility/settings without an evidence-based, authorized decision.
-- PR #1 remains Draft/unmerged; no consumer implementation, settings, visibility, permissions, release, or deployment changes were made. The archive commit's exact-head CI remains pending verification.
+- PR #1 remains Draft/unmerged; no consumer implementation, settings, visibility, permissions, release, or deployment changes were made. Historical note: archive CI was pending at the time this entry was written; later exact-head verification is recorded below and supersedes that pending status.
 
 
 ### Superseding exact-head verification update — 2026-10-30
