@@ -506,9 +506,9 @@ class HarnessRunnerTests(unittest.TestCase):
         # Ignored helper modules can be imported by tracked tests and affect results.
         ignored_helper = self.root / "tests" / "helper.py"
         (self.root / ".gitignore").write_text(
-            "tests/helper.py\\n", encoding="utf-8"
+            "tests/helper.py\n", encoding="utf-8"
         )
-        ignored_helper.write_text("RESULT = 'mutable ignored source'\\n", encoding="utf-8")
+        ignored_helper.write_text("RESULT = 'mutable ignored source'\n", encoding="utf-8")
         subprocess.run(
             ["git", "add", ".gitignore"], cwd=self.root, check=True,
             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
