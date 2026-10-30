@@ -266,7 +266,7 @@ class GitBoundReviewTests(unittest.TestCase):
             harness_runner, "_resolve_git_commit", side_effect=[BASE, HEAD]
         ), patch.object(harness_runner, "_git_text", return_value=BASE), patch.object(
             harness_runner, "_git_bytes_bounded",
-            side_effect=[DIFF.encode("utf-8"), b"tests/test_example.py\0"],
+            side_effect=[b"", DIFF.encode("utf-8"), b"tests/test_example.py\0"],
         ):
             with self.assertRaisesRegex(
                 harness_runner.HarnessRunnerError, "valid UTF-8 JSON"
