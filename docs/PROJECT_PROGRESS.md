@@ -278,3 +278,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Rechecked second-consumer run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209) and its job record: the job failed before any runner was assigned and contains an empty step list; no runner logs or actionable error are exposed through the available read-only API. The exact cause remains unconfirmed. Repository Actions policy/settings could not be inspected with the available read-only surface, and no settings were changed.
 - All three Harness PRs remain Draft/open/unmerged, with their existing base branch unchanged. No release, merge, deployment, permission change, or local-worktree sync is claimed.
 - This archive-only commit requires its own Push and PR-context CI to pass on the exact resulting commit before this new archive is considered verified.
+
+
+### Second-consumer retry evidence — 2026-10-30
+
+- Re-ran only the previously failed job in second-consumer workflow [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209) as attempt 2, without changing the consumer commit, workflow definition, repository visibility, or Actions settings.
+- Attempt 2 again failed before any steps: job [123960822318](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209/job/123960822318) is completed with failure and an empty step list. The job-log endpoint returned `BlobNotFound`; no actionable error message or runner logs were exposed.
+- The repeated pre-step failure makes a one-off transient failure less likely, but does not identify the root cause. The caller repository's Actions policy/permissions remain an unverified diagnostic target; repository visibility alone is not sufficient evidence.
+- The second-consumer criterion remains incomplete. No settings, permissions, visibility, consumer code, or Harness implementation were changed during the retry. This documentation archive must pass Push and PR-context CI on its exact resulting commit before it is treated as verified.
