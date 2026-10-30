@@ -490,3 +490,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - PR #37 candidate head `d0c513b19876f057017c4c7fbb5ca52c7d377253` now rejects ignored project Python sources before task planning/execution and rechecks after all tasks. Regression coverage verifies rejection when a task creates an ignored helper; runner and stable contract docs state the boundary.
 - Exact-head Push CI [run 40993134186](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993134186) and PR-context CI [run 40993140527](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993140527) both succeeded.
 - PR #37 remains Draft/unmerged. Original PR #32 is unchanged; no merge or release is authorized by this archive.
+
+
+## 2026-10-30 — post-task source cleanliness gate
+- Static review found that the runner checked only HEAD after tasks; a task could modify tracked source or create non-ignored untracked source while leaving HEAD unchanged.
+- PR #37 candidate head `b9748c3230782e3065923f386bacbd7a2ba83bdd` now reruns the full Git provenance/clean-worktree check after task execution, in addition to checking ignored Python source inventory. Added regression tests for task-created untracked source and task-modified tracked source; updated runner and contract documentation.
+- Exact-head Push CI [run 40993507598](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993507598) and PR-context CI [run 40993515179](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993515179) both succeeded.
+- Candidate PR #37 remains Draft/unmerged. Original PR #32 source refs remain untouched. Runtime/dependency environment is not attested by source commit.
