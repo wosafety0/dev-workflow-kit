@@ -287,10 +287,13 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         }
         for input_name, expected_default in expected_defaults.items():
             with self.subTest(input_name=input_name):
-                block = self.source.split(f"      {input_name}:\\n", 1)[1]
-                block = block.split("\\n      ", 1)[0]
+                match = re.search(
+                    rf"(?ms)^      {re.escape(input_name)}:\\n(.*?)(?=^      [a-zA-Z][a-zA-Z0-9-]*:\\n|^permissions:)",
+                    self.source,
+                )
+                self.assertIsNotNone(match, f"Missing workflow input: {input_name}")
                 self.assertRegex(
-                    block,
+                    match.group(1),
                     rf"(?m)^        default: {re.escape(expected_default)}\\s*$",
                 )
 
