@@ -359,3 +359,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added a real temporary-repository regression that writes a graft making the head commit appear root-like, then verifies strict review still derives the true parent commit as the merge base and includes the source change. The environment regression also asserts the graft override.
 - Exact implementation/test head `9ab754bafcc791e37b49ea6afc3e7d26e45fde86` passed Push CI [run 41012770557](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41012770557) and PR-context CI [run 41012776765](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41012776765). Both passed the required-stage gate; Push CI ran all 170 offline contract tests successfully.
 - Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+### Git-bound review: reject shallow repository history (2026-10-30)
+
+- Continued the ancestry audit after isolating replace refs and legacy grafts. A shallow repository marks commits as history boundaries; merge-base can therefore return a baseline derived from incomplete ancestry even when the requested commit objects are present.
+- Strict Git-bound review now checks git rev-parse --is-shallow-repository and fails closed unless Git explicitly reports false. Compatibility mode is unchanged.
+- Added a real temporary-repository regression that retains both base/head commit objects, marks the head as a shallow boundary via .git/shallow, confirms Git reports a shallow repository, and verifies strict review rejects it before merge-base/diff derivation.
+- Exact implementation/test head 32096f2bf2ccbc70007ac9a68414b3acaf3d18c8 passed Push CI [run 41013208958](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41013208958) and PR-context CI [run 41013217001](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41013217001). Both ran all 171 offline contract tests successfully, generated a passed acceptance report, uploaded the report artifact, and passed the final required-stage gate.
+- Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
