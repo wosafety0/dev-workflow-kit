@@ -208,3 +208,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Verified all reported job steps succeeded: Python compilation, offline contract tests, redacted acceptance report generation, artifact upload, and final required-stage gate.
 - This is CI evidence for the candidate head before this progress-only archive commit. The archive commit will trigger a fresh CI run; only its result can validate the final archived head.
 - Draft PR #35: https://github.com/wosafety0/dev-workflow-kit/pull/35. No merge performed.
+
+
+### 2026-10-30 cross-PR diff audit
+- Compared candidate implementation/test blobs with original PR #32 head: `scripts/harness_runner.py` SHA `55b39b22113df5a07da7d6e0dcd9108baf1276df` and `tests/test_harness_runner.py` SHA `98d5ac1f0b661106533c90003e0476edc26065a7` match exactly. The candidate preserves the complete expanded provenance, duplicate-key, path-collision, and symlink regression suite from the original PR.
+- Reviewed output-path preflight: resolved paths are checked for input/output equality and collisions with config/report outputs; config and output symlink checks are repeated before report writing. Offline CI passed, but no separate local run was performed.
+- The CI workflow's `printf` newline escape was corrected on the candidate only; the original PR branch remains unchanged.
+- Cross-PR note: PR #33 independently modifies `tests/test_harness_runner.py` for Windows-normalized path assertions. These candidate branches are based on different stacked parents; do not squash/rebase them together by wholesale file replacement. If a future combined branch is needed, preserve PR #32's expanded suite and merge PR #33's `.resolve()` expectations selectively.
