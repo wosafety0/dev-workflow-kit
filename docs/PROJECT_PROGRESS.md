@@ -323,3 +323,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - PR #37 candidate head `2ee839b9c8cada2fe3c5646d6eae57bc83a138e4` now checks ignored Python sources across the project tree, excluding generated artifacts, common virtual environments, and Python caches. Regression tests cover ignored helpers under `tests/` and `scripts/`; runner and contract docs were updated.
 - Exact-head Push CI [run 40992914390](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40992914390) and PR-context CI [run 40992921060](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40992921060) both succeeded.
 - Candidate remains Draft/unmerged; original PR #33 was not changed. Runtime/dependency environment contents are not attested by the source commit.
+
+
+## 2026-10-30 — post-task ignored-source revalidation
+- Additional audit found a task could create ignored Python source after the initial preflight. The runner now repeats the ignored-source check after all tasks, before the report can be emitted.
+- Final PR #37 candidate head: `d0c513b19876f057017c4c7fbb5ca52c7d377253`; regression coverage verifies that a task-created ignored helper blocks acceptance.
+- Exact-head Push CI [run 40993134186](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993134186) and PR-context CI [run 40993140527](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993140527) both succeeded.
+- PR #37 remains Draft/unmerged. Original PR #33 remains unchanged; no merge or release is authorized by this archive.
