@@ -2,9 +2,9 @@
 
 Status: deterministic metadata validator and report builder; not a test runner. Schema v1 remains the compatibility-mode format; the opt-in Git-bound runner emits schema v2.
 
-## Required input
+## Required input (schema v1)
 
-The caller supplies exactly four fields:
+For compatibility-mode schema v1, the caller supplies exactly four fields:
 
 - `commit_sha`: full 40-character Git commit SHA.
 - `rules_pin`: lowercase SHA-256 content pin in the form `sha256:` followed by exactly 64 lowercase hexadecimal characters.
@@ -33,7 +33,7 @@ The test step uses `continue-on-error` only so the report can still be produced 
 
 ## Output and fail-closed behavior
 
-The report contains only `schema_version`, `commit_sha`, `rules_pin`, `tool_version`, normalized `tests`, and overall `status`. Test names are sorted for deterministic output and the commit SHA is normalized to lowercase.
+A schema-v1 report contains only `schema_version`, `commit_sha`, `rules_pin`, `tool_version`, normalized `tests`, and overall `status`. Test names are sorted for deterministic output and the commit SHA is normalized to lowercase.
 
 Overall status is `passed` only when every declared test status is exactly `passed`. A `failed`, `skipped`, or `not_run` test produces overall `failed`. Missing or malformed required data and unknown input keys are rejected. This strict allowlist prevents arbitrary input fields—including credentials, environment dumps, and raw logs—from being copied into the report.
 
