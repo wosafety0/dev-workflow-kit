@@ -585,6 +585,8 @@ class HarnessRunnerTests(unittest.TestCase):
         git(child, "add", "module.py")
         git(child, "commit", "-qm", "submodule base")
 
+        git(self.root, "config", "user.name", "Harness Test")
+        git(self.root, "config", "user.email", "harness-test@example.invalid")
         git(self.root, "-c", "protocol.file.allow=always", "submodule", "add", "-q",
             str(child), "deps/sub")
         git(self.root, "commit", "-qam", "add submodule")
