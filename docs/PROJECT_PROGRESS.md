@@ -2,6 +2,12 @@
 
 Last updated: 2026-10-31
 
+## Latest private-consumer retest — 2026-10-31
+
+- Updated the Draft private consumer [chatgpt-auto-send-assistant PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) to pin the reusable workflow to Harness SHA `37dc07c7d7055a740c754ab543eeecc9e01d9db0`. Consumer commit: `0d64bf825cc5a76f3d8603f2e0fb431613715b56`.
+- New exact-head run [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) failed before any job steps; the job has an empty step list and its log endpoint returns `BlobNotFound`. This reproduces the pre-step failure with the latest reviewed Harness pin, so the old pin is not a sufficient explanation. Root cause and effective caller Actions policy remain unknown.
+- No repository Actions settings, permissions, secrets, or visibility were changed. Do not mark the private-consumer acceptance as passed; the PR remains Draft/open/unmerged.
+
 ## Latest consumer pin verification — 2026-10-31
 
 - Updated the Draft consumer pilot [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2) to pin the reusable acceptance workflow to the reviewed Harness commit `37dc07c7d7055a740c754ab543eeecc9e01d9db0` (workflow blob SHA `a5fccae44358222a0d453c33afbe90f95d29f191`). The pin change is isolated to the consumer's acceptance workflow; no application source, deployment configuration, secrets, or provider behavior changed.
