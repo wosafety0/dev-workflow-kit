@@ -458,7 +458,7 @@ def _build_git_bound_review_input(
         root,
         [
             "-c", "core.quotePath=false", "diff",
-            "--no-ext-diff", "--no-textconv", "--no-renames", "--no-color",
+            "--text", "--no-ext-diff", "--no-textconv", "--no-renames", "--no-color",
             "--unified=3", merge_base, head_sha, "--",
         ],
         "Git-generated semantic-review diff",
