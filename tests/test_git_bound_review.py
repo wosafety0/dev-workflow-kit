@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -80,6 +82,40 @@ class GitBoundReviewTests(unittest.TestCase):
                 harness_runner._build_git_bound_review_input(
                     Path("."), self.source, BASE, HEAD, HEAD
                 )
+
+    def test_git_diff_output_is_capped_without_buffering_unbounded_output(self):
+        real_popen = subprocess.Popen
+
+        def oversized_process(_argv, **kwargs):
+            return real_popen(
+                [sys.executable, "-c", "import sys; sys.stdout.write('x' * 1000)"],
+                **kwargs,
+            )
+
+        with patch.object(harness_runner, "_MAX_REVIEW_INPUT_BYTES", 16), patch.object(
+            harness_runner.subprocess, "Popen", side_effect=oversized_process
+        ):
+            with self.assertRaisesRegex(
+                harness_runner.HarnessRunnerError, "exceeds the 4 MiB input limit"
+            ):
+                harness_runner._git_bytes_bounded(Path("."), [], "test diff")
+
+    def test_git_diff_read_has_a_wall_clock_timeout(self):
+        real_popen = subprocess.Popen
+
+        def hanging_process(_argv, **kwargs):
+            return real_popen(
+                [sys.executable, "-c", "import time; time.sleep(30)"],
+                **kwargs,
+            )
+
+        with patch.object(harness_runner, "_GIT_COMMAND_TIMEOUT_SECONDS", 0.05), patch.object(
+            harness_runner.subprocess, "Popen", side_effect=hanging_process
+        ):
+            with self.assertRaisesRegex(
+                harness_runner.HarnessRunnerError, "Could not verify test diff"
+            ):
+                harness_runner._git_bytes_bounded(Path("."), [], "test diff")
 
     def test_rejects_malformed_review_context_json(self):
         with patch.object(
