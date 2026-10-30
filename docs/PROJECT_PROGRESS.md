@@ -296,3 +296,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Documentation-only commit `a84a6b39ebbdd0819c8ff19068449890e1a28b41` passed exact-head Push CI [41025355542](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41025355542) and PR-context CI [41025363651](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41025363651).
 - The second consumer remains blocked pending actionable evidence or a separately authorized settings review. No repository settings, permissions, visibility, application code, or deployment behavior were changed.
 - The follow-up archive commit recorded current PR #40 head `4cd2d694faddb655a482f5d26905f3bbe9ff8bd7`; exact-head Push CI [41025416154](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41025416154) and PR-context CI [41025420927](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41025420927) both passed. The documentation-only archive is verified for that exact head.
+
+
+### Second-consumer workflow-definition cross-check — 2026-10-30
+
+- Re-fetched consumer PR #1's caller workflow at head `9757c44c8a255d9587ff5b47f1016e5fb57cd8b6` and the reusable workflow at immutable Harness SHA `36533dd7726365fd817f48072e49ea055d339947`.
+- The called file exists at that exact SHA and declares `workflow_call`; its input names and types match the caller's `runtime: node`, `node-version: "24"`, `package-manager: none`, and `test-command: "npm test"`. This source cross-check found no obvious path, pin, or input-name mismatch.
+- Re-read run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209), attempt 2, and job [123960822318](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209/job/123960822318): the run is failed, the step list is empty, and the job-log endpoint returns `BlobNotFound`. No runner-level cause is exposed.
+- The GitHub connector cannot read the private repository's Actions permissions settings endpoint; therefore the effective caller/organization policy is still unknown. A policy restriction remains a hypothesis, not a finding.
+- No consumer code, repository settings, visibility, or permissions were changed. PR #1 remains Draft/unmerged. This archive-only change must pass Push and PR-context CI on its resulting exact Harness branch head before this entry is considered CI-verified.
