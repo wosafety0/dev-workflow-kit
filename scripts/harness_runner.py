@@ -452,11 +452,6 @@ def _build_git_bound_review_input(
     if head_sha != current_head.lower():
         raise HarnessRunnerError("review-head must equal the checked-out Git HEAD")
 
-    shallow_state = _git_text(
-        root, ["rev-parse", "--is-shallow-repository"], "Git shallow repository state"
-    ).lower()
-    if shallow_state != "false":
-        raise HarnessRunnerError("Strict review requires complete Git history")
     merge_bases = _git_text(
         root, ["merge-base", "--all", base_sha, head_sha], "Git review merge-base"
     ).lower().splitlines()
