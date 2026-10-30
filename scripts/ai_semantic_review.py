@@ -13,6 +13,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
@@ -442,14 +443,59 @@ def call_model(payload: dict[str, Any]) -> Any:
         raise ReviewError("Model response was not valid JSON in the expected chat-completions shape") from None
 
 
+def _reject_symlink_components(path: Path, field: str) -> Path:
+    """Reject symlinks in an input/output path without following the final component."""
+    absolute = Path(os.path.abspath(path))
+    current = Path(absolute.anchor)
+    for part in absolute.parts[1:]:
+        current = current / part
+        if current.is_symlink():
+            raise ReviewError(f"{field} must not use symlinked paths")
+    return absolute
+
+
+def _write_json_atomically(output_path: Path, artifact: dict[str, Any]) -> None:
+    """Write a complete artifact and atomically replace the destination entry."""
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=output_path.parent,
+            prefix=f".{output_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary:
+            json.dump(artifact, temporary, ensure_ascii=False, indent=2)
+            temporary.write("\\n")
+            temporary_path = Path(temporary.name)
+        # Recheck the final path after the potentially long provider request.
+        _reject_symlink_components(output_path, "output")
+        os.replace(temporary_path, output_path)
+    except ReviewError:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink()
+            except OSError:
+                pass
+        raise
+    except OSError:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink()
+            except OSError:
+                pass
+        raise ReviewError("Could not write semantic-review artifact") from None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", required=True, help="JSON review input file")
     parser.add_argument("--output", required=True, help="JSON review artifact output path")
     args = parser.parse_args()
     try:
-        input_path = Path(args.input)
-        output_path = Path(args.output)
+        input_path = _reject_symlink_components(Path(args.input), "input")
+        output_path = _reject_symlink_components(Path(args.output), "output")
         if input_path.resolve() == output_path.resolve():
             raise ReviewError("Input and output paths must be different")
         try:
@@ -465,9 +511,7 @@ def main() -> int:
         validate_input(payload)
         review = validate_review(payload, call_model(payload))
         artifact = {"schema_version": "1.0", "status": review["status"], "review": review}
-        output_path.write_text(
-            json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
+        _write_json_atomically(output_path, artifact)
         print(f"AI semantic review result: {review['status']}")
         return 0 if review["status"] == "PASS" else 1
     except (OSError, UnicodeError, json.JSONDecodeError, ReviewError) as exc:
