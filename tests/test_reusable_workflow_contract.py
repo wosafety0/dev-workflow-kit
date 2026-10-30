@@ -65,6 +65,16 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         self.assertIn('case "$ACCEPTANCE_RUNTIME" in', self.source[validation:command])
         self.assertIn('case "$ACCEPTANCE_PACKAGE_MANAGER" in', self.source[validation:command])
 
+    def test_whitespace_only_command_is_rejected_before_shell_execution(self):
+        command_step = self.source.split(
+            "      - name: Run consumer-owned acceptance command", 1
+        )[1]
+        self.assertIn('if [ -z "${ACCEPTANCE_COMMAND//[[:space:]]/}" ]; then', command_step)
+        self.assertLess(
+            command_step.index('if [ -z "${ACCEPTANCE_COMMAND//[[:space:]]/}" ]; then'),
+            command_step.index('bash -euo pipefail -c "$ACCEPTANCE_COMMAND"'),
+        )
+
     def test_job_has_a_bounded_timeout(self):
         self.assertIn("timeout-minutes: 15", self.source)
 
