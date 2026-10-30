@@ -401,6 +401,9 @@ class HarnessRunnerTests(unittest.TestCase):
             "GIT_CONFIG_COUNT": "1",
             "GIT_CONFIG_KEY_0": "core.fsmonitor",
             "GIT_CONFIG_VALUE_0": "true",
+            "LD_PRELOAD": "/tmp/untrusted.so",
+            "LD_LIBRARY_PATH": "/tmp/untrusted-libraries",
+            "DYLD_INSERT_LIBRARIES": "/tmp/untrusted.dylib",
         }
         with patch.dict(harness_runner.os.environ, overrides), patch(
             "scripts.harness_runner.subprocess.run",
