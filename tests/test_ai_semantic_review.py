@@ -237,6 +237,19 @@ class SemanticReviewValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ReviewError, "Unsupported or malformed"):
             validate_review(payload, self.pass_review())
 
+    def test_stdin_input_produces_valid_review_artifact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output_path = Path(directory) / "review.json"
+            with patch("sys.argv", ["ai_semantic_review.py", "--input", "-", "--output", str(output_path)]), patch(
+                "sys.stdin", StringIO(json.dumps(self.payload))
+            ), patch(
+                "scripts.ai_semantic_review.call_model", return_value=self.pass_review()
+            ):
+                self.assertEqual(main(), 0)
+            artifact_text = output_path.read_text(encoding="utf-8")
+            self.assertTrue(artifact_text.endswith("\n"))
+            self.assertEqual(json.loads(artifact_text)["status"], "PASS")
+
     def test_failed_run_removes_previous_pass_artifact(self):
         with tempfile.TemporaryDirectory() as directory:
             input_path = Path(directory) / "input.json"

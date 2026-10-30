@@ -501,16 +501,20 @@ def main() -> int:
     parser.add_argument("--output", required=True, help="JSON review artifact output path")
     args = parser.parse_args()
     try:
-        input_path = _reject_symlink_components(Path(args.input), "input")
+        input_path = (
+            None if args.input == "-"
+            else _reject_symlink_components(Path(args.input), "input")
+        )
         output_path = _reject_symlink_components(Path(args.output), "output")
-        if input_path.resolve() == output_path.resolve():
+        if input_path is not None and input_path.resolve() == output_path.resolve():
             raise ReviewError("Input and output paths must be different")
         try:
             output_path.unlink()
         except FileNotFoundError:
             pass
+        input_text = sys.stdin.read() if input_path is None else input_path.read_text(encoding="utf-8")
         payload = json.loads(
-            input_path.read_text(encoding="utf-8"),
+            input_text,
             object_pairs_hook=_reject_duplicate_json_keys,
         )
         if not isinstance(payload, dict):

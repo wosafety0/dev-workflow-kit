@@ -174,9 +174,10 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(calls[1], [
             sys.executable,
             str((self.root / "scripts" / "ai_semantic_review.py").resolve()),
-            "--input", str((self.root / "review-input.json").resolve()),
+            "--input", "-",
             "--output", str((self.root / "artifacts" / "review.json").resolve()),
         ])
+        self.assertEqual(run_task.call_args_list[1].args[3], b"{}")
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["status"], "passed")
         self.assertEqual(

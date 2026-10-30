@@ -240,7 +240,7 @@ def _task_argv(
             sys.executable,
             str(script),
             "--input",
-            str(review_input),
+            "-",
             "--output",
             str(review_output),
         ]
@@ -249,16 +249,23 @@ def _task_argv(
     raise HarnessRunnerError(f"No reviewed runner implementation for task ID: {task_id}")
 
 
-def _run_task(argv: list[str], root: Path, timeout_seconds: int) -> tuple[str, int | None]:
+def _run_task(
+    argv: list[str],
+    root: Path,
+    timeout_seconds: int,
+    stdin_data: bytes | None = None,
+) -> tuple[str, int | None]:
     try:
-        result = subprocess.run(
-            argv,
-            cwd=root,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=timeout_seconds,
-            check=False,
-        )
+        run_options: dict[str, Any] = {
+            "cwd": root,
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL,
+            "timeout": timeout_seconds,
+            "check": False,
+        }
+        if stdin_data is not None:
+            run_options["input"] = stdin_data
+        result = subprocess.run(argv, **run_options)
     except subprocess.TimeoutExpired:
         return "failed", None
     except OSError:
@@ -266,10 +273,10 @@ def _run_task(argv: list[str], root: Path, timeout_seconds: int) -> tuple[str, i
     return ("passed", result.returncode) if result.returncode == 0 else ("failed", result.returncode)
 
 
-def _file_sha256(path: Path, field: str) -> str:
-    """Fingerprint caller-supplied review input so earlier tasks cannot silently change it."""
+def _read_review_input(path: Path, field: str) -> bytes:
+    """Read caller-supplied review input once so the exact bytes can be passed to the child."""
     try:
-        return hashlib.sha256(path.read_bytes()).hexdigest()
+        return path.read_bytes()
     except OSError:
         raise HarnessRunnerError(f"Could not verify {field}") from None
 
@@ -397,9 +404,13 @@ def main(argv: list[str] | None = None) -> int:
             _require_artifact_path(root, review_output, "review-output")
         if review_input is not None and not review_input.is_file():
             raise HarnessRunnerError("review-input must identify an existing file")
-        review_input_sha = (
-            _file_sha256(review_input, "review-input")
+        review_input_bytes = (
+            _read_review_input(review_input, "review-input")
             if review_input is not None else None
+        )
+        review_input_sha = (
+            hashlib.sha256(review_input_bytes).hexdigest()
+            if review_input_bytes is not None else None
         )
         if review_output is not None:
             review_output.parent.mkdir(parents=True, exist_ok=True)
@@ -427,11 +438,20 @@ def main(argv: list[str] | None = None) -> int:
                 # generated or tracked inputs. Do not review bytes different from those
                 # validated during preflight.
                 _reject_symlink_path(root, args.review_input, "review-input")
-                if review_input_sha is None or _file_sha256(
+                current_review_input = _read_review_input(
                     review_input, "review-input"
-                ) != review_input_sha:
+                )
+                if (
+                    review_input_sha is None
+                    or hashlib.sha256(current_review_input).hexdigest() != review_input_sha
+                ):
                     raise HarnessRunnerError("review-input changed during task execution")
-            status, exit_code = _run_task(argv_for_task, root, args.timeout_seconds)
+            task_stdin = (
+                review_input_bytes if task_id == "semantic-review" else None
+            )
+            status, exit_code = _run_task(
+                argv_for_task, root, args.timeout_seconds, task_stdin
+            )
             outcomes[task_id] = status
             suffix = " (timeout or launch failure)" if exit_code is None and status == "failed" else (
                 f" (exit {exit_code})" if exit_code not in (None, 0) else ""
