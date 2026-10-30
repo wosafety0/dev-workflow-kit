@@ -424,3 +424,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Latest exact-head Harness CI [run 40989353911](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40989353911) completed successfully. Verified compilation, offline contract tests, redacted report generation, artifact upload, and final required-stage gate all succeeded.
 - Audit confirmed the candidate's `scripts/harness_runner.py` and `tests/test_harness_runner.py` blobs are identical to original PR #32. The candidate's CI workflow additionally fixes the printf newline escape. Original PR #32 remains open/draft at its original head/base and mergeable=false; no original PR state was changed.
 - Cross-PR overlap in `tests/test_harness_runner.py` is documented: if a combined branch is needed later, merge PR #33's resolved-path assertions selectively and retain PR #32's expanded suite.
+
+
+## 2026-10-30 — dependency-chain audit follow-up (PR #32/#18)
+
+- Rechecked live PR metadata and ancestry: PR #18 is still based on PR #14 (which is based on PR #13); PR #32 candidate is based exactly on the current PR #18 head `e4be499e36ed9d8e22ff45065d95f92e0876df34`.
+- PR #18's current head is 8 commits beyond PR #14's head; the compare lists `.github/workflows/ci.yml`, `.gitignore`, `docs/HARNESS_RUNNER_V1.md`, `docs/PROJECT_PROGRESS.md`, `scripts/harness_runner.py`, and `tests/test_harness_runner.py`. These are inherited upstream changes, not unexpected PR #32 candidate changes.
+- The PR #32 candidate compare against its exact base is 12 commits ahead, 0 behind, and limited to the expected seven files. The commit count includes candidate history; use the seven-file net diff and exact blob checks, not ahead count, as the scope check.
+- PR #19's output-alias guard is a sibling branch based directly on PR #13 and is not in the PR #14 → #18 ancestry. PR #32 correctly carries that guard into the #18 line. Do not drop it as a duplicate unless the dependency topology is intentionally redesigned.
+- PR #23/#24 are on the separate runner/loopback line (#20 → #22 → #23 → #24) and are not dependencies of PR #32. No evidence in this audit requires importing them into the PR #32 runner/provenance line.
+- Candidate CI exact-head run [40989353911](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40989353911) succeeded on candidate head `6055555ce94dc15441048b753744db18feaee59a`. Original PR #32 remains open/draft/unmerged and unchanged; no merge or branch mutation was performed.
