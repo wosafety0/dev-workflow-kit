@@ -198,8 +198,8 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         step = self.source.split(
             "      - name: Run consumer-owned acceptance command", 1
         )[1]
-        script = step.split("        run: |\\n", 1)[1]
-        script = "\\n".join(
+        script = step.split("        run: |\n", 1)[1]
+        script = "\n".join(
             line[10:] if line.startswith("          ") else line
             for line in script.splitlines()
         )
