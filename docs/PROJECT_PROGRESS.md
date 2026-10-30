@@ -199,3 +199,5 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Preserved PR #36's fail-fast execution behavior and semantic-review-last requirement. The runner regression suite starts from PR #32's expanded tests, then restores PR #36's loopback semantic-review test and selectively applies the Windows-resolved path assertions.
 - Documentation changes are limited to runner safety and acceptance-contract scope; unrelated historical workflow/docs changes from PR #32's branch are not copied wholesale.
 - This is a validation candidate only. Exact-head hosted CI and review of the combined diff are required; no local test run, real provider call, merge, release, or deployment is claimed.
+
+- CI trigger correction: added `integration/**` to both `push` and `pull_request` target filters because this validation branch namespace was previously excluded. This allows exact-head CI for integration candidates without manual dispatch; original workflow branches and permissions are preserved.
