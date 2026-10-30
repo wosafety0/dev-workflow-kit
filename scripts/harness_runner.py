@@ -46,6 +46,9 @@ def _git_environment() -> dict[str, str]:
         if name.startswith("GIT_"):
             environment.pop(name, None)
     environment["GIT_NO_REPLACE_OBJECTS"] = "1"
+    # Do not let user/system Git config silently alter provenance commands.
+    environment["GIT_CONFIG_NOSYSTEM"] = "1"
+    environment["GIT_CONFIG_GLOBAL"] = os.devnull
     return environment
 
 
@@ -171,7 +174,7 @@ def _git_commit_sha(root: Path) -> str:
         top = run_git("rev-parse", "--show-toplevel")
         result = run_git("rev-parse", "HEAD")
         status = run_git(
-            "status", "--porcelain=v1", "--untracked-files=all",
+            "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "--untracked-files=all",
             "--", ".", ":(exclude)artifacts",
         )
     except (OSError, subprocess.TimeoutExpired):
