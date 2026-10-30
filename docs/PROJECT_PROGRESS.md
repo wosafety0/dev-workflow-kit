@@ -303,3 +303,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The corrected candidate contains all 14 runner test methods from the PR #24 base and all 31 from PR #32's candidate suite, plus the loopback preflight test (34 unique methods total).
 - Exact-head Harness CI [run 40991595301](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40991595301) passed compilation, offline contract tests, redacted report build/upload, and final gate. No local tests or live provider request are claimed.
 - PR #37 remains Draft/unmerged; original PR #33 and its branch are unchanged.
+
+
+## 2026-10-30 — final PR #37 corrected archive head
+- Final PR #37 head after the candidate progress archive: `04f455b23e5b17956705a76b5ef74d263956a96c`.
+- Exact-head Push Harness CI [run 40991648743](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40991648743) and PR-context CI [run 40991653272](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40991653272) both succeeded, including compilation, offline contract tests, redacted report build/upload, and final gate.
+- Final read-back confirms PR #37 has 34 unique runner test methods, all 14 PR #24 base methods, all 31 PR #32 candidate methods, plus the loopback preflight test. PR #37 remains Draft/unmerged; original PR #33 remains unchanged.
