@@ -330,3 +330,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Final PR #37 candidate head: `d0c513b19876f057017c4c7fbb5ca52c7d377253`; regression coverage verifies that a task-created ignored helper blocks acceptance.
 - Exact-head Push CI [run 40993134186](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993134186) and PR-context CI [run 40993140527](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993140527) both succeeded.
 - PR #37 remains Draft/unmerged. Original PR #33 remains unchanged; no merge or release is authorized by this archive.
+
+
+## 2026-10-30 — post-task source cleanliness gate
+- Static review found the runner only compared HEAD after tasks; tracked changes and non-ignored untracked source could slip through while HEAD stayed the same.
+- Candidate PR #37 head `b9748c3230782e3065923f386bacbd7a2ba83bdd` now rechecks full Git provenance/clean-worktree status after task execution. Regression tests cover tracked source modification and non-ignored untracked source creation during a task.
+- Exact-head Push CI [run 40993507598](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993507598) and PR-context CI [run 40993515179](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993515179) both succeeded.
+- Candidate PR #37 remains Draft/unmerged; original PR #33 remains unchanged.
