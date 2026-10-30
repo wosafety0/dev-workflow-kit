@@ -219,3 +219,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Restored both original regression tests without changing the runner implementation. The unified runner test module now contains 34 test methods, includes every one of the 14 test methods from PR #24's base file, all 31 methods from PR #32's candidate suite, and the additional loopback preflight regression. No duplicate test method names were found.
 - Exact corrected head `731c39a5a8c9d1a21312b2c959a6e6dc3c732123` passed Harness CI [run 40991595301](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40991595301): Python compilation, all offline contract tests, redacted acceptance report build/upload, and final required-stage gate succeeded.
 - This was a source-level inventory plus hosted CI verification; no local tests or live provider requests were run. PR #37 remains Draft/unmerged; original PRs and earlier candidates remain unchanged.
+
+### Roadmap evidence correction — hosted artifact-upload failure (2026-10-30)
+
+- Corrected `docs/ROADMAP.md` on branch `docs/roadmap-hosted-failure-evidence-20261030` to mark hosted workflow failure injection complete based on existing evidence, rather than leaving a completed test marked pending.
+- Historical failure-injection run [40712433963](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40712433963) intentionally referenced a missing artifact path. The upload step failed and the final gate failed closed with `ARTIFACT_OUTCOME=failure`.
+- Explicit limitation: this proves fail-closed handling of an artifact-upload step failure, not behavior during a GitHub Artifact service outage; service-level outage behavior remains unverified.
+- Documentation-only commit: `0af65f57acc1eccc7ff3cbe90588454454795ae7`. Exact-head Push CI [41020641066](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41020641066) and PR-context CI [41020653152](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41020653152) both completed successfully. The offline test job, report generation, artifact upload, and final gate all succeeded on this commit.
+- Draft PR #39: https://github.com/wosafety0/dev-workflow-kit/pull/39. It remains open, draft, and unmerged; base is `integration/pr24-pr33-pr32-20261030`. No runtime code, workflow behavior, default branch, release, or consumer repository was changed.
