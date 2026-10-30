@@ -351,3 +351,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added a unit regression for multi-line merge-base output and a real temporary Git repository regression that constructs two criss-cross merge commits, verifies `git merge-base --all` returns both best ancestors, and asserts strict review rejects the range.
 - Exact implementation/test head `660a3843430ff6bf109cc8ed33eeeb7b6639fbdd` passed Push CI [run 41012640138](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41012640138) and PR-context CI [run 41012648370](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41012648370). Both ran all 169 offline contract tests successfully and passed the final required-stage gate.
 - Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+### Git-bound review: isolate ancestry from legacy grafts metadata (2026-10-30)
+
+- Continued auditing repository-local Git metadata that can affect ancestry. The legacy `.git/info/grafts` file can rewrite the parentage Git uses for merge-base calculations even when replace refs are disabled.
+- `_git_environment()` now sets `GIT_GRAFT_FILE` to the platform null device, alongside the existing inherited `GIT_*`, replace-ref, system-config, and global-config isolation.
+- Added a real temporary-repository regression that writes a graft making the head commit appear root-like, then verifies strict review still derives the true parent commit as the merge base and includes the source change. The environment regression also asserts the graft override.
+- Exact implementation/test head `9ab754bafcc791e37b49ea6afc3e7d26e45fde86` passed Push CI [run 41012770557](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41012770557) and PR-context CI [run 41012776765](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41012776765). Both passed the required-stage gate; Push CI ran all 170 offline contract tests successfully.
+- Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
