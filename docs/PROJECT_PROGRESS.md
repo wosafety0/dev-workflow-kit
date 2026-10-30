@@ -315,3 +315,14 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Regression-test commit `af18eaf5e5179d7d868eebebeee41fc63eaa2004`: extended environment isolation assertions for Git object directories, alternate objects, and Git config injection variables, alongside repository/worktree/index overrides.
 - Exact implementation/test head `af18eaf5e5179d7d868eebebeee41fc63eaa2004` passed GitHub Actions [push run 41007110682](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41007110682) and [PR run 41007112836](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41007112836), both conclusion `success`.
 - This does not independently attest the executable, Git config files, runtime, concurrent filesystem mutation, or artifact contents. No local tests, live provider requests, credentials, merge, release, deployment, or game actions are claimed.
+
+### Git-bound semantic review: isolate global Git configuration (2026-10-30)
+
+- Audited the strict review runner after inherited `GIT_*` environment isolation. Found that system/global Git configuration could still influence provenance commands, including a configured `core.fsmonitor` helper.
+- Hardened `_git_environment()` to set `GIT_CONFIG_NOSYSTEM=1` and `GIT_CONFIG_GLOBAL=os.devnull` in addition to clearing inherited `GIT_*` variables and setting `GIT_NO_REPLACE_OBJECTS=1`.
+- Disabled `core.fsmonitor` for the Git status invocation used in commit/worktree validation.
+- Added regression assertions that verify the isolated environment explicitly sets both Git configuration controls.
+- Implementation commit: `e04d3f76d2fa11628612d497b88bffc1dee2df64`. Exact-head Push CI [41010495951](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41010495951) and PR-context CI [41010503402](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41010503402) both succeeded.
+- Regression-test commit: `9f3a6b3351b80f9bc64b5cdfd9e22ed6de478855`. Exact-head Push CI [41010765899](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41010765899) and PR-context CI [41010772487](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41010772487) both completed successfully. The PR-context run completed compilation, offline contract tests, redacted acceptance report generation, artifact upload, and the final required-stage gate.
+- Verification boundary: this is hosted CI evidence only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
