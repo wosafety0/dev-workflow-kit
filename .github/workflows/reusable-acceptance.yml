@@ -3,11 +3,31 @@ name: Reusable Acceptance Gate
 on:
   workflow_call:
     inputs:
+      runtime:
+        description: Runtime used by the consumer-owned acceptance command
+        required: false
+        type: string
+        default: python
       python-version:
         description: Python version requested by the consuming repository
         required: false
         type: string
         default: "3.12"
+      node-version:
+        description: Node.js version requested by the consuming repository
+        required: false
+        type: string
+        default: "24"
+      package-manager:
+        description: Optional Node package manager setup; currently none or pnpm
+        required: false
+        type: string
+        default: none
+      pnpm-version:
+        description: pnpm version when package-manager is pnpm
+        required: false
+        type: string
+        default: "11.4.0"
       test-command:
         description: Explicit test command owned and reviewed by the consuming repository
         required: true
@@ -19,21 +39,50 @@ permissions:
 jobs:
   acceptance:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Check out consuming repository
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Validate runtime and package-manager inputs
+        shell: bash
+        env:
+          ACCEPTANCE_RUNTIME: ${{ inputs.runtime }}
+          ACCEPTANCE_PACKAGE_MANAGER: ${{ inputs.package-manager }}
+        run: |
+          case "$ACCEPTANCE_RUNTIME" in
+            python|node) ;;
+            *) echo "::error::runtime must be python or node." >&2; exit 2 ;;
+          esac
+          case "$ACCEPTANCE_PACKAGE_MANAGER" in
+            none|pnpm) ;;
+            *) echo "::error::package-manager must be none or pnpm." >&2; exit 2 ;;
+          esac
+          if [ "$ACCEPTANCE_RUNTIME" != node ] && [ "$ACCEPTANCE_PACKAGE_MANAGER" != none ]; then
+            echo "::error::package-manager is supported only when runtime is node." >&2
+            exit 2
+          fi
       - name: Set up Python
+        if: inputs.runtime == 'python'
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ inputs.python-version }}
+      - name: Set up Node.js
+        if: inputs.runtime == 'node'
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ inputs.node-version }}
+      - name: Set up pnpm
+        if: inputs.runtime == 'node' && inputs.package-manager == 'pnpm'
+        uses: pnpm/action-setup@08c4be7e2e672a47d11bd04269e27e5f3e8529cb # v6.0.0
+        with:
+          version: ${{ inputs.pnpm-version }}
       - name: Run consumer-owned acceptance command
         shell: bash
         env:
           ACCEPTANCE_COMMAND: ${{ inputs.test-command }}
         run: |
           if [ -z "${ACCEPTANCE_COMMAND//[[:space:]]/}" ]; then
-            echo "test-command must not be empty." >&2
+            echo "::error::test-command must not be empty." >&2
             exit 2
           fi
           bash -euo pipefail -c "$ACCEPTANCE_COMMAND"
