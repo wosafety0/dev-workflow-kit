@@ -118,6 +118,19 @@ class GitBoundReviewTests(unittest.TestCase):
             ):
                 harness_runner._git_bytes_bounded(Path("."), [], "test diff")
 
+    def test_git_provenance_ignores_inherited_repository_overrides(self):
+        overrides = {
+            "GIT_DIR": "/tmp/other-repository",
+            "GIT_WORK_TREE": "/tmp/other-worktree",
+            "GIT_INDEX_FILE": "/tmp/other-index",
+            "GIT_COMMON_DIR": "/tmp/other-common",
+        }
+        with patch.dict(harness_runner.os.environ, overrides):
+            environment = harness_runner._git_environment()
+        for key in overrides:
+            self.assertNotIn(key, environment)
+        self.assertEqual(environment["GIT_NO_REPLACE_OBJECTS"], "1")
+
     def test_git_replace_refs_cannot_change_reviewed_commit_content(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
