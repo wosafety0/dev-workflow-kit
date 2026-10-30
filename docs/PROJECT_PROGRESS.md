@@ -193,3 +193,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Candidate branch `fix/reconcile-pr-32-current-base-20261030` is a copy of the isolated reconstruction `reconcile/pr-32-on-current-base-20261030`; the original PR and rescue refs remain untouched.
 - This archive commit is intended to trigger the repository's Push CI for the candidate head. Results must be queried by exact commit SHA before the candidate is considered validated.
 - Candidate remains non-mergeable until CI and patch review are complete. No original PR retarget or merge was performed.
+
+
+### 2026-10-30 CI trigger/config verification follow-up
+- Inspected `.github/workflows/ci.yml` on the current-base reconstruction candidate. The `push` filter includes `fix/**`, and the `pull_request` target filter includes `fix/**`.
+- Corrected a doubled backslash in the candidate's CI summary `printf` format so the newline escape is `\n`; GitHub Contents API write and read-back confirmed the exact corrected line.
+- Candidate head after this correction: `fbf62b4c0ee8ed42f9476ba6a22377287bddf9ef`.
+- Exact-head combined status is still empty and the available workflow-run connector returned no runs; therefore CI remains unverified. Do not claim tests or CI passed.
