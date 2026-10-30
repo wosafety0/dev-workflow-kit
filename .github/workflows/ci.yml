@@ -44,6 +44,10 @@ jobs:
           RULES_PIN: ${{ steps.rules.outputs.pin }}
           TOOL_VERSION: dev-workflow-kit@${{ github.sha }}
           TEST_OUTCOME: ${{ steps.tests.outcome }}
+          CI_RUN_ID: ${{ github.run_id }}
+          CI_RUN_ATTEMPT: ${{ github.run_attempt }}
+          CI_EVENT_NAME: ${{ github.event_name }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           python - <<'PY'
           import json
@@ -63,6 +67,13 @@ jobs:
               "rules_pin": os.environ["RULES_PIN"],
               "tool_version": os.environ["TOOL_VERSION"],
               "tests": {"offline-contract-tests": status},
+              "ci_context": {
+                  "tested_commit_sha": os.environ["COMMIT_SHA"],
+                  "run_id": int(os.environ["CI_RUN_ID"]),
+                  "run_attempt": int(os.environ["CI_RUN_ATTEMPT"]),
+                  "event_name": os.environ["CI_EVENT_NAME"],
+                  "pull_request_head_sha": os.environ.get("PR_HEAD_SHA") or None,
+              },
           }
           report = build_acceptance_report(metadata)
           output = Path("artifacts/acceptance-report.json")
