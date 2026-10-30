@@ -314,3 +314,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The older roadmap/progress notes saying a later archive commit still needed exact-head verification are historical; this entry supersedes them for the verified head above.
 - The first independent consumer pilot remains passing at its recorded immutable Harness SHA. The second consumer remains blocked before steps with no actionable logs; the cause and effective Actions policy remain unverified. Do not count it as passing.
 - PR #40 and both consumer PRs remain Draft/open/unmerged. No repository settings, permissions, visibility, release, deployment, or local-worktree synchronization changed.
+
+
+### Checkout credential-isolation hardening — 2026-10-30
+
+- Bounded workflow review found that the reusable workflow's `actions/checkout` step did not explicitly disable persisted Git credentials. This was a hardening opportunity, not evidence of an observed credential leak.
+- Updated `.github/workflows/reusable-acceptance.yml` to set `persist-credentials: false`, retaining the existing full-SHA checkout pin and `contents: read` workflow permission.
+- Added `test_checkout_does_not_persist_credentials` to `tests/test_reusable_workflow_contract.py` so the credential-isolation setting is part of the static workflow contract.
+- Implementation commits: workflow change `49a370ca0e2ff2399791b88cca3eeca0d191298d`; final test-contract correction `b1eaaa14f512d9675170aa67243a27ff3290ba7a`.
+- CI runs triggered for `b1eaaa14f512d9675170aa67243a27ff3290ba7a`: PR-context run [41034870490](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41034870490) was queued at archive time; run [41034863354](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41034863354) was in progress. This entry does not claim those runs passed.
+- This is a narrow credential-exposure reduction. It does not change the second consumer's unexplained pre-step failure, and it is not a full security audit. PR #40 remains Draft/unmerged; no settings, visibility, merge, release, or deployment changed.
