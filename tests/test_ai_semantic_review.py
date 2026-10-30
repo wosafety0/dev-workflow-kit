@@ -558,7 +558,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
         self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
         finding["line_start"] = 10
         finding["line_end"] = 20
-        with self.assertRaisesRegex(ReviewError, "does not cover the cited diff evidence"):
+        with self.assertRaisesRegex(ReviewError, "line range is broader"):
             validate_review(payload, review)
 
     def test_repeated_evidence_across_hunks_is_rejected_as_ambiguous(self):
