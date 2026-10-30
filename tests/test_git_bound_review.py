@@ -136,6 +136,8 @@ class GitBoundReviewTests(unittest.TestCase):
         for key in overrides:
             self.assertNotIn(key, environment)
         self.assertEqual(environment["GIT_NO_REPLACE_OBJECTS"], "1")
+        self.assertEqual(environment["GIT_CONFIG_NOSYSTEM"], "1")
+        self.assertEqual(environment["GIT_CONFIG_GLOBAL"], harness_runner.os.devnull)
 
     def test_git_replace_refs_cannot_change_reviewed_commit_content(self):
         with tempfile.TemporaryDirectory() as directory:
