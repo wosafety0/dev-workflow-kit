@@ -410,3 +410,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Expanded regression coverage to inject Python import controls, Git repository redirection, and Git config injection, and assert they do not reach the task subprocess.
 - Exact implementation/test head `a2c0d2899318448db122798c3d643dfea29c56ce` passed GitHub Actions Push CI [run 41015352209](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41015352209) and PR-context CI [run 41015355267](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41015355267). Both completed successfully; each CI log reports 175 offline contract tests passed and acceptance status `passed`.
 - Verification boundary: GitHub-hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+
+### Acceptance task environment: block dynamic-loader overrides (2026-10-30)
+
+- Continued the task subprocess environment audit beyond Python and Git settings. Dynamic-loader variables can affect which native code or libraries are loaded before Python task code begins, so relying only on Python/Git variable isolation left an avoidable runtime override surface.
+- Task subprocess environment construction now removes inherited variables with `LD_*` and `DYLD_*` prefixes in addition to the previously filtered `PYTHON*` and `GIT_*` variables. This mitigates common Linux/macOS dynamic-loader override paths; it is not a complete runtime/dependency attestation and does not claim to sanitize every platform-specific environment variable.
+- Expanded the existing regression test with `LD_PRELOAD`, `LD_LIBRARY_PATH`, and `DYLD_INSERT_LIBRARIES` examples.
+- Exact implementation/test head `55d64f190812b750e686f97ee8b746eeb87caa35` passed GitHub Actions Push CI [run 41015468933](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41015468933) and PR-context CI [run 41015476094](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41015476094). Both completed successfully; PR-context logs report all 175 offline contract tests passed and acceptance status `passed`.
+- Verification boundary: GitHub-hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
