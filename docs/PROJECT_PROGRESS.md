@@ -391,3 +391,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Push artifact `acceptance-report` ID `12976009690` was present and unexpired when checked; digest `sha256:2f68ebe4f2bd7c5e81ea9bd05aaefa3e109debe7dcfe3844049fc907dc25859e`, expiry `2026-11-13T12:33:27Z`. It is a temporary CI artifact.
 - Second consumer PR #1 remains blocked before job steps with root cause and effective Actions policy unknown. Its acceptance criterion is not met.
 - PR #40 and both consumer PRs remain Draft/open/unmerged. No settings, permissions, visibility, merge, release, or deployment changed.
+
+
+### Latest workflow-contract tests and exact-head CI — 2026-10-31
+
+- Added regression coverage that asserts the reusable workflow exposes `workflow_call` and keeps the documented input defaults stable (Python `3.12`, Node.js `24`, package manager `none`, pnpm `11.4.0`). Corrected the test regex escaping in implementation commit [78005435b11150f141da4739b30d2158c40e1377](https://github.com/wosafety0/dev-workflow-kit/commit/78005435b11150f141da4739b30d2158c40e1377).
+- For that exact SHA, Push CI [41103982861](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41103982861) completed successfully, and PR-context CI [41103993312](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41103993312) is now also reported as completed successfully. The available jobs response exposes the `offline-tests` conclusion but no step details, so this archive records the run-level success only and does not independently assert individual step execution.
+- The added contract assertions are now covered by a successful exact-head CI result. PR #40 remains Draft/open/unmerged.
+- Second consumer [chatgpt-auto-send-assistant PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) remains blocked before job steps: run [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) reports failure with an empty step list. Root cause and effective Actions policy remain unknown; this consumer is not accepted.
+- No repository settings, permissions, visibility, merge, release, deployment, or consumer configuration changed in this round. The documentation archive itself requires exact-head CI verification.
