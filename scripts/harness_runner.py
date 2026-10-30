@@ -40,8 +40,11 @@ def _git_environment() -> dict[str, str]:
     """Ignore replace refs so provenance is derived from the commit objects named by their SHAs."""
     environment = os.environ.copy()
     # Git provenance must not inherit repository redirection from the caller.
-    for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR"):
-        environment.pop(name, None)
+    # Git-specific caller settings can redirect object lookup or inject config.
+    # Keep ordinary process environment (PATH, locale, etc.) intact.
+    for name in tuple(environment):
+        if name.startswith("GIT_"):
+            environment.pop(name, None)
     environment["GIT_NO_REPLACE_OBJECTS"] = "1"
     return environment
 
