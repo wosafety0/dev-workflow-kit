@@ -418,10 +418,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Task {task_id}: {status}{suffix}")
             failed = status != "passed"
 
-        # Tests or hooks may edit tracked/untracked source or move HEAD. Never
-        # attribute such a run to the original commit in a passing report.
+        # Tests or hooks may edit tracked/untracked source or move HEAD. Recheck
+        # full source-tree cleanliness as well as the commit before reporting success.
         _reject_ignored_python_sources(root)
-        if _git_commit_sha(root) != commit_sha:
+        post_task_sha = _git_commit_sha(root)
+        if post_task_sha != commit_sha:
             raise HarnessRunnerError("Git HEAD changed during task execution")
 
         # Revalidate generated output paths immediately before report emission.
