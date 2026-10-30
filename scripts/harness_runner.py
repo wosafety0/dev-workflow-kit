@@ -479,7 +479,7 @@ def _build_git_bound_review_input(
     try:
         validate_input(payload)
         _validate_diff_integrity(payload)
-    except ReviewError:
+    except ReviewError as exc:
         raise HarnessRunnerError(
             f"Git-generated review diff failed semantic-review input validation ({exc})"
         ) from None
