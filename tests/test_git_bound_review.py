@@ -131,18 +131,18 @@ class GitBoundReviewTests(unittest.TestCase):
             git("config", "user.name", "Harness Test")
             git("config", "user.email", "harness-test@example.invalid")
             source = root / "source.py"
-            source.write_text("VALUE = 'old'\\n", encoding="utf-8")
+            source.write_text("VALUE = 'old'" + chr(10), encoding="utf-8")
             git("add", "source.py")
             git("commit", "-qm", "base")
             base_sha = git("rev-parse", "HEAD").stdout.strip()
 
-            source.write_text("VALUE = 'new'\\n", encoding="utf-8")
+            source.write_text("VALUE = 'new'" + chr(10), encoding="utf-8")
             git("add", "source.py")
             git("commit", "-qm", "actual head")
             head_sha = git("rev-parse", "HEAD").stdout.strip()
 
             git("checkout", "--detach", base_sha)
-            source.write_text("VALUE = 'forged replacement'\\n", encoding="utf-8")
+            source.write_text("VALUE = 'forged replacement'" + chr(10), encoding="utf-8")
             git("add", "source.py")
             git("commit", "-qm", "replacement tree")
             replacement_sha = git("rev-parse", "HEAD").stdout.strip()
