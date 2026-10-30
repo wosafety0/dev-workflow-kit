@@ -177,3 +177,46 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - PR #22 head `46587adaf9160c4e0b8503dfe49dc779cd976a33` received a successful PR-context Harness CI run: [run 40859961406](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40859961406).
 - The run tested merge commit `e41cc9887e65ebd8f110761853261e0cadd02cf6`, ran **106 offline tests**, generated/uploaded acceptance-report artifact `12891346305`, and passed the final orchestration gate.
 - This verifies the CI workflow correction against PR #22's current merge context. It does not validate PR #33's duplicate-key implementation; PR #33 still needs its own exact-head PR-context CI run.
+
+
+## 2026-10-30 — Candidate reconstruction on current base (PR #33)
+
+- Created isolated candidate branch `reconcile/pr-33-on-current-base-20261030` from current recorded base SHA `071c168bc9532ba8d8c6a9f4708046e164879568`; original PR and rescue refs remain unchanged.
+- Applied the bounded-response and duplicate-JSON implementation/tests, Windows-resolved runner path assertions, and merged the stable-contract statements into the current base contract rather than replacing that contract wholesale.
+- Candidate head and exact-head validation remain to be verified. This is a reconstruction candidate, not a validated replacement for PR #33. No tests were run by the connector in this step.
+
+
+## 2026-10-30 — trigger exact-head Push CI for PR #33 reconstruction candidate
+
+- Candidate branch `fix/reconcile-pr-33-current-base-20261030` is a copy of the isolated reconstruction `reconcile/pr-33-on-current-base-20261030`; the original PR and rescue refs remain untouched.
+- This archive commit is intended to trigger the repository's Push CI for the candidate head. Results must be queried by exact commit SHA before the candidate is considered validated.
+- Candidate remains non-mergeable until CI and patch review are complete. No original PR retarget or merge was performed.
+
+## 2026-10-30 — Duplicate-input JSON regression repaired on reconstruction candidate
+
+- Exact-head Push CI initially failed on candidate commit `06858e97bd0a3657c2a379f97807003876b15202` (run [40912095333](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40912095333)). The failing test was `test_duplicate_input_json_keys_fail_closed_before_model_call`: the duplicate-key hook raised plain `ValueError`, while the CLI's fail-closed handler catches `ReviewError`.
+- Corrected `scripts/ai_semantic_review.py` so duplicate JSON keys raise `ReviewError`, preserving rejection while allowing the CLI to return its documented blocked exit code and remove any stale PASS artifact.
+- Fix commit: `d5346d0571ce6933c643220791ec020d8b26cf2a` on `fix/reconcile-pr-33-current-base-20261030`. Exact-head Push CI [40928437863](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40928437863) completed successfully: Python compilation passed, **108 offline tests passed**, redacted acceptance report upload succeeded, and the final acceptance gate passed.
+- Verification scope is the candidate branch's Push CI only. No live provider request or credential was used. Original PR #33 and PR #22 were not retargeted, merged, or closed; the reconstruction candidate remains separate pending patch review and PR-context CI. No release or deployment occurred.
+- Draft PR #34 is open against base branch fix/semantic-review-no-redirect-20261029 at base SHA 071c168bc9532ba8d8c6a9f4708046e164879568. Initial candidate head 465dd824b5234a34f390aa80b3cacfcb08a45fd3 passed exact-head Push CI [40928555354](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40928555354) and PR-context CI [40928587632](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40928587632). The subsequent progress-archive head 101a8d97593d6d66eb96212aea7cd1339e016521 passed Push CI [40929452332](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40929452332). The current candidate head b2fc14881ea299448b5c1f8cbbd8ecc079e65117 also passed exact-head Push CI [40929747847](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40929747847) and PR-context CI [40929756561](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40929756561): 108 offline tests, report upload, and final gate succeeded. PR #34 remains Draft/open; original PR #33 remains open/Draft and was not modified. No PR was merged, and no release/deployment occurred.
+- Next: review the full candidate diff and confirm stacked dependency. Do not merge automatically; preserve PR #33 and its rescue refs until the candidate is reviewed.
+
+
+### 2026-10-30 CI trigger/config verification follow-up
+- Inspected `.github/workflows/ci.yml` on the current-base reconstruction candidate. The `push` filter includes `fix/**`, and the `pull_request` target filter includes `fix/**`; the required-stage gate uses a folded shell command and appears structurally consistent in the retrieved excerpt.
+- Exact-head combined status is empty and the available workflow-run connector returned no runs; therefore CI remains unverified. No tests were run locally in this connector-only pass.
+- Candidate head before this progress-only archive: `06858e97bd0a3657c2a379f97807003876b15202`.
+
+
+### 2026-10-30 exact-head CI validation (PR #34)
+- Confirmed validation-only Draft PR #34 targets the current PR #22 base `071c168bc9532ba8d8c6a9f4708046e164879568`; original PR #33 remains untouched.
+- Exact candidate head `0d2d82cd881be69bb949789bce6b079395a2f5a4` ran Harness CI #658: [run 40988770798](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40988770798) completed successfully.
+- Verified all reported job steps succeeded: Python compilation, offline contract tests, redacted acceptance report generation, artifact upload, and final required-stage gate.
+- This is CI evidence for the candidate head before this progress-only archive commit. The archive commit will trigger a fresh CI run; only its result can validate the final archived head.
+- Draft PR #34: https://github.com/wosafety0/dev-workflow-kit/pull/34. No merge performed.
+
+
+### 2026-10-30 cross-PR diff audit
+- Compared candidate and original PR #33 source/test blobs. `tests/test_ai_semantic_review.py` SHA `193b9c046ae7e1fd70a734b7d15c65cbed7c802f` and shared `tests/test_harness_runner.py` SHA `45d2208a9c871076418f5375241878d71c259be9` match exactly.
+- `scripts/ai_semantic_review.py` differs from the original source blob only at duplicate-key handler behavior: candidate raises `ReviewError` instead of bare `ValueError`, preserving the module's fail-closed error contract. Provider envelopes are bounded to 1 MiB plus a sentinel byte; duplicate keys are rejected in the envelope, model content, and review input. Offline CI passed; no live provider call or local test run was performed.
+- The stable acceptance contract records both duplicate-key rejection and the response-size bound. Cross-PR note: the shared runner test file differs from PR #32's expanded test suite because these PRs sit on different stacked parents. Do not combine by replacing the file wholesale; selectively retain PR #32's expanded coverage and PR #33's resolved-path expectations if a unified branch is ever required.
