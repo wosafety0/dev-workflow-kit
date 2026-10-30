@@ -40,7 +40,7 @@ class GitBoundReviewTests(unittest.TestCase):
             patch.object(harness_runner, "_git_text", return_value=BASE),
             patch.object(
                 harness_runner, "_git_bytes_bounded",
-                side_effect=[DIFF.encode("utf-8"), names],
+                side_effect=[b"", DIFF.encode("utf-8"), names],
             ),
         )
 
