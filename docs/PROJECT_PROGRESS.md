@@ -301,3 +301,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added a real temporary-Git-repository regression: create a real base/head, install a replacement ref whose tree contains forged content, and verify strict review still derives the diff from the original head object.
 - Exact implementation head `11929c11a231123da994ab1008630ef2b3450552`: Push CI [run 41005772744](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41005772744) and PR-context CI [run 41005779128](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41005779128) both succeeded. PR-context job log reports `Ran 164 tests in 2.521s`, acceptance status `passed`, artifact upload success, and final required-stage gate success.
 - Intermediate implementation/test commits were verified or corrected before this exact passing head; no local test run, live provider request, credentials, merge, release, deployment, or game action is claimed.
+
+### Git provenance environment isolation (2026-10-30)
+
+- Implementation commit: `c175014e51e2e5deab63b713b30c3ae92bebd0b7`. Git provenance subprocesses discard inherited `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, and `GIT_COMMON_DIR` while retaining `GIT_NO_REPLACE_OBJECTS=1`.
+- Regression-test commit: `893d7294cb36093f6f078913b513e25d89d88481`. Added a unit test asserting these four overrides are absent from the derived Git environment.
+- Exact implementation/test head `893d7294cb36093f6f078913b513e25d89d88481` passed GitHub Actions push run [41006559844](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41006559844) and pull-request run [41006566427](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41006566427).
+- Scope remains limited: this does not claim full Git environment isolation, independently attest the runtime, or prove protection against concurrent filesystem mutation. No local tests, live provider requests, credentials, merge, release, deployment, or game actions were performed.
