@@ -1,6 +1,6 @@
 # Developer Workflow Toolkit
 
-Early development (0.x). A reusable, provider-agnostic toolkit for validating AI-assisted software changes. The current development branch includes an evidence-checked semantic-review module, offline contract tests, versioned configuration validation, an allowlisted task runner, deterministic acceptance reports, and a reusable Python/Node acceptance workflow.
+Early development (0.x). A reusable, provider-agnostic toolkit for validating AI-assisted software changes. The current development branch includes an evidence-checked semantic-review module, offline contract tests, versioned configuration validation, an allowlisted task runner, deterministic acceptance reports, and a reusable Python acceptance workflow.
 
 No credentials are committed. Offline tests do not establish live model behavior or guarantee complete defect detection. This branch is still under review; features here are not considered merged into `main` until the relevant pull requests are merged.
 
