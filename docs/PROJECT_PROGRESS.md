@@ -326,3 +326,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Regression-test commit: `9f3a6b3351b80f9bc64b5cdfd9e22ed6de478855`. Exact-head Push CI [41010765899](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41010765899) and PR-context CI [41010772487](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41010772487) both completed successfully. The PR-context run completed compilation, offline contract tests, redacted acceptance report generation, artifact upload, and the final required-stage gate.
 - Verification boundary: this is hosted CI evidence only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
 
+### Git-bound review: neutralize repository-local binary diff driver settings (2026-10-30)
+
+- Continued the configuration audit after isolating inherited, system, and global Git configuration. A repository-local `diff.<driver>.binary=true` setting combined with a matching `.gitattributes` driver could suppress ordinary text hunks in the generated review diff.
+- Added Git's `--text` option to the strict review diff command so tracked textual source changes remain visible even when a local diff driver marks the path as binary. External diff and textconv remain explicitly disabled.
+- Added a real temporary-Git-repository regression test that sets `diff.review.binary=true`, assigns that driver to `source.py`, changes the source across two commits, and asserts the generated review diff still includes the added line.
+- Implementation commit: `1be7f0044951ea49b110344afbb89a854fb9d43b`.
+- Regression-test head: `56127a867fa8c5ee8c281c0021b4b1b729c24714`. Exact-head Push CI [41011071189](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41011071189) and PR-context CI [41011076799](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41011076799) both succeeded. Both runs completed compilation, the offline contract suite, redacted acceptance report generation, artifact upload, and the final required-stage gate.
+- Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
