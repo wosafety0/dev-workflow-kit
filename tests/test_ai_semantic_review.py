@@ -89,10 +89,10 @@ class SemanticReviewValidationTests(unittest.TestCase):
             "diff --git a/src/client.py b/src/client.py\n"
             "--- a/src/client.py\n"
             "+++ b/src/client.py\n"
-            "@@ -1,2 +1,2 @@\n"
+            "@@ -1 +1 @@\n"
             "-old first\n"
             "+duplicate target\n"
-            "@@ -20,2 +20,2 @@\n"
+            "@@ -20 +20 @@\n"
             "-old second\n"
             "+duplicate target\n"
         )
@@ -560,7 +560,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
         finding["line_end"] = 20
         self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
 
-    def test_repeated_evidence_across_hunks_requires_all_mapped_lines(self):
+    def test_repeated_evidence_across_hunks_is_rejected_as_ambiguous(self):
         payload = dict(self.payload)
         payload["diff"] = (
             "diff --git a/src/client.py b/src/client.py\n"
@@ -576,11 +576,9 @@ class SemanticReviewValidationTests(unittest.TestCase):
         finding = review["findings"][0]
         finding["evidence"] = "+same target"
         finding["line_start"] = 1
-        finding["line_end"] = 1
-        with self.assertRaisesRegex(ReviewError, "does not cover the cited diff evidence"):
-            validate_review(payload, review)
         finding["line_end"] = 40
-        self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+        with self.assertRaisesRegex(ReviewError, "Evidence is ambiguous"):
+            validate_review(payload, review)
 
 
     def test_maps_partial_added_line_evidence(self):
