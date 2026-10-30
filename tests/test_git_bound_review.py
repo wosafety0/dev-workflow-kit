@@ -37,7 +37,7 @@ class GitBoundReviewTests(unittest.TestCase):
             patch.object(
                 harness_runner, "_resolve_git_commit", side_effect=[BASE, HEAD]
             ),
-            patch.object(harness_runner, "_git_text", return_value=BASE),
+            patch.object(harness_runner, "_git_text", side_effect=["false", BASE]),
             patch.object(
                 harness_runner, "_git_bytes_bounded",
                 side_effect=[b"", DIFF.encode("utf-8"), names],
@@ -296,11 +296,45 @@ class GitBoundReviewTests(unittest.TestCase):
             self.assertIn("+VALUE = 'new'", payload["diff"])
             self.assertEqual(provenance["merge_base_sha"], base_sha)
 
+    def test_shallow_repository_is_rejected_even_when_both_commits_exist(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def git(*args):
+                return subprocess.run(
+                    ["git", *args], cwd=root, check=True,
+                    capture_output=True, text=True,
+                ).stdout.strip()
+
+            git("init", "-q")
+            git("config", "user.name", "Harness Test")
+            git("config", "user.email", "harness-test@example.invalid")
+            source = root / "source.py"
+            source.write_text("VALUE = 'old'\\n", encoding="utf-8")
+            git("add", "source.py")
+            git("commit", "-qm", "base")
+            base_sha = git("rev-parse", "HEAD")
+            source.write_text("VALUE = 'new'\\n", encoding="utf-8")
+            git("add", "source.py")
+            git("commit", "-qm", "head")
+            head_sha = git("rev-parse", "HEAD")
+
+            # Mark the existing HEAD as a shallow boundary while retaining both objects.
+            (root / ".git" / "shallow").write_text(head_sha + "\\n", encoding="utf-8")
+            self.assertEqual(git("rev-parse", "--is-shallow-repository"), "true")
+
+            with self.assertRaisesRegex(
+                harness_runner.HarnessRunnerError, "does not support shallow repositories"
+            ):
+                harness_runner._build_git_bound_review_input(
+                    root, self.source, base_sha, head_sha, head_sha
+                )
+
     def test_rejects_multiple_best_merge_bases(self):
         multiple_bases = BASE + chr(10) + HEAD
         with patch.object(
             harness_runner, "_resolve_git_commit", side_effect=[BASE, HEAD]
-        ), patch.object(harness_runner, "_git_text", return_value=multiple_bases):
+        ), patch.object(harness_runner, "_git_text", side_effect=["false", multiple_bases]):
             with self.assertRaisesRegex(
                 harness_runner.HarnessRunnerError, "ambiguous merge-base"
             ):
@@ -357,7 +391,7 @@ class GitBoundReviewTests(unittest.TestCase):
     def test_rejects_malformed_review_context_json(self):
         with patch.object(
             harness_runner, "_resolve_git_commit", side_effect=[BASE, HEAD]
-        ), patch.object(harness_runner, "_git_text", return_value=BASE), patch.object(
+        ), patch.object(harness_runner, "_git_text", side_effect=["false", BASE]), patch.object(
             harness_runner, "_git_bytes_bounded",
             side_effect=[b"", DIFF.encode("utf-8"), b"tests/test_example.py\0"],
         ):
