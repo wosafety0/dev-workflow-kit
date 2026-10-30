@@ -447,9 +447,11 @@ class HarnessRunnerTests(unittest.TestCase):
         ).stdout.strip()
         source = self.root / "tests" / "test_example.py"
         source.write_text(source.read_text(encoding="utf-8") + "# bound source change\n", encoding="utf-8")
+        spaced_source = self.root / "tests" / "test file.py"
+        spaced_source.write_text("value = 1\n", encoding="utf-8")
         subprocess.run(
-            ["git", "add", "tests/test_example.py"], cwd=self.root, check=True,
-            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+            ["git", "add", "tests/test_example.py", "tests/test file.py"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
         )
         subprocess.run(
             ["git", "-c", "user.name=Harness Test",
@@ -473,8 +475,11 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual((code, stderr), (0, ""))
         payload = json.loads(run_task.call_args.args[3].decode("utf-8"))
         self.assertNotEqual(payload["diff"], "caller-supplied forged diff")
-        self.assertEqual(payload["changed_files"], ["tests/test_example.py"])
+        self.assertEqual(
+            payload["changed_files"], ["tests/test file.py", "tests/test_example.py"]
+        )
         self.assertIn("diff --git a/tests/test_example.py b/tests/test_example.py", payload["diff"])
+        self.assertIn("diff --git a/tests/test file.py b/tests/test file.py", payload["diff"])
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["schema_version"], 2)
         self.assertEqual(report["review_provenance"]["base_sha"], base_sha)
