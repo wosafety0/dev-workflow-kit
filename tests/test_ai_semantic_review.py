@@ -715,6 +715,20 @@ class SemanticReviewValidationTests(unittest.TestCase):
             validate_review(payload, self.pass_review())
 
 
+    def test_accepts_internal_spaces_in_changed_file_paths(self):
+        payload = dict(self.payload)
+        path = "src/my file.py"
+        payload["changed_files"] = [path]
+        payload["diff"] = (
+            f"diff --git a/{path} b/{path}\\n"
+            f"--- a/{path}\\n"
+            f"+++ b/{path}\\n"
+            "@@ -1 +1 @@\\n"
+            "-old\\n"
+            "+new\\n"
+        )
+        self.assertEqual(validate_review(payload, self.pass_review())["status"], "PASS")
+
     def test_rejects_parent_traversal_changed_file_path(self):
         payload = dict(self.payload)
         payload["changed_files"] = ["../client.py", "README.md"]
