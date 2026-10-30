@@ -116,3 +116,14 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - Push acceptance-report artifact [12976945877](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41055907724) was present and not expired when checked; digest `sha256:fe0bd9167a6a537ae844e175f4f129ba77ddb87daee52f1f6514fea9d07b51d8`, expiry `2026-11-13T12:31:02Z`. It is temporary, not a permanent archive.
 - The second consumer `chatgpt-auto-send-assistant` remains blocked before job steps: run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209) has a failed job and no step details. The root cause and effective caller Actions policy remain unconfirmed; do not count this pilot as passing.
 - This current status supersedes earlier historical entries that describe older branch heads as current or say later CI was still pending. PR #40 and both consumer PRs remain Draft/open/unmerged. No settings, permissions, visibility, merge, release, or deployment changed.
+
+
+
+### Current status superseding older head references — 2026-10-31
+
+- Latest verified implementation head before this documentation-only status refresh: `bd2f2083332b8050c6dd6b5753575bfe0783bc24`. Exact-head Push CI [41056295005](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41056295005) and PR-context CI [41056302765](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41056302765) both succeeded, including compilation, all offline contract tests, redacted acceptance-report generation/upload, and the final required-stage gate.
+- Push acceptance-report artifact [12976294611](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41056295005) had digest `sha256:3561ba3e4a5e30e2d4a6a00a8c0d6b20977a91fa7b3eb05292e58b2efca047c5` and expiry `2026-11-13T12:34:06Z`; it is temporary evidence, not a permanent archive.
+- The reusable workflow currently supports Python and Node.js with optional pnpm, read-only repository permissions, full-SHA action pins, checkout credential persistence disabled, and fail-closed contract tests.
+- First consumer pilot [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2) passed its reusable acceptance run and native lint/type-check on consumer head `643659014370f85b61964bcbb978833ec6f74428`; it remains Draft/unmerged.
+- Second consumer pilot [chatgpt-auto-send-assistant PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) remains blocked before job steps. Run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209) has no assigned runner/steps and unavailable logs; root cause and effective Actions policy remain unverified. This is not a pass.
+- This entry supersedes older entries above that label older SHAs as the current head or describe the newer CI as pending. PR #40 and both consumer PRs remain Draft/open/unmerged; no settings, permissions, visibility, merge, release, or deployment changed.
