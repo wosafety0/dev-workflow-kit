@@ -497,7 +497,7 @@ class HarnessRunnerTests(unittest.TestCase):
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner()
         self.assertEqual(code, 2)
-        self.assertIn("ignored Python test source", stderr)
+        self.assertIn("ignored Python source", stderr)
         self.assertFalse(report_path.exists())
         run_task.assert_not_called()
 
