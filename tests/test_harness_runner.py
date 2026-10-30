@@ -111,6 +111,44 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(report["status"], "failed")
         self.assertEqual(report["tests"], {"python-unittest": "failed"})
 
+    def test_stops_after_failure_and_marks_remaining_tasks_not_run(self):
+        self.write_config(["python-unittest", "semantic-review"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        with patch("scripts.harness_runner._git_commit_sha", return_value="f" * 40), patch(
+            "scripts.harness_runner._rules_pin", return_value="sha256:contract"
+        ), patch(
+            "scripts.harness_runner._run_task", return_value=("failed", 23)
+        ) as run_task:
+            code, stdout, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+
+        self.assertEqual(code, 1)
+        self.assertEqual(stderr, "")
+        self.assertIn("Task python-unittest: failed (exit 23)", stdout)
+        self.assertIn("Task semantic-review: not_run (an earlier task failed)", stdout)
+        self.assertEqual(run_task.call_count, 1)
+        report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["status"], "failed")
+        self.assertEqual(
+            report["tests"],
+            {"python-unittest": "failed", "semantic-review": "not_run"},
+        )
+
+    def test_semantic_review_must_be_last_configured_task(self):
+        self.write_config(["semantic-review", "python-unittest"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+
+        self.assertEqual(code, 2)
+        self.assertIn("semantic-review must be the final configured task", stderr)
+        run_task.assert_not_called()
+
     def test_runs_configured_tasks_in_order_with_explicit_review_paths(self):
         self.write_config(["python-unittest", "semantic-review"])
         (self.root / "review-input.json").write_text("{}", encoding="utf-8")
