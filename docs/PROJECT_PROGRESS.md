@@ -249,3 +249,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Bounded audit outcome: no reproducible defect found in the inspected workflow path. This does not establish full security, dependency provenance, live-provider behavior, or production readiness. The second consumer remains blocked before job steps; its cause is still unconfirmed. No access settings, visibility, secrets, application code, or deployment workflow were changed.
 - PR #40 remains Draft/open/unmerged with its base unchanged. No release or merge authorization is implied.
 - This archive-only update requires its own exact-head Push CI and PR-context CI to pass before the archive commit is considered verified.
+
+
+### Corrected diagnosis of second-consumer pre-step failure — 2026-10-30
+
+- Rechecked the second consumer's exact caller workflow at head `9757c44c8a255d9587ff5b47f1016e5fb57cd8b6`: it calls the public reusable workflow at immutable Harness SHA `36533dd7726365fd817f48072e49ea055d339947`, declares only `contents: read`, and runs the existing `npm test` command.
+- The recorded run `41021315209` has a failed job with no step payload or runner logs; the available evidence still does not identify the exact cause.
+- Consulted current GitHub documentation on [reusable workflow access](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations). It states that a private caller can use a public reusable workflow when the caller repository's Actions policy allows public reusable workflows. Therefore, the private/public visibility difference alone is not an adequate explanation. The caller repository's Actions permissions/policy is a plausible diagnostic target, not a confirmed cause.
+- This corrects the earlier diagnosis wording: the failure remains unresolved and must not be counted as a passing consumer. No repository settings were read or changed; no permission change is authorized or implied.
+- Roadmap wording updated to preserve this distinction. The second-consumer acceptance criterion remains unchecked.
+- This documentation-only archive commit must pass its own exact-head CI before it is considered verified.
