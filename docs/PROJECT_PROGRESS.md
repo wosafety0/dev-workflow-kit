@@ -282,3 +282,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Current dependency tail remains PR #20 → PR #22 → PR #23 → PR #24. PR #33/#34 currently target PR #22, so they intentionally do not inherit fail-fast/order enforcement from #23 or HTTPS-specific regression coverage from #24.
 - For the broader integration candidate, the safer order is to start from PR #24's current head, then selectively port PR #33's bounded-response/duplicate-key changes and carefully combine shared tests; separately port PR #32's runner/provenance guard only if the target integration is intended to combine both branches. Do not merge the two branch families by blindly replacing shared files.
 - Original PR #33 and validation candidate PR #34 remain open/draft/unmerged. No PR or branch topology was changed in this review.
+
+
+## 2026-10-30 — unified validation candidate PR #37
+- Created Draft PR #37: https://github.com/wosafety0/dev-workflow-kit/pull/37, based on PR #24's tested head `58702b8ba7e7fde2c384671677aec8784f216c97`.
+- Exact archived candidate head `ea05b0813ed25abe5354b7f2bf8d2655a86bf181` passed Harness CI [run 40990643340](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40990643340). Python compilation, offline contract tests, redacted report generation, artifact upload, and final gate all succeeded.
+- Candidate carries the bounded response and duplicate-key checks from PR #33 alongside PR #32 runner/config protections; the PR #24 HTTPS redirect regression and fail-fast ordering were retained. Shared runner tests were combined selectively, not overwritten wholesale.
+- Compare against PR #24 base: 15 commits ahead, 0 behind; intended net diff is 8 files including CI trigger coverage for `integration/**` branches.
+- Validation-only Draft; no live provider request or credential use. Original PR #33 remains open/draft/unmerged and its branch was not altered.
