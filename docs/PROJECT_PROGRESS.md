@@ -547,3 +547,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Current PR #37 head: `90564d4550142af0fb776c0e7aaa78b92698357d`.
 - Exact-head Push CI [40996448203](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40996448203) and PR-context CI [40996455446](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40996455446) both succeeded for the same SHA. Compilation, offline contract tests, redacted acceptance report generation/upload, and final required-stage gate all succeeded.
 - This head includes the prior atomic JSON newline fix and verified stdin byte-snapshot flow. No local tests or live provider calls are claimed; PR #37 remains Draft/open/unmerged.
+
+## 2026-10-30 — bounded review input and unambiguous evidence
+- Added a 4 MiB cap for semantic-review input in both runner and standalone CLI. The runner snapshots at most limit+1 bytes; the CLI rejects oversized file/stdin input before parsing or calling the model.
+- Static audit found that repeated evidence substrings across multiple lines/hunks could be merged into a broad range and accepted without uniquely identifying the cited location. Validation now rejects evidence substrings that occur more than once in the cited file diff; tests were updated to make ambiguity fail closed.
+- The first CI attempt for the evidence change correctly failed because the new test's hunk counts were malformed and an older test still expected multi-location aggregation. Both tests were corrected to assert the new fail-closed contract.
+- Current PR #37 head: `2bd757ec21247af583386498a7a90ffdce0de847`.
+- Exact-head Push CI [40997023835](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40997023835) and PR-context CI [40997028514](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40997028514) both succeeded for the same SHA. Compilation, all offline contract tests, redacted acceptance report generation/upload, and the final required-stage gate succeeded.
+- This head also includes the verified stdin byte-snapshot flow, real trailing newline in review JSON, strict acceptance-rules digest validation, rule-quote source separation, and the documented caller-supplied diff provenance limitation. No local tests or live provider requests are claimed. PR #37 remains Draft/open/unmerged.
