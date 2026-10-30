@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Any
 
 
@@ -52,8 +53,7 @@ def _validate_review_provenance(value: Any, commit_sha: str) -> dict[str, Any]:
             or re.match(r"^[A-Za-z]:", path) is not None
             or "\\" in path
             or any(part in {"", ".", ".."} for part in parts)
-            or any(ord(char) < 32 or ord(char) == 127 for char in path)
-            or any(char.isspace() for char in path)
+            or any(unicodedata.category(char) == "Cc" for char in path)
         ):
             raise AcceptanceReportError("review_provenance.changed_files contains an unsafe path")
         checked_paths.append(path)
