@@ -82,12 +82,12 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         step = self.source.split(
             "      - name: Run consumer-owned acceptance command", 1
         )[1]
-        script = step.split("        run: |\\n", 1)[1]
-        script = "\\n".join(
+        script = step.split("        run: |\n", 1)[1]
+        script = "\n".join(
             line[10:] if line.startswith("          ") else line
             for line in script.splitlines()
         )
-        for command in ("", "   ", "\\t\\n "):
+        for command in ("", "   ", "\t\n "):
             with self.subTest(command=repr(command)):
                 env = dict(os.environ, ACCEPTANCE_COMMAND=command)
                 result = subprocess.run(
@@ -107,8 +107,8 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         step = self.source.split(
             "      - name: Validate runtime and package-manager inputs", 1
         )[1].split("      - name: Set up Python", 1)[0]
-        script = step.split("        run: |\\n", 1)[1]
-        script = "\\n".join(
+        script = step.split("        run: |\n", 1)[1]
+        script = "\n".join(
             line[10:] if line.startswith("          ") else line
             for line in script.splitlines()
         )
