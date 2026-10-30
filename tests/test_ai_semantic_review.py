@@ -755,7 +755,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
 
     def test_rejects_unicode_control_characters_in_changed_file_path(self):
         payload = dict(self.payload)
-        payload["changed_files"] = ["src/client.py" + chr(0x85), "README.md"]
+        payload["changed_files"] = ["src/cli" + chr(0x85) + "ent.py", "README.md"]
         with self.assertRaisesRegex(ReviewError, "changed_files contains an unsafe path"):
             validate_input(payload)
 
