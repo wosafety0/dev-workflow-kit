@@ -190,3 +190,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Validation-only Draft PR; exact-head hosted CI required. No local tests, live provider request, credential use, merge, release, or deployment is claimed.
 
 - Candidate PR opened: [PR #36](https://github.com/wosafety0/dev-workflow-kit/pull/36), Draft/open/unmerged, based on PR #24. Exact final archived head at this checkpoint: `68c58ef4dbcff2072c866b19aa46d3e538a40558`. Exact-head Harness CI run [40990216035](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40990216035) completed successfully: compile, offline contract tests, redacted acceptance report, artifact upload, and final required-stage gate all succeeded.
+
+
+## 2026-10-30 — combined path/config integrity candidate on PR #36 chain
+
+- Created isolated branch `integration/pr24-pr33-pr32-20261030` from PR #36 exact head `84d7fed0ae91f71d4572572c093b3af7999c3b2b`; no original PR or prior candidate was retargeted or merged.
+- Selectively merged PR #32 runner protections into the current PR #24/#33 chain: duplicate-key config rejection, tracked-config requirement, stale-artifact invalidation before config validation, trusted-source/symlink checks, output/config collision guard, and post-task worktree/output revalidation.
+- Preserved PR #36's fail-fast execution behavior and semantic-review-last requirement. The runner regression suite starts from PR #32's expanded tests, then restores PR #36's loopback semantic-review test and selectively applies the Windows-resolved path assertions.
+- Documentation changes are limited to runner safety and acceptance-contract scope; unrelated historical workflow/docs changes from PR #32's branch are not copied wholesale.
+- This is a validation candidate only. Exact-head hosted CI and review of the combined diff are required; no local test run, real provider call, merge, release, or deployment is claimed.
