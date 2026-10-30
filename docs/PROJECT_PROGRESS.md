@@ -316,3 +316,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Corrected on PR #37 candidate branch `integration/pr24-pr33-pr32-20261030`: head `bf0b96b2c8dfbcaf623f6b57d09614dc6422ee0b`. The runner now blocks all ignored `.py` files under `tests/`; regression coverage includes an ignored helper module and the existing ignored-test case.
 - Exact-head Push CI [run 40992682760](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40992682760) and PR-context CI [run 40992686555](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40992686555) both succeeded, including compilation, offline contract tests, report generation/upload, and final gate.
 - This is a follow-up finding/fix on the unified validation candidate; it does not alter the original PR #32/#33 source refs, and does not authorize merging PR #37.
+
+
+## 2026-10-30 — project-wide ignored Python source guard
+- Follow-up review found ignored Python helper modules outside `tests/` could also be imported by tracked tests.
+- PR #37 candidate head `2ee839b9c8cada2fe3c5646d6eae57bc83a138e4` now checks ignored Python sources across the project tree, excluding generated artifacts, common virtual environments, and Python caches. Regression tests cover ignored helpers under `tests/` and `scripts/`; runner and contract docs were updated.
+- Exact-head Push CI [run 40992914390](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40992914390) and PR-context CI [run 40992921060](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40992921060) both succeeded.
+- Candidate remains Draft/unmerged; original PR #33 was not changed. Runtime/dependency environment contents are not attested by the source commit.
