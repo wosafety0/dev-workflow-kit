@@ -35,6 +35,8 @@ In strict mode, the review-context JSON provides `task`, `global_rules`, and `pr
 
 The runner writes `artifacts/acceptance-report.json`. It requires the project root to be the Git repository root with a valid HEAD and a clean worktree outside generated `artifacts/`. The `--config` file must be tracked by the current HEAD and must not resolve under `artifacts/`; prior passing artifacts are invalidated before config validation. Duplicate JSON object keys at every nesting level are rejected. For an opt-in live model test, see [SEMANTIC_REVIEW_SMOKE_TEST.md](SEMANTIC_REVIEW_SMOKE_TEST.md) and the semantic-review example config/input.
 
+The repository's GitHub Actions acceptance report uses schema version 3 to add a validated `ci_context`: the actual tested commit SHA, workflow run ID and attempt, triggering event, and PR source-head SHA when the event is `pull_request`. For a pull-request run, `commit_sha`/`tested_commit_sha` identifies the tested merge commit while `pull_request_head_sha` identifies the PR source commit; these are intentionally distinct. Reports generated without CI context retain schema v1, and strict Git-bound runner reports without CI context retain schema v2.
+
 ## Task mapping
 
 Configuration supplies only task IDs. The runner maps them to fixed argument vectors and never invokes a shell:
