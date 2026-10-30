@@ -124,6 +124,12 @@ class GitBoundReviewTests(unittest.TestCase):
             "GIT_WORK_TREE": "/tmp/other-worktree",
             "GIT_INDEX_FILE": "/tmp/other-index",
             "GIT_COMMON_DIR": "/tmp/other-common",
+            "GIT_OBJECT_DIRECTORY": "/tmp/other-objects",
+            "GIT_ALTERNATE_OBJECT_DIRECTORIES": "/tmp/other-alternates",
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "core.worktree",
+            "GIT_CONFIG_VALUE_0": "/tmp/other-worktree",
+            "GIT_CONFIG_SYSTEM": "/tmp/other-config",
         }
         with patch.dict(harness_runner.os.environ, overrides):
             environment = harness_runner._git_environment()
