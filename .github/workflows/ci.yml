@@ -2,9 +2,9 @@ name: Harness CI
 
 on:
   push:
-    branches: [main, "feat/**", "fix/**", "docs/**", "test/**"]
+    branches: [main, "feat/**", "fix/**", "docs/**", "test/**", "integration/**"]
   pull_request:
-    branches: [main, "feat/**", "fix/**", "test/**"]
+    branches: [main, "feat/**", "fix/**", "test/**", "integration/**"]
   workflow_dispatch:
 
 permissions:
