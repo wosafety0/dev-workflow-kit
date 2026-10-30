@@ -274,8 +274,8 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
 
 
     def test_workflow_call_is_exposed(self):
-        self.assertRegex(self.source, r"(?m)^on:\\s*$")
-        self.assertRegex(self.source, r"(?m)^  workflow_call:\\s*$")
+        self.assertRegex(self.source, r"(?m)^on:\s*$")
+        self.assertRegex(self.source, r"(?m)^  workflow_call:\s*$")
 
     def test_input_defaults_are_stable(self):
         expected_defaults = {
@@ -288,13 +288,13 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         for input_name, expected_default in expected_defaults.items():
             with self.subTest(input_name=input_name):
                 match = re.search(
-                    rf"(?ms)^      {re.escape(input_name)}:\\n(.*?)(?=^      [a-zA-Z][a-zA-Z0-9-]*:\\n|^permissions:)",
+                    rf"(?ms)^      {re.escape(input_name)}:\n(.*?)(?=^      [a-zA-Z][a-zA-Z0-9-]*:\n|^permissions:)",
                     self.source,
                 )
                 self.assertIsNotNone(match, f"Missing workflow input: {input_name}")
                 self.assertRegex(
                     match.group(1),
-                    rf"(?m)^        default: {re.escape(expected_default)}\\s*$",
+                    rf"(?m)^        default: {re.escape(expected_default)}\s*$",
                 )
 
 
