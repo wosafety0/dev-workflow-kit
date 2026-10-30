@@ -80,3 +80,16 @@ Replace the placeholder with a real, reviewed commit SHA from this repository. D
 - The workflow does not install dependencies automatically; dependency installation is part of the consumer-owned command.
 - The workflow definition and all third-party actions invoked inside it are pinned to full commit SHAs. Re-verify those pins during upgrades.
 - A green run establishes only that the consumer-provided command exited successfully. It does not prove the quality or completeness of the command, attest every dependency, or establish production readiness.
+
+
+## Troubleshooting cross-repository calls
+
+If a consumer workflow fails before the reusable job starts, do not assume the consumer test command or runtime setup caused the failure: those steps may never have run.
+
+1. Confirm the caller's `uses:` path is exactly `wosafety0/dev-workflow-kit/.github/workflows/reusable-acceptance.yml@<40-character-SHA>`, and verify that the referenced SHA exists and is the reviewed version.
+2. Inspect the run attempt, job status, annotations, and available logs in GitHub Actions. An empty step list or unavailable log blob is evidence that diagnostics are incomplete, not a root-cause explanation.
+3. Check the caller repository's **Settings → Actions → General** access/policy controls and any applicable organization or enterprise policy. Confirm whether the caller is allowed to use the referenced reusable workflow and its source repository. Read the effective policy before changing anything.
+4. Prefer the narrowest access change that matches the intended trust boundary. Do not enable broad third-party action access, expose secrets, or change repository visibility merely as a troubleshooting shortcut.
+5. After any separately authorized configuration change, rerun the same pinned workflow and preserve the exact caller SHA, reusable-workflow SHA, run URL, attempt number, and conclusion. A successful retry verifies that run, but does not by itself prove which setting caused an earlier failure.
+
+GitHub documents reusable-workflow access controls in its [reusing workflow configurations guide](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations). Effective access depends on the caller's repository policy and any higher-level policy; a private caller/public reusable-workflow combination alone is not sufficient to identify a failure cause.
