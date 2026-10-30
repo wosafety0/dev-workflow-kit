@@ -266,6 +266,14 @@ def _run_task(argv: list[str], root: Path, timeout_seconds: int) -> tuple[str, i
     return ("passed", result.returncode) if result.returncode == 0 else ("failed", result.returncode)
 
 
+def _file_sha256(path: Path, field: str) -> str:
+    """Fingerprint caller-supplied review input so earlier tasks cannot silently change it."""
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        raise HarnessRunnerError(f"Could not verify {field}") from None
+
+
 def _write_report(output_path: Path, metadata: dict[str, Any]) -> dict[str, Any]:
     report = build_acceptance_report(metadata)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -389,6 +397,10 @@ def main(argv: list[str] | None = None) -> int:
             _require_artifact_path(root, review_output, "review-output")
         if review_input is not None and not review_input.is_file():
             raise HarnessRunnerError("review-input must identify an existing file")
+        review_input_sha = (
+            _file_sha256(review_input, "review-input")
+            if review_input is not None else None
+        )
         if review_output is not None:
             review_output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -410,6 +422,15 @@ def main(argv: list[str] | None = None) -> int:
                 outcomes[task_id] = "not_run"
                 print(f"Task {task_id}: not_run (an earlier task failed)")
                 continue
+            if task_id == "semantic-review" and review_input is not None:
+                # Earlier tests are trusted repository code, but they may still mutate
+                # generated or tracked inputs. Do not review bytes different from those
+                # validated during preflight.
+                _reject_symlink_path(root, args.review_input, "review-input")
+                if review_input_sha is None or _file_sha256(
+                    review_input, "review-input"
+                ) != review_input_sha:
+                    raise HarnessRunnerError("review-input changed during task execution")
             status, exit_code = _run_task(argv_for_task, root, args.timeout_seconds)
             outcomes[task_id] = status
             suffix = " (timeout or launch failure)" if exit_code is None and status == "failed" else (

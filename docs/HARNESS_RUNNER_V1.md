@@ -29,7 +29,7 @@ Configuration supplies only task IDs. The runner maps them to fixed argument vec
 - `python-unittest`: `python -m unittest discover -s tests -v` using the current Python interpreter.
 - `semantic-review`: `python scripts/ai_semantic_review.py --input <path> --output <path>`; both paths must be supplied explicitly with `--review-input` and `--review-output`.
 
-If `semantic-review` is configured, a caller must pass both review paths. Review input must already exist. Review output and the acceptance report must be files under `artifacts/`. Output paths may not overwrite the config, review input, or one another. All configured tasks are preflighted before any task runs.
+If `semantic-review` is configured, a caller must pass both review paths. Review input must already exist. Its SHA-256 fingerprint is captured before task execution and rechecked immediately before semantic review, so an earlier task cannot silently change the reviewed payload. Review output and the acceptance report must be files under `artifacts/`. Output paths may not overwrite the config, review input, or one another. All configured tasks are preflighted before any task runs.
 
 ## Execution and exit behavior
 
@@ -52,6 +52,7 @@ A passing runner result establishes only that the configured fixed tasks exited 
 - The runner never evaluates configuration text as shell code and does not accept executable paths or arbitrary arguments from config.
 - Trusted source inputs (`tests/`, the semantic-review script, and the stable acceptance contract) must resolve inside the project root, outside `artifacts/`, and contain no symlinked source paths. Caller-supplied config/report/review paths reject symlink components before reads or writes.
 - The semantic-review output must not alias the Harness config, even when both paths are inside `artifacts/`; generated report/review outputs are revalidated immediately before report emission.
+- The caller-supplied semantic-review input is fingerprinted before task execution and checked again immediately before the semantic-review task. If a preceding task changes or replaces the input path, the run is blocked and no review is performed on the altered payload.
 - The standalone semantic-review CLI rejects symlink components in both input and output paths and writes the final review artifact through a same-directory temporary file plus atomic replacement. This reduces partial-artifact exposure and prevents the final output entry from redirecting a write through a symlink; it is not a general filesystem sandbox against hostile concurrent parent-directory replacement.
 - After all tasks, the runner rechecks the full Git worktree (tracked changes and non-ignored untracked files outside `artifacts/`) as well as HEAD and ignored Python sources. Task-created or task-modified source files must block report emission.
 - Before task execution and again after all tasks, the runner rejects ignored Python source files anywhere in the repository that could be imported as project code. It excludes generated `artifacts/`, common virtual-environment directories (`.venv`, `venv`, `env`, `.tox`), and `__pycache__`; the dependency/runtime environment itself is not attested by the source commit.

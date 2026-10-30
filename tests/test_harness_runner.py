@@ -226,6 +226,33 @@ class HarnessRunnerTests(unittest.TestCase):
         run_task.assert_not_called()
         self.assertEqual(self.config_path.read_bytes(), original_config)
 
+    def test_runner_rejects_review_input_mutated_by_preceding_task(self):
+        self.write_config(["python-unittest", "semantic-review"])
+        review_input = self.root / "review-input.json"
+        review_input.write_text('{"task":"original"}', encoding="utf-8")
+
+        def mutate_review_input(argv, *_args):
+            if "-m" in argv:
+                review_input.write_text('{"task":"changed"}', encoding="utf-8")
+                return "passed", 0
+            return "passed", 0
+
+        with patch("scripts.harness_runner._git_commit_sha", return_value="a" * 40), patch(
+            "scripts.harness_runner._rules_pin", return_value="sha256:contract"
+        ), patch(
+            "scripts.harness_runner._run_task", side_effect=mutate_review_input
+        ) as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+
+        self.assertEqual(code, 2)
+        self.assertIn("review-input changed during task execution", stderr)
+        self.assertEqual(run_task.call_count, 1, "semantic review must not run on changed input")
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
+        self.assertFalse((self.root / "artifacts" / "review.json").exists())
+
     def test_loopback_semantic_review_task_is_preflighted_without_network(self):
         from scripts.ai_semantic_review import validate_model_config
 
