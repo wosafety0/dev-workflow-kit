@@ -5,7 +5,7 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.ai_semantic_review import MAX_REVIEW_INPUT_BYTES, ReviewError, build_messages, main, validate_review
+from scripts.ai_semantic_review import MAX_REVIEW_INPUT_BYTES, ReviewError, build_messages, main, validate_input, validate_review
 
 
 class SemanticReviewValidationTests(unittest.TestCase):
@@ -738,6 +738,13 @@ class SemanticReviewValidationTests(unittest.TestCase):
         payload["changed_files"] = ["src/client.py\\x00", "README.md"]
         with self.assertRaisesRegex(ReviewError, "changed_files contains an unsafe path"):
             validate_review(payload, self.pass_review())
+
+    def test_rejects_unicode_control_characters_in_changed_file_path(self):
+        payload = dict(self.payload)
+        payload["changed_files"] = ["src/client.py" + chr(0x85), "README.md"]
+        with self.assertRaisesRegex(ReviewError, "changed_files contains an unsafe path"):
+            validate_input(payload)
+
 
 
     def test_rejects_extremely_large_hunk_line_numbers(self):
