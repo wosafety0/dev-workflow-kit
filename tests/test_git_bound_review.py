@@ -180,6 +180,38 @@ class GitBoundReviewTests(unittest.TestCase):
             self.assertEqual(provenance["head_sha"], head_sha)
             self.assertEqual(provenance["changed_files"], ["source.py"])
 
+    def test_local_binary_diff_driver_cannot_hide_text_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def git(*args):
+                return subprocess.run(
+                    ["git", *args], cwd=root, check=True, capture_output=True, text=True
+                )
+
+            git("init", "-q")
+            git("config", "user.name", "Harness Test")
+            git("config", "user.email", "harness-test@example.invalid")
+            git("config", "diff.review.binary", "true")
+            (root / ".gitattributes").write_text("source.py diff=review\\n", encoding="utf-8")
+            source = root / "source.py"
+            source.write_text("VALUE = 'old'\\n", encoding="utf-8")
+            git("add", ".gitattributes", "source.py")
+            git("commit", "-qm", "base")
+            base_sha = git("rev-parse", "HEAD").stdout.strip()
+
+            source.write_text("VALUE = 'new'\\n", encoding="utf-8")
+            git("add", "source.py")
+            git("commit", "-qm", "head")
+            head_sha = git("rev-parse", "HEAD").stdout.strip()
+
+            task_bytes, provenance = harness_runner._build_git_bound_review_input(
+                root, self.source, base_sha, head_sha, head_sha
+            )
+            payload = json.loads(task_bytes.decode("utf-8"))
+            self.assertIn("+VALUE = 'new'", payload["diff"])
+            self.assertEqual(provenance["changed_files"], ["source.py"])
+
     def test_rejects_malformed_review_context_json(self):
         with patch.object(
             harness_runner, "_resolve_git_commit", side_effect=[BASE, HEAD]
