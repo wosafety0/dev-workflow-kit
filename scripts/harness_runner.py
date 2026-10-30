@@ -450,9 +450,12 @@ def _build_git_bound_review_input(
     if head_sha != current_head.lower():
         raise HarnessRunnerError("review-head must equal the checked-out Git HEAD")
 
-    merge_base = _git_text(root, ["merge-base", base_sha, head_sha], "Git review merge-base").lower()
-    if not _SHA_RE.fullmatch(merge_base):
-        raise HarnessRunnerError("Could not verify Git review merge-base")
+    merge_bases = _git_text(
+        root, ["merge-base", "--all", base_sha, head_sha], "Git review merge-base"
+    ).lower().splitlines()
+    if len(merge_bases) != 1 or not _SHA_RE.fullmatch(merge_bases[0]):
+        raise HarnessRunnerError("Git review range has an ambiguous merge-base")
+    merge_base = merge_bases[0]
 
     raw_diff = _git_bytes_bounded(
         root,
