@@ -422,6 +422,65 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(report["schema_version"], 2)
         self.assertEqual(report["review_provenance"], provenance)
 
+    def test_git_bound_review_derives_diff_from_real_commit_range(self):
+        self.write_config(["semantic-review"])
+        (self.root / "review-input.json").write_text(json.dumps({
+            "task": "Review the selected Git range",
+            "diff": "caller-supplied forged diff",
+            "changed_files": ["forged.py"],
+            "global_rules": "Follow the global rules.",
+            "project_instructions": "Review only the selected changes.",
+        }), encoding="utf-8")
+        subprocess.run(
+            ["git", "add", "harness.json", "review-input.json"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test",
+             "-c", "user.email=harness-test@example.invalid",
+             "commit", "-qm", "configure strict review fixture"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        base_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.root, check=True,
+            capture_output=True, text=True,
+        ).stdout.strip()
+        source = self.root / "tests" / "test_example.py"
+        source.write_text(source.read_text(encoding="utf-8") + "# bound source change\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "add", "tests/test_example.py"], cwd=self.root, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test",
+             "-c", "user.email=harness-test@example.invalid",
+             "commit", "-qm", "change source under review"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        head_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.root, check=True,
+            capture_output=True, text=True,
+        ).stdout.strip()
+
+        with patch("scripts.harness_runner._run_task", return_value=("passed", 0)) as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+                "--review-base", base_sha,
+                "--review-head", head_sha,
+            )
+
+        self.assertEqual((code, stderr), (0, ""))
+        payload = json.loads(run_task.call_args.args[3].decode("utf-8"))
+        self.assertNotEqual(payload["diff"], "caller-supplied forged diff")
+        self.assertEqual(payload["changed_files"], ["tests/test_example.py"])
+        self.assertIn("diff --git a/tests/test_example.py b/tests/test_example.py", payload["diff"])
+        report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["schema_version"], 2)
+        self.assertEqual(report["review_provenance"]["base_sha"], base_sha)
+        self.assertEqual(report["review_provenance"]["head_sha"], head_sha)
+        self.assertEqual(report["commit_sha"], head_sha)
+
     def test_git_bound_review_requires_base_and_head_together(self):
         self.write_config(["semantic-review"])
         (self.root / "review-input.json").write_text("{}", encoding="utf-8")
