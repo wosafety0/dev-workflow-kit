@@ -372,3 +372,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Updated report tests and runner fixtures to use valid SHA-256-shaped pins, with negative tests for malformed pins.
 - Current PR #37 head: `4ba0108f5c4804fdedd55b7e3fe8850f8ea56143`. Exact-head Push CI [40994944355](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40994944355) and PR-context CI [40994950381](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40994950381) both succeeded for the same SHA, including compile, offline tests, report generation, artifact upload, and final gate.
 - The current head also includes review-input mutation protection, single-source rule quote validation, precise evidence line ranges, and the documented caller-supplied diff-provenance limitation. No local tests or live provider requests are claimed.
+
+## 2026-10-30 — atomic review artifact and input snapshot hardening
+- Fixed semantic-review JSON output to write an actual newline rather than the literal backslash-plus-n sequence. The successful CLI regression test now checks the output ends in a real newline and round-trips through `json.loads`.
+- Closed a check/use race in the runner's review input handling: it captures the input bytes and SHA-256 before task execution, checks the source path and hash again immediately before review, then passes the captured bytes to the child over standard input. A path replacement after the check cannot change the bytes reviewed. The CLI supports `--input -` for stdin while retaining path-based standalone use.
+- Updated runner tests and `docs/HARNESS_RUNNER_V1.md` to describe the snapshot flow accurately.
+- Current PR #37 head: `49191bd53c998a9af31862cb1ff75d46a16a769b`.
+- Exact-head Push CI [40996142543](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40996142543) and PR-context CI [40996147886](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40996147886) both succeeded for the same SHA. Both completed compilation, offline contract tests, redacted report generation/upload, and the final required-stage gate.
+- No local tests or live provider calls are claimed. PR #37 remains Draft/open/unmerged; no candidate PRs were merged, closed, or retargeted.
