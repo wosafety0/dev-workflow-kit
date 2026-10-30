@@ -52,6 +52,19 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         run_script = self.source.split("      - name: Run consumer-owned acceptance command", 1)[1]
         self.assertNotIn("${{ inputs.test-command }}", run_script.split("run: |", 1)[1])
 
+    def test_consumer_command_is_required(self):
+        self.assertRegex(
+            self.source,
+            r"(?s)test-command:\\n\\s+description:.*?required: true\\n\\s+type: string",
+        )
+
+    def test_input_validation_precedes_consumer_execution(self):
+        validation = self.source.index("      - name: Validate runtime and package-manager inputs")
+        command = self.source.index("      - name: Run consumer-owned acceptance command")
+        self.assertLess(validation, command)
+        self.assertIn('case "$ACCEPTANCE_RUNTIME" in', self.source[validation:command])
+        self.assertIn('case "$ACCEPTANCE_PACKAGE_MANAGER" in', self.source[validation:command])
+
     def test_job_has_a_bounded_timeout(self):
         self.assertIn("timeout-minutes: 15", self.source)
 
