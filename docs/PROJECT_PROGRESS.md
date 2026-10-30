@@ -401,3 +401,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added a regression test that sets an untrusted ambient `PATH` and verifies executable resolution uses `os.defpath` instead.
 - Exact implementation/test head `b77c52fce7ef46595910b7abccee17c213d5117e` passed GitHub Actions Push CI [run 41014953208](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41014953208) and PR-context CI [run 41014960597](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41014960597). Both completed all required stages successfully; Push CI reports all 175 offline contract tests passed.
 - Verification boundary: GitHub-hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+
+### Acceptance task environment: isolate Git configuration overrides (2026-10-30)
+
+- Continued the runtime-environment audit after Python import-path isolation. The runner's own provenance commands already sanitize inherited `GIT_*` variables, but configured acceptance task subprocesses previously inherited them. Variables such as `GIT_DIR`, `GIT_WORK_TREE`, and `GIT_CONFIG_COUNT` could make test subprocesses observe a redirected repository or injected Git configuration.
+- Task subprocess environments now remove inherited `PYTHON*` and `GIT_*` variables, then explicitly set `PYTHONNOUSERSITE=1`, `GIT_NO_REPLACE_OBJECTS=1`, `GIT_CONFIG_NOSYSTEM=1`, `GIT_CONFIG_GLOBAL=os.devnull`, and `GIT_GRAFT_FILE=os.devnull`. Ordinary environment variables needed to locate normal task dependencies remain available.
+- Expanded regression coverage to inject Python import controls, Git repository redirection, and Git config injection, and assert they do not reach the task subprocess.
+- Exact implementation/test head `a2c0d2899318448db122798c3d643dfea29c56ce` passed GitHub Actions Push CI [run 41015352209](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41015352209) and PR-context CI [run 41015355267](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41015355267). Both completed successfully; each CI log reports 175 offline contract tests passed and acceptance status `passed`.
+- Verification boundary: GitHub-hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
