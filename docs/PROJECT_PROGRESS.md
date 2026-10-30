@@ -180,3 +180,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Isolated follow-up branch: `test/https-redirect-handler-20261029`, based on the fail-fast candidate head `7962697d273e04716e71fcf95536154b03704032`, tracked in Draft PR #24: https://github.com/wosafety0/dev-workflow-kit/pull/24.
 - Exact tested head `afe632edc0f5fdcef3d57289d8ef6da472f49365` passed push CI [40805356218](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40805356218) and PR-context CI [40805372630](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40805372630); both passed Python compilation, **109 offline tests**, redacted report generation, artifact upload, and final gate. The progress archive update itself will receive a new exact-head run.
 - No merge, live model call, game operation, release, or deployment.
+
+
+## 2026-10-30 — downstream integration candidate based on PR #24
+
+- Created isolated candidate `integration/pr24-plus-bounded-semantic-review-20261030` from PR #24 exact head `58702b8ba7e7fde2c384671677aec8784f216c97`, preserving PR #23 fail-fast ordering and PR #24's HTTPS redirect-handler regression.
+- Selectively carried PR #33's bounded provider-response read (1 MiB plus sentinel byte), duplicate-JSON-key rejection at provider envelope/model content/CLI input boundaries, stable-contract wording, and Windows-resolved path expectations in runner tests.
+- Re-composed `tests/test_ai_semantic_review.py` by retaining PR #33 candidate coverage and restoring PR #24's HTTPS redirect-handler test. This branch does not replace PR #32's expanded runner test suite in any future unified branch.
+- Validation-only Draft PR; exact-head hosted CI required. No local tests, live provider request, credential use, merge, release, or deployment is claimed.
