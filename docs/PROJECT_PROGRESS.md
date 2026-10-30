@@ -456,3 +456,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Final audited PR #37 head: `169fa027fecfa0f361da751f86e7df4d2251b4ff`; exact-head Harness CI [run 40990807374](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40990807374) succeeded. Python compilation, offline contract tests, redacted report build, artifact upload, and final required-stage gate all succeeded.
 - Diff audit confirms the semantic-review implementation matches PR #33 candidate blob `4a29f02f370704e6b61d2a8ddfe718eb31d99e26`; all 31 PR #32 candidate runner tests are retained, plus the loopback preflight regression (32 runner tests total). Net changed-file list is 8 intended files; no unrelated source modules in the net diff.
 - Candidate remains Draft/unmerged; originals #24/#32/#33 and candidates #34–#36 remain open/draft/unmerged. No live provider call, release, or deployment.
+
+
+## 2026-10-30 — PR #37 follow-up audit correction
+- The unified candidate initially omitted two fail-fast regression tests inherited from PR #24's base. Both were restored on candidate head `731c39a5a8c9d1a21312b2c959a6e6dc3c732123`: `test_stops_after_failure_and_marks_remaining_tasks_not_run` and `test_semantic_review_must_be_last_configured_task`.
+- Read-back inventory confirms all 14 PR #24 base runner test methods and all 31 PR #32 candidate runner test methods are present, plus the loopback preflight test (34 unique runner test methods total).
+- Corrected exact-head CI [run 40991595301](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40991595301) passed compilation, offline contract tests, report build/upload, and final gate. No local test execution or live provider request is claimed.
+- PR #37 remains Draft/unmerged; original PR #32 and its branch are unchanged.
