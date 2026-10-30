@@ -140,8 +140,8 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         step = self.source.split(
             "      - name: Validate runtime and package-manager inputs", 1
         )[1].split("      - name: Set up Python", 1)[0]
-        script = step.split("        run: |\\n", 1)[1]
-        script = "\\n".join(
+        script = step.split("        run: |\n", 1)[1]
+        script = "\n".join(
             line[10:] if line.startswith("          ") else line
             for line in script.splitlines()
         )
@@ -172,8 +172,8 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         step = self.source.split(
             "      - name: Run consumer-owned acceptance command", 1
         )[1]
-        script = step.split("        run: |\\n", 1)[1]
-        script = "\\n".join(
+        script = step.split("        run: |\n", 1)[1]
+        script = "\n".join(
             line[10:] if line.startswith("          ") else line
             for line in script.splitlines()
         )
