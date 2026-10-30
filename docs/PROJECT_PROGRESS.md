@@ -383,3 +383,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added a real Git regression that enables cone-mode sparse checkout, selects only docs/ and scripts/, verifies the tracked tests file is absent, and asserts that acceptance provenance rejects the workspace before tasks run.
 - Exact implementation/test head 8c6c422c51ae464b5c1927e7b7a652d9f50b9e82 passed Push CI [run 41013802438](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41013802438) and PR-context CI [run 41013805393](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41013805393). Both ran the complete offline contract suite, built the redacted acceptance report, uploaded the artifact, and passed the required-stage gate.
 - Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+
+### Acceptance task runtime: isolate Python import environment (2026-10-30)
+
+- Continued the acceptance-environment audit beyond Git metadata. Python task subprocesses inherit ambient interpreter variables by default; caller-controlled `PYTHONPATH`, `PYTHONHOME`, user-site configuration, and related `PYTHON*` variables could influence imports and make acceptance results depend on modules outside the committed repository.
+- The task runner now removes inherited environment entries whose names are `PYTHONPATH`, `PYTHONHOME`, or start with `PYTHON`, then explicitly sets `PYTHONNOUSERSITE=1`. Other environment entries, including `PATH`, remain available to configured tasks.
+- Added a regression test that injects `PYTHONPATH`, `PYTHONHOME`, `PYTHONUSERBASE`, and `PYTHONINSPECT` and verifies none reach the task subprocess while `PYTHONNOUSERSITE=1` is set.
+- Exact implementation/test head `ce490949dcc16dd14c11de16787a899e97ce44c0` passed GitHub Actions Push CI [run 41014360849](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41014360849) and PR-context CI [run 41014365771](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41014365771). Both workflow runs completed successfully.
+- Verification boundary: GitHub-hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
