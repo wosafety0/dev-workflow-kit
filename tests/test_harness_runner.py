@@ -379,6 +379,26 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertFalse(review_output.exists(), "blocked run must not leave a PASS review artifact")
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
+    def test_task_environment_blocks_python_import_path_overrides(self):
+        overrides = {
+            "PYTHONPATH": "/tmp/untrusted-modules",
+            "PYTHONHOME": "/tmp/untrusted-python",
+            "PYTHONUSERBASE": "/tmp/untrusted-user-base",
+            "PYTHONINSPECT": "1",
+        }
+        with patch.dict(harness_runner.os.environ, overrides), patch(
+            "scripts.harness_runner.subprocess.run",
+            return_value=subprocess.CompletedProcess(["test"], 0),
+        ) as run:
+            status, exit_code = harness_runner._run_task(
+                [sys.executable, "-c", "pass"], self.root, 1
+            )
+        self.assertEqual((status, exit_code), ("passed", 0))
+        task_env = run.call_args.kwargs["env"]
+        for key in overrides:
+            self.assertNotIn(key, task_env)
+        self.assertEqual(task_env["PYTHONNOUSERSITE"], "1")
+
     def test_timeout_is_a_failed_task_without_echoing_process_output(self):
         with patch(
             "scripts.harness_runner.subprocess.run",

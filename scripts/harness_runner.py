@@ -295,6 +295,14 @@ def _run_task(
         }
         if stdin_data is not None:
             run_options["input"] = stdin_data
+        # Do not allow caller-controlled Python import paths or user site packages
+        # to replace committed Harness modules during acceptance.
+        task_environment = os.environ.copy()
+        for name in tuple(task_environment):
+            if name == "PYTHONPATH" or name == "PYTHONHOME" or name.startswith("PYTHON"):
+                task_environment.pop(name, None)
+        task_environment["PYTHONNOUSERSITE"] = "1"
+        run_options["env"] = task_environment
         result = subprocess.run(argv, **run_options)
     except subprocess.TimeoutExpired:
         return "failed", None
