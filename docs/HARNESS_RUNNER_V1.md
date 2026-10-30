@@ -44,7 +44,7 @@ If `semantic-review` is configured, a caller must pass both review paths. Review
 
 The runner reuses `scripts/acceptance_report.py` and emits only the current commit SHA, SHA-256 pin of the stable acceptance contract, runner version label, per-task status, and overall status. It never copies task output, environment variables, API keys, or raw logs into the report.
 
-A passing runner result establishes only that the configured fixed tasks exited successfully on the recorded commit. It is not proof that semantic review detects every defect and is not authorization to merge, deploy, or perform project actions.
+A passing runner result establishes only that the configured fixed tasks exited successfully on the recorded commit. The semantic-review input is caller-supplied: its SHA-256 fingerprint guarantees only that the payload is unchanged between preflight and review, not that its diff corresponds to the current Git `HEAD`. The report's `commit_sha` identifies the runner worktree, not the reviewed diff's target commit unless the caller separately establishes that linkage. It is not proof that semantic review detects every defect and is not authorization to merge, deploy, or perform project actions.
 
 ## Security boundaries
 
