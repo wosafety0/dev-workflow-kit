@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -116,6 +117,47 @@ class GitBoundReviewTests(unittest.TestCase):
                 harness_runner.HarnessRunnerError, "Could not verify test diff"
             ):
                 harness_runner._git_bytes_bounded(Path("."), [], "test diff")
+
+    def test_git_replace_refs_cannot_change_reviewed_commit_content(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def git(*args):
+                return subprocess.run(
+                    ["git", *args], cwd=root, check=True, capture_output=True, text=True
+                )
+
+            git("init", "-q")
+            git("config", "user.name", "Harness Test")
+            git("config", "user.email", "harness-test@example.invalid")
+            source = root / "source.py"
+            source.write_text("VALUE = 'old'\\n", encoding="utf-8")
+            git("add", "source.py")
+            git("commit", "-qm", "base")
+            base_sha = git("rev-parse", "HEAD").stdout.strip()
+
+            source.write_text("VALUE = 'new'\\n", encoding="utf-8")
+            git("add", "source.py")
+            git("commit", "-qm", "actual head")
+            head_sha = git("rev-parse", "HEAD").stdout.strip()
+
+            git("checkout", "--detach", base_sha)
+            source.write_text("VALUE = 'forged replacement'\\n", encoding="utf-8")
+            git("add", "source.py")
+            git("commit", "-qm", "replacement tree")
+            replacement_sha = git("rev-parse", "HEAD").stdout.strip()
+
+            git("checkout", "--detach", head_sha)
+            git("replace", head_sha, replacement_sha)
+
+            task_bytes, provenance = harness_runner._build_git_bound_review_input(
+                root, self.source, base_sha, head_sha, head_sha
+            )
+            payload = json.loads(task_bytes.decode("utf-8"))
+            self.assertIn("+VALUE = 'new'", payload["diff"])
+            self.assertNotIn("forged replacement", payload["diff"])
+            self.assertEqual(provenance["head_sha"], head_sha)
+            self.assertEqual(provenance["changed_files"], ["source.py"])
 
     def test_rejects_malformed_review_context_json(self):
         with patch.object(
