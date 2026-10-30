@@ -180,3 +180,42 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Isolated follow-up branch: `test/https-redirect-handler-20261029`, based on the fail-fast candidate head `7962697d273e04716e71fcf95536154b03704032`, tracked in Draft PR #24: https://github.com/wosafety0/dev-workflow-kit/pull/24.
 - Exact tested head `afe632edc0f5fdcef3d57289d8ef6da472f49365` passed push CI [40805356218](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40805356218) and PR-context CI [40805372630](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40805372630); both passed Python compilation, **109 offline tests**, redacted report generation, artifact upload, and final gate. The progress archive update itself will receive a new exact-head run.
 - No merge, live model call, game operation, release, or deployment.
+
+
+## 2026-10-30 — downstream integration candidate based on PR #24
+
+- Created isolated candidate `integration/pr24-plus-bounded-semantic-review-20261030` from PR #24 exact head `58702b8ba7e7fde2c384671677aec8784f216c97`, preserving PR #23 fail-fast ordering and PR #24's HTTPS redirect-handler regression.
+- Selectively carried PR #33's bounded provider-response read (1 MiB plus sentinel byte), duplicate-JSON-key rejection at provider envelope/model content/CLI input boundaries, stable-contract wording, and Windows-resolved path expectations in runner tests.
+- Re-composed `tests/test_ai_semantic_review.py` by retaining PR #33 candidate coverage and restoring PR #24's HTTPS redirect-handler test. This branch does not replace PR #32's expanded runner test suite in any future unified branch.
+- Validation-only Draft PR; exact-head hosted CI required. No local tests, live provider request, credential use, merge, release, or deployment is claimed.
+
+- Candidate PR opened: [PR #36](https://github.com/wosafety0/dev-workflow-kit/pull/36), Draft/open/unmerged, based on PR #24. Exact final archived head at this checkpoint: `68c58ef4dbcff2072c866b19aa46d3e538a40558`. Exact-head Harness CI run [40990216035](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40990216035) completed successfully: compile, offline contract tests, redacted acceptance report, artifact upload, and final required-stage gate all succeeded.
+
+
+## 2026-10-30 — combined path/config integrity candidate on PR #36 chain
+
+- Created isolated branch `integration/pr24-pr33-pr32-20261030` from PR #36 exact head `84d7fed0ae91f71d4572572c093b3af7999c3b2b`; no original PR or prior candidate was retargeted or merged.
+- Selectively merged PR #32 runner protections into the current PR #24/#33 chain: duplicate-key config rejection, tracked-config requirement, stale-artifact invalidation before config validation, trusted-source/symlink checks, output/config collision guard, and post-task worktree/output revalidation.
+- Preserved PR #36's fail-fast execution behavior and semantic-review-last requirement. The runner regression suite starts from PR #32's expanded tests, then restores PR #36's loopback semantic-review test and selectively applies the Windows-resolved path assertions.
+- Documentation changes are limited to runner safety and acceptance-contract scope; unrelated historical workflow/docs changes from PR #32's branch are not copied wholesale.
+- Candidate implementation head `7b30ae63b8f0e3d1fe5c79daeecde64e80f1fdd3` was followed by workflow-trigger/archive commits; exact pre-archive combined head `299eb3b9e77c1737d132a693c031f22bd50d51f8` passed Harness CI [run 40990589875](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40990589875): compile, all offline contract tests, redacted report generation, artifact upload, and final gate succeeded. This connector did not run local tests. Final archive head receives its own CI check. No real provider call, merge, release, or deployment is claimed.
+
+- CI trigger correction: added `integration/**` to both `push` and `pull_request` target filters because this validation branch namespace was previously excluded. This allows exact-head CI for integration candidates without manual dispatch; original workflow branches and permissions are preserved.
+
+
+## 2026-10-30 — final unified candidate source/diff audit
+
+- Audited original PR #24/#32/#33 patches and unified Draft PR #37. PR #37 net file list is exactly 8 intended paths: CI workflow, runner guide, progress archive, stable acceptance contract, semantic-review implementation/tests, Harness runner implementation/tests. No unrelated source modules are introduced by the net diff.
+- Verified PR #37 `scripts/ai_semantic_review.py` is byte-for-byte identical to the reconstructed PR #33 candidate blob `4a29f02f370704e6b61d2a8ddfe718eb31d99e26`, retaining 1 MiB + sentinel response bounding, duplicate-key rejection, HTTPS redirect refusal, and fail-closed parsing.
+- Compared runner test names: all 31 tests from PR #32's candidate suite are present in PR #37; one additional PR #36 loopback preflight test is retained (32 total). Windows-resolved script/input/output assertions are retained.
+- Confirmed runner code includes tracked-config enforcement, duplicate-key config parsing, stale report/review invalidation before config validation, source/path symlink rejection, config/output alias checks, fail-fast task ordering, and post-task Git/output integrity revalidation. Hosted CI verifies the current code path, but no local test run or live provider request is claimed.
+- Workflow net change only adds `integration/**` to push and pull-request base-branch filters; existing full-SHA-pinned checkout/setup-python actions, read-only contents permission, and final gate remain present. The current PR targets a `test/**` base (already covered by PR filters); the push filter ensures the integration head also receives branch CI.
+- Audit conclusion: no missing test method from PR #32's candidate suite was detected in the unified test file. This is a code/diff audit plus hosted CI evidence, not a human approval or merge authorization. PR #37 remains Draft/unmerged; originals #24/#32/#33 and candidates #34–#36 remain untouched and unmerged.
+
+
+## 2026-10-30 — follow-up audit: restore inherited fail-fast regressions
+
+- A deeper base-to-head test inventory found that the unified PR #37 candidate had unintentionally dropped two tests inherited from the PR #24 base: `test_stops_after_failure_and_marks_remaining_tasks_not_run` and `test_semantic_review_must_be_last_configured_task`. The previous audit statement that all base fail-fast tests were retained was therefore incomplete; this is corrected here.
+- Restored both original regression tests without changing the runner implementation. The unified runner test module now contains 34 test methods, includes every one of the 14 test methods from PR #24's base file, all 31 methods from PR #32's candidate suite, and the additional loopback preflight regression. No duplicate test method names were found.
+- Exact corrected head `731c39a5a8c9d1a21312b2c959a6e6dc3c732123` passed Harness CI [run 40991595301](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40991595301): Python compilation, all offline contract tests, redacted acceptance report build/upload, and final required-stage gate succeeded.
+- This was a source-level inventory plus hosted CI verification; no local tests or live provider requests were run. PR #37 remains Draft/unmerged; original PRs and earlier candidates remain unchanged.

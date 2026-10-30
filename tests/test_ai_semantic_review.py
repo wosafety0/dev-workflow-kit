@@ -1,10 +1,11 @@
 import json
 import tempfile
 import unittest
+from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.ai_semantic_review import ReviewError, build_messages, main, validate_review
+from scripts.ai_semantic_review import MAX_REVIEW_INPUT_BYTES, ReviewError, build_messages, main, validate_review
 
 
 class SemanticReviewValidationTests(unittest.TestCase):
@@ -68,16 +69,53 @@ class SemanticReviewValidationTests(unittest.TestCase):
             "src/client.py",
         )
 
+    def test_rejects_rule_quote_spanning_global_and_project_instruction_boundary(self):
+        review = self.finding()
+        review["findings"][0]["rule_quote"] = (
+            "不得将未验证结果声明为成功。\n网络请求必须设置明确超时。"
+        )
+        with self.assertRaisesRegex(ReviewError, "not an exact substring"):
+            validate_review(self.payload, review)
+
     def test_rejects_finding_evidence_not_in_diff(self):
         review = self.finding()
         review["findings"][0]["evidence"] = "requests.get(url)"
         with self.assertRaisesRegex(ReviewError, "does not belong to the cited file"):
             validate_review(self.payload, review)
 
+    def test_rejects_ambiguous_evidence_repeated_in_same_file(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/src/client.py b/src/client.py\n"
+            "--- a/src/client.py\n"
+            "+++ b/src/client.py\n"
+            "@@ -1 +1 @@\n"
+            "-old first\n"
+            "+duplicate target\n"
+            "@@ -20 +20 @@\n"
+            "-old second\n"
+            "+duplicate target\n"
+        )
+        payload["changed_files"] = ["src/client.py"]
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["evidence"] = "+duplicate target"
+        finding["line_start"] = 1
+        finding["line_end"] = 21
+        with self.assertRaisesRegex(ReviewError, "Evidence is ambiguous"):
+            validate_review(payload, review)
+
     def test_rejects_evidence_borrowed_from_another_file(self):
         review = self.finding()
         review["findings"][0]["file"] = "README.md"
         with self.assertRaisesRegex(ReviewError, "does not belong to the cited file"):
+            validate_review(self.payload, review)
+
+    def test_rejects_overly_broad_line_range(self):
+        review = self.finding()
+        review["findings"][0]["line_start"] = 1
+        review["findings"][0]["line_end"] = 100
+        with self.assertRaisesRegex(ReviewError, "line range is broader"):
             validate_review(self.payload, review)
 
     def test_rejects_line_range_not_covering_evidence(self):
@@ -221,6 +259,32 @@ class SemanticReviewValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ReviewError, "Unsupported or malformed"):
             validate_review(payload, self.pass_review())
 
+    def test_stdin_input_produces_valid_review_artifact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output_path = Path(directory) / "review.json"
+            with patch("sys.argv", ["ai_semantic_review.py", "--input", "-", "--output", str(output_path)]), patch(
+                "sys.stdin", StringIO(json.dumps(self.payload))
+            ), patch(
+                "scripts.ai_semantic_review.call_model", return_value=self.pass_review()
+            ):
+                self.assertEqual(main(), 0)
+            artifact_text = output_path.read_text(encoding="utf-8")
+            self.assertTrue(artifact_text.endswith("\n"))
+            self.assertEqual(json.loads(artifact_text)["status"], "PASS")
+
+    def test_oversized_stdin_is_rejected_before_model_call(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output_path = Path(directory) / "review.json"
+            with patch("sys.argv", ["ai_semantic_review.py", "--input", "-", "--output", str(output_path)]), patch(
+                "sys.stdin", StringIO("x" * (MAX_REVIEW_INPUT_BYTES + 1))
+            ), patch(
+                "scripts.ai_semantic_review.call_model"
+            ) as model, patch("sys.stderr", new_callable=StringIO) as stderr:
+                self.assertEqual(main(), 2)
+            self.assertIn("4 MiB input limit", stderr.getvalue())
+            model.assert_not_called()
+            self.assertFalse(output_path.exists())
+
     def test_failed_run_removes_previous_pass_artifact(self):
         with tempfile.TemporaryDirectory() as directory:
             input_path = Path(directory) / "input.json"
@@ -233,12 +297,34 @@ class SemanticReviewValidationTests(unittest.TestCase):
             ):
                 self.assertEqual(main(), 0)
             self.assertTrue(output_path.exists())
+            artifact_text = output_path.read_text(encoding="utf-8")
+            self.assertTrue(artifact_text.endswith("\n"))
+            self.assertEqual(json.loads(artifact_text)["status"], "PASS")
             with patch("sys.argv", argv), patch(
                 "scripts.ai_semantic_review.call_model",
                 side_effect=ReviewError("simulated model failure"),
             ):
                 self.assertEqual(main(), 2)
             self.assertFalse(output_path.exists())
+
+
+    def test_duplicate_input_json_keys_fail_closed_before_model_call(self):
+        with tempfile.TemporaryDirectory() as directory:
+            input_path = Path(directory) / "input.json"
+            output_path = Path(directory) / "review.json"
+            raw = json.dumps(self.payload).replace('"task":', '"task": "", "task":', 1)
+            input_path.write_text(raw, encoding="utf-8")
+            output_path.write_text('{"status":"PASS"}', encoding="utf-8")
+            argv = ["ai_semantic_review.py", "--input", str(input_path),
+                    "--output", str(output_path)]
+            with patch("sys.argv", argv), patch(
+                "scripts.ai_semantic_review.call_model"
+            ) as model, patch("sys.stderr", new_callable=StringIO) as stderr:
+                self.assertEqual(main(), 2)
+            self.assertIn("duplicate JSON object key", stderr.getvalue())
+            model.assert_not_called()
+            self.assertFalse(output_path.exists())
+
 
     def test_input_and_output_must_not_be_same_path(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -248,6 +334,51 @@ class SemanticReviewValidationTests(unittest.TestCase):
                                     "--output", str(same_path)]):
                 self.assertEqual(main(), 2)
             self.assertTrue(same_path.exists())
+
+
+    def test_rejects_symlink_output_without_touching_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            input_path = root / "input.json"
+            target_path = root / "important.txt"
+            output_path = root / "review.json"
+            input_path.write_text(json.dumps(self.payload), encoding="utf-8")
+            target_path.write_text("preserve this file\n", encoding="utf-8")
+            try:
+                output_path.symlink_to(target_path)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlink creation is unavailable in this environment")
+            argv = ["ai_semantic_review.py", "--input", str(input_path),
+                    "--output", str(output_path)]
+            with patch("sys.argv", argv), patch(
+                "scripts.ai_semantic_review.call_model"
+            ) as model, patch("sys.stderr", new_callable=StringIO) as stderr:
+                self.assertEqual(main(), 2)
+            self.assertIn("symlinked paths", stderr.getvalue())
+            self.assertEqual(target_path.read_text(encoding="utf-8"), "preserve this file\n")
+            self.assertTrue(output_path.is_symlink())
+            model.assert_not_called()
+
+    def test_rejects_symlinked_input_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target_path = root / "real-input.json"
+            input_path = root / "input.json"
+            output_path = root / "review.json"
+            target_path.write_text(json.dumps(self.payload), encoding="utf-8")
+            try:
+                input_path.symlink_to(target_path)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlink creation is unavailable in this environment")
+            with patch("sys.argv", ["ai_semantic_review.py", "--input", str(input_path),
+                                    "--output", str(output_path)]), patch(
+                "scripts.ai_semantic_review.call_model"
+            ) as model, patch("sys.stderr", new_callable=StringIO) as stderr:
+                self.assertEqual(main(), 2)
+            self.assertIn("symlinked paths", stderr.getvalue())
+            self.assertFalse(output_path.exists())
+            model.assert_not_called()
+
 
     def test_rejects_rule_quote_not_in_supplied_rules(self):
         review = self.finding()
@@ -407,7 +538,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
         finding["line_end"] = 7
         self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
 
-    def test_context_evidence_requires_both_old_and_new_coordinates(self):
+    def test_context_evidence_uses_resulting_file_coordinates(self):
         payload = dict(self.payload)
         payload["diff"] = (
             "diff --git a/src/client.py b/src/client.py\n"
@@ -422,14 +553,15 @@ class SemanticReviewValidationTests(unittest.TestCase):
         review = self.finding()
         finding = review["findings"][0]
         finding["evidence"] = " context target"
-        finding["line_start"] = 10
-        finding["line_end"] = 10
-        with self.assertRaisesRegex(ReviewError, "does not cover the cited diff evidence"):
-            validate_review(payload, review)
+        finding["line_start"] = 20
         finding["line_end"] = 20
         self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+        finding["line_start"] = 10
+        finding["line_end"] = 20
+        with self.assertRaisesRegex(ReviewError, "line range is broader"):
+            validate_review(payload, review)
 
-    def test_repeated_evidence_across_hunks_requires_all_mapped_lines(self):
+    def test_repeated_evidence_across_hunks_is_rejected_as_ambiguous(self):
         payload = dict(self.payload)
         payload["diff"] = (
             "diff --git a/src/client.py b/src/client.py\n"
@@ -445,11 +577,9 @@ class SemanticReviewValidationTests(unittest.TestCase):
         finding = review["findings"][0]
         finding["evidence"] = "+same target"
         finding["line_start"] = 1
-        finding["line_end"] = 1
-        with self.assertRaisesRegex(ReviewError, "does not cover the cited diff evidence"):
-            validate_review(payload, review)
         finding["line_end"] = 40
-        self.assertEqual(validate_review(payload, review)["status"], "NEEDS_CHANGES")
+        with self.assertRaisesRegex(ReviewError, "Evidence is ambiguous"):
+            validate_review(payload, review)
 
 
     def test_maps_partial_added_line_evidence(self):
@@ -746,6 +876,8 @@ class SemanticReviewValidationTests(unittest.TestCase):
             b'{"choices":[]}',
             b'{"choices":[{"message":{"content":"not-json"}}]}',
             b'{"choices":[{"message":{"content":null}}]}',
+            b'{"choices":[],"choices":[{"message":{"content":"{}"}}]}',
+            b'{"choices":[{"message":{"content":"{\"status\":\"PASS\",\"status\":\"NEEDS_CHANGES\"}"}}]}',
         ]
         for raw in responses:
             with self.subTest(raw=raw):
@@ -776,6 +908,27 @@ class SemanticReviewValidationTests(unittest.TestCase):
             self.assertEqual(call_model(self.payload)["status"], "PASS")
 
 
+
+    def test_model_response_size_is_bounded_and_fails_closed(self):
+        from unittest.mock import MagicMock
+        from scripts.ai_semantic_review import MAX_MODEL_RESPONSE_BYTES, call_model
+
+        config = {
+            "AI_REVIEW_API_BASE": "https://example.invalid/v1",
+            "AI_REVIEW_API_KEY": "test-key",
+            "AI_REVIEW_MODEL": "test-model",
+        }
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = b"x" * (MAX_MODEL_RESPONSE_BYTES + 1)
+        with patch.dict("os.environ", config, clear=True), patch(
+            "scripts.ai_semantic_review.urllib.request.build_opener"
+        ) as opener_builder:
+            opener_builder.return_value.open.return_value = response
+            with self.assertRaisesRegex(ReviewError, "size limit"):
+                call_model(self.payload)
+        response.__enter__.return_value.read.assert_called_once_with(
+            MAX_MODEL_RESPONSE_BYTES + 1
+        )
 
     def test_provider_config_validation_is_offline(self):
         from scripts.ai_semantic_review import validate_model_config
@@ -841,8 +994,15 @@ class SemanticReviewValidationTests(unittest.TestCase):
                 "AI_REVIEW_MODEL": "test-model",
                 "HTTP_PROXY": "http://127.0.0.1:1",
                 "HTTPS_PROXY": "http://127.0.0.1:1",
+                "http_proxy": "http://127.0.0.1:1",
+                "https_proxy": "http://127.0.0.1:1",
+                "ALL_PROXY": "http://127.0.0.1:1",
+                "all_proxy": "http://127.0.0.1:1",
+                "NO_PROXY": "",
+                "no_proxy": "",
             }
-            with patch.dict("os.environ", config, clear=True):
+            # Keep Windows-required environment such as SystemRoot for SSLContext setup.
+            with patch.dict("os.environ", config, clear=False):
                 review = call_model(self.payload)
             self.assertEqual(review["status"], "PASS")
             self.assertEqual(server.received_auth, "Bearer test-loopback-key")
@@ -883,6 +1043,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
             None, None, 302, "Found", {"Location": "https://attacker.invalid/collect"},
             "https://attacker.invalid/collect",
         ))
+
 
     def test_call_model_rejects_redirect_without_forwarding_authorization(self):
         import threading

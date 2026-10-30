@@ -36,6 +36,8 @@ def build_acceptance_report(metadata: Any) -> dict[str, Any]:
         raise AcceptanceReportError("commit_sha must be a 40-character Git SHA")
 
     rules_pin = _required_text(metadata["rules_pin"], "rules_pin")
+    if not re.fullmatch(r"sha256:[0-9a-f]{64}", rules_pin):
+        raise AcceptanceReportError("rules_pin must be a lowercase SHA-256 digest")
     tool_version = _required_text(metadata["tool_version"], "tool_version")
 
     tests = metadata["tests"]
