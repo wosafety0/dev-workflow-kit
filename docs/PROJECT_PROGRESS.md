@@ -497,3 +497,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - PR #37 candidate head `b9748c3230782e3065923f386bacbd7a2ba83bdd` now reruns the full Git provenance/clean-worktree check after task execution, in addition to checking ignored Python source inventory. Added regression tests for task-created untracked source and task-modified tracked source; updated runner and contract documentation.
 - Exact-head Push CI [run 40993507598](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993507598) and PR-context CI [run 40993515179](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993515179) both succeeded.
 - Candidate PR #37 remains Draft/unmerged. Original PR #32 source refs remain untouched. Runtime/dependency environment is not attested by source commit.
+
+
+## 2026-10-30 — semantic-review CLI output hardening
+- Static review found the standalone semantic-review CLI accepted symlinked input/output paths and wrote its final JSON directly, exposing output to final-path redirection and partial-write risks.
+- Candidate PR #37 head `93adba0e56d3b6b3981c863ec8da24b6df7f482c` rejects symlink components in both CLI paths and writes the result through a same-directory temporary file plus atomic replacement. Output path is rechecked after provider processing. This is not a filesystem sandbox against hostile concurrent parent-directory replacement.
+- Regression tests cover symlinked input/output paths and verify a symlink target is preserved. Exact-head Push CI [40993820393](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993820393) and PR-context CI [40993826168](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40993826168) both succeeded.
+- Candidate PR #37 remains Draft/unmerged; original PR #32 remains untouched. No local tests or live provider calls are claimed.
