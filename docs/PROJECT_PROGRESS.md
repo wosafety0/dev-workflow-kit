@@ -242,3 +242,14 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Exact code head: `4e365c5d501e2b54c5c4e0b93bb20a3ad78771ab`. Exact-head GitHub Push CI [run 41003292886](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003292886) and PR-context CI [run 41003299444](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003299444) both completed successfully. Both run the compile step, full offline contract suite, redacted acceptance-report generation/upload, and final required-stage gate.
 - The acceptance report is an allowlisted summary, not a complete provenance attestation: schema v2 structural validation does not independently re-derive Git ancestry or recompute the diff digest. The runner derives those fields from Git before producing the report.
 - Hosted CI only; no local test run, live provider request, credentials, merge, release, deployment, or game action is claimed. PR #38 remains Draft and unmerged.
+
+
+## 2026-10-30 — downstream acceptance contract audit
+
+- Audited acceptance-report consumers and current-facing docs against the schema-v2 implementation.
+- Fixed a concrete path-contract gap: schema-v2 provenance validation now rejects Windows drive-prefixed paths (`C:/outside.py`, `C:relative.py`) in addition to absolute paths, backslashes, traversal, controls, whitespace, and duplicates. Regression tests cover both drive-prefix forms.
+- Updated `docs/ACCEPTANCE_REPORT_V1.md`: corrected the stale `rules_pin` example (it previously used a digest string rejected by the implementation), defined the exact lowercase SHA-256 shape, and documented the opt-in schema-v2 `review_provenance` extension while preserving schema-v1 compatibility mode.
+- Corrected two unrelated but adjacent stale reuse docs: `docs/REUSABLE_ACCEPTANCE_WORKFLOW.md` now accurately says actions inside the reusable workflow are SHA-pinned, and `README.md` describes the current reusable workflow as Python-only rather than Python/Node.
+- Exact code/documentation head: `33148f621b06a7fdc71a4cfd74c2004cdc5057a6`. Exact-head GitHub Push CI [run 41003415481](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003415481) and PR-context CI [run 41003420942](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003420942) both succeeded. Both completed Python compilation, the full offline contract suite, redacted acceptance-report generation/upload, and the final required-stage gate.
+- Report schema validation is structural only: it validates recorded SHA formats and paths but does not independently recompute Git ancestry or the diff digest. The trusted runner derives the diff/provenance from Git before report construction.
+- Hosted CI only; no local tests, live provider requests, credentials, merge, release, deployment, or game action are claimed. PR #38 remains Draft and unmerged.
