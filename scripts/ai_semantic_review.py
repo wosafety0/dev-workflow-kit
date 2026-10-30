@@ -130,7 +130,9 @@ def _validate_hunk_integrity(section: str) -> None:
             )
 
 
-def _diff_sections(diff: str) -> list[tuple[str, str]]:
+def _diff_sections(
+    diff: str, expected_paths: set[str] | None = None
+) -> list[tuple[str, str]]:
     """Return changed file sections and fail closed on unsupported path formats."""
     # Normalize Windows and legacy-Mac line endings before parsing headers and mapping evidence.
     diff = diff.replace("\r\n", "\n").replace("\r", "\n")
@@ -140,11 +142,29 @@ def _diff_sections(diff: str) -> list[tuple[str, str]]:
     sections = []
     for index, header in enumerate(headers):
         end = headers[index + 1].start() if index + 1 < len(headers) else len(diff)
-        parsed = re.fullmatch(r"diff --git a/([^\s]+) b/([^\s]+)", header.group(0))
-        if not parsed:
-            raise ReviewError("Unsupported or malformed Git diff path header")
-        old_path, new_path = parsed.groups()
         section = diff[header.start():end]
+        parsed = re.fullmatch(r"diff --git a/([^\s]+) b/([^\s]+)", header.group(0))
+        if parsed:
+            old_path, new_path = parsed.groups()
+        else:
+            # Git paths may contain spaces. Resolve those unambiguously against the
+            # declared changed-file set, or against explicit rename metadata.
+            rename_from = re.search(r"(?m)^rename from (.+)$", section)
+            rename_to = re.search(r"(?m)^rename to (.+)$", section)
+            if rename_from and rename_to:
+                old_path, new_path = rename_from.group(1), rename_to.group(1)
+                if header.group(0) != f"diff --git a/{old_path} b/{new_path}":
+                    raise ReviewError("Git rename metadata does not match its path header")
+            elif expected_paths:
+                candidates = [
+                    path for path in expected_paths
+                    if header.group(0) == f"diff --git a/{path} b/{path}"
+                ]
+                if len(candidates) != 1:
+                    raise ReviewError("Unsupported or ambiguous Git diff path header")
+                old_path = new_path = candidates[0]
+            else:
+                raise ReviewError("Unsupported or malformed Git diff path header")
         _validate_hunk_integrity(section)
         old_header = re.search(r"(?m)^--- (.+)$", section)
         new_header = re.search(r"(?m)^\+\+\+ (.+)$", section)
@@ -172,7 +192,7 @@ def _diff_sections(diff: str) -> list[tuple[str, str]]:
 
 
 def _validate_diff_integrity(payload: dict[str, Any]) -> list[tuple[str, str]]:
-    sections = _diff_sections(payload["diff"])
+    sections = _diff_sections(payload["diff"], set(payload["changed_files"]))
     paths = [path for path, _ in sections]
     if len(paths) != len(set(paths)):
         raise ReviewError("Diff contains duplicate file sections")
