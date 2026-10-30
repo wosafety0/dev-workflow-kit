@@ -192,7 +192,7 @@ def _diff_sections(
         if old_file != ("/dev/null" if old_file == "/dev/null" else "a/" + old_path):
             raise ReviewError("Git diff old-file header does not match its path")
         if new_file != ("/dev/null" if new_file == "/dev/null" else "b/" + new_path):
-            raise ReviewError("Git diff new-file header does not match its path")
+            raise ReviewError(f"Git diff new-file header does not match its path ({new_file!r} versus {new_path!r})")
         if rename_from and rename_from.group(1) != old_path:
             raise ReviewError("Git rename-from metadata does not match its path")
         if rename_to and rename_to.group(1) != new_path:
