@@ -16,6 +16,7 @@ import sys
 import tempfile
 import urllib.error
 import urllib.request
+import unicodedata
 from urllib.parse import urlsplit
 from pathlib import Path
 from typing import Any
@@ -63,7 +64,7 @@ def validate_input(payload: dict[str, Any]) -> None:
             or "\\" in path
             or re.match(r"^[A-Za-z]:", path)
             or any(part in {"", ".", ".."} for part in parts)
-            or any(ord(char) < 32 or ord(char) == 127 for char in path)
+            or any(unicodedata.category(char) == "Cc" for char in path)
         ):
             raise ReviewError("changed_files contains an unsafe path")
     if len(set(payload["changed_files"])) != len(payload["changed_files"]):
