@@ -556,6 +556,52 @@ class HarnessRunnerTests(unittest.TestCase):
 
 
 
+
+    def test_runner_rejects_untracked_source_created_during_task(self):
+        generated_source = self.root / "scripts" / "generated_source.py"
+
+        def create_untracked_source(*_args):
+            generated_source.write_text(
+                "RESULT = 'untracked mutable source'\n", encoding="utf-8"
+            )
+            return "passed", 0
+
+        with patch(
+            "scripts.harness_runner._run_task", side_effect=create_untracked_source
+        ):
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("Git worktree must be clean", stderr)
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
+
+    def test_runner_rejects_tracked_source_modified_during_task(self):
+        source = self.root / "scripts" / "source.py"
+        source.write_text("VALUE = 'original'\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "add", "scripts/source.py"], cwd=self.root, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test",
+             "-c", "user.email=harness-test@example.invalid",
+             "commit", "-qm", "add tracked source"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+
+        def modify_tracked_source(*_args):
+            source.write_text("VALUE = 'modified during task'\n", encoding="utf-8")
+            return "passed", 0
+
+        with patch(
+            "scripts.harness_runner._run_task", side_effect=modify_tracked_source
+        ):
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("Git worktree must be clean", stderr)
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
+
+
     def test_runner_rejects_ignored_python_source_created_during_task(self):
         (self.root / ".gitignore").write_text(
             "scripts/generated_helper.py\n", encoding="utf-8"
