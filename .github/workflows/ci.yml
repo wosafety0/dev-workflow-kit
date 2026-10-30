@@ -86,7 +86,7 @@ jobs:
           REPORT_OUTCOME: ${{ steps.report.outcome }}
           ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
         run: |
-          printf 'Required stage outcomes: tests=%s report=%s artifact=%s\\n' \
+          printf 'Required stage outcomes: tests=%s report=%s artifact=%s\n' \
             "$TEST_OUTCOME" "$REPORT_OUTCOME" "$ARTIFACT_OUTCOME"
           python scripts/ci_gate.py \
             "$TEST_OUTCOME" "$REPORT_OUTCOME" "$ARTIFACT_OUTCOME"
