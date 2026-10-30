@@ -15,6 +15,7 @@ import os
 import re
 import subprocess
 import sys
+import shutil
 import tempfile
 import threading
 import time
@@ -34,6 +35,15 @@ _SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 _MAX_TIMEOUT_SECONDS = 3600
 _MAX_REVIEW_INPUT_BYTES = 4 * 1024 * 1024
 _GIT_COMMAND_TIMEOUT_SECONDS = 10
+
+def _git_argv(*args: str) -> list[str]:
+    """Resolve Git from the platform's default executable path, not caller-controlled PATH."""
+    executable = shutil.which("git", path=os.defpath)
+    if executable is None:
+        raise FileNotFoundError("Git executable not found on the default executable path")
+    return [os.path.realpath(executable), *args]
+
+
 
 
 def _git_environment() -> dict[str, str]:
@@ -138,7 +148,7 @@ def _require_tracked_config(root: Path, config_path: Path) -> None:
     try:
         relative = config_path.relative_to(root.resolve()).as_posix()
         result = subprocess.run(
-            ["git", "ls-tree", "-r", "--name-only", "HEAD", "--", f":(literal){relative}"],
+            _git_argv("ls-tree", "-r", "--name-only", "HEAD", "--", f":(literal){relative}"),
             cwd=root,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -162,7 +172,7 @@ def _git_commit_sha(root: Path) -> str:
     """
     def run_git(*args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            ["git", *args],
+            _git_argv(*args),
             cwd=root,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -220,7 +230,7 @@ def _reject_ignored_python_sources(root: Path) -> None:
     try:
         ignored = subprocess.run(
             [
-                "git", "ls-files", "--others", "--ignored", "--exclude-standard",
+                *_git_argv("ls-files", "--others", "--ignored", "--exclude-standard"),
                 "-z", "--", ".",
             ],
             cwd=root, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -315,7 +325,7 @@ def _git_text(root: Path, args: list[str], field: str) -> str:
     """Run a bounded-time Git metadata command without exposing its stderr."""
     try:
         result = subprocess.run(
-            ["git", *args],
+            _git_argv(*args),
             cwd=root,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -361,7 +371,7 @@ def _git_bytes_bounded(root: Path, args: list[str], field: str) -> bytes:
 
     try:
         process = subprocess.Popen(
-            ["git", *args],
+            _git_argv(*args),
             cwd=root,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
