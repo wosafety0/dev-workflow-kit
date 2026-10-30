@@ -16,6 +16,8 @@ import re
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +33,7 @@ class HarnessRunnerError(ValueError):
 _SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 _MAX_TIMEOUT_SECONDS = 3600
 _MAX_REVIEW_INPUT_BYTES = 4 * 1024 * 1024
+_GIT_COMMAND_TIMEOUT_SECONDS = 10
 
 
 def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -295,35 +298,98 @@ def _git_text(root: Path, args: list[str], field: str) -> str:
 
 
 def _git_bytes_bounded(root: Path, args: list[str], field: str) -> bytes:
-    """Read at most the review-input limit from Git output and fail closed if larger."""
+    """Read bounded Git output with both a byte cap and a wall-clock timeout."""
     process: subprocess.Popen[bytes] | None = None
+    reader: threading.Thread | None = None
+    output_chunks: list[bytes] = []
+    reader_errors: list[BaseException] = []
+    oversized = threading.Event()
+    total_bytes = 0
+    timed_out = False
+
+    def consume_stdout() -> None:
+        nonlocal total_bytes
+        assert process is not None and process.stdout is not None
+        try:
+            while total_bytes <= _MAX_REVIEW_INPUT_BYTES:
+                chunk = process.stdout.read(
+                    min(65536, _MAX_REVIEW_INPUT_BYTES + 1 - total_bytes)
+                )
+                if not chunk:
+                    return
+                output_chunks.append(chunk)
+                total_bytes += len(chunk)
+                if total_bytes > _MAX_REVIEW_INPUT_BYTES:
+                    oversized.set()
+                    return
+        except (OSError, ValueError) as exc:
+            reader_errors.append(exc)
+
     try:
         process = subprocess.Popen(
             ["git", *args],
             cwd=root,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
+            bufsize=0,
         )
-        assert process.stdout is not None
-        output = process.stdout.read(_MAX_REVIEW_INPUT_BYTES + 1)
-        if len(output) > _MAX_REVIEW_INPUT_BYTES:
-            process.kill()
-            process.wait(timeout=2)
-            raise HarnessRunnerError(f"{field} exceeds the 4 MiB input limit")
+        reader = threading.Thread(target=consume_stdout, name="harness-git-output", daemon=True)
+        reader.start()
+        deadline = time.monotonic() + _GIT_COMMAND_TIMEOUT_SECONDS
+        while process.poll() is None:
+            if oversized.is_set():
+                try:
+                    process.kill()
+                except OSError:
+                    pass
+                break
+            if time.monotonic() >= deadline:
+                timed_out = True
+                try:
+                    process.kill()
+                except OSError:
+                    pass
+                break
+            time.sleep(0.01)
+
         try:
-            return_code = process.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            process.kill()
             process.wait(timeout=2)
-            raise HarnessRunnerError(f"Could not verify {field}") from None
-        if return_code != 0:
+        except subprocess.TimeoutExpired:
+            try:
+                process.kill()
+            except OSError:
+                pass
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+
+        reader.join(timeout=2)
+        if reader.is_alive():
+            if process.stdout is not None:
+                try:
+                    process.stdout.close()
+                except (OSError, ValueError):
+                    pass
+            reader.join(timeout=2)
+
+        if oversized.is_set():
+            raise HarnessRunnerError(f"{field} exceeds the 4 MiB input limit")
+        if timed_out or reader.is_alive():
             raise HarnessRunnerError(f"Could not verify {field}")
-        return output
+        if reader_errors:
+            raise HarnessRunnerError(f"Could not verify {field}") from None
+        if process.returncode != 0:
+            raise HarnessRunnerError(f"Could not verify {field}")
+        return b"".join(output_chunks)
     except HarnessRunnerError:
         raise
     except (OSError, subprocess.TimeoutExpired):
         if process is not None and process.poll() is None:
-            process.kill()
+            try:
+                process.kill()
+            except OSError:
+                pass
             try:
                 process.wait(timeout=2)
             except subprocess.TimeoutExpired:
@@ -331,7 +397,10 @@ def _git_bytes_bounded(root: Path, args: list[str], field: str) -> bytes:
         raise HarnessRunnerError(f"Could not verify {field}") from None
     finally:
         if process is not None and process.stdout is not None:
-            process.stdout.close()
+            try:
+                process.stdout.close()
+            except (OSError, ValueError):
+                pass
 
 
 def _resolve_git_commit(root: Path, value: str, field: str) -> str:
