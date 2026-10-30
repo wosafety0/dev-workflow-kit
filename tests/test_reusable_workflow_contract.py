@@ -224,5 +224,54 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         self.assertIn("consumer-command-ok", result.stdout)
 
 
+    def test_consumer_pipeline_failure_is_propagated_by_pipefail(self):
+        import os
+        import subprocess
+
+        step = self.source.split(
+            "      - name: Run consumer-owned acceptance command", 1
+        )[1]
+        script = step.split("        run: |\\n", 1)[1]
+        script = "\\n".join(
+            line[10:] if line.startswith("          ") else line
+            for line in script.splitlines()
+        )
+        env = dict(os.environ, ACCEPTANCE_COMMAND="false | true")
+        result = subprocess.run(
+            ["bash", "-euo", "pipefail", "-c", script],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 1, result.stderr)
+
+    def test_consumer_command_stops_after_a_failed_command(self):
+        import os
+        import subprocess
+
+        step = self.source.split(
+            "      - name: Run consumer-owned acceptance command", 1
+        )[1]
+        script = step.split("        run: |\\n", 1)[1]
+        script = "\\n".join(
+            line[10:] if line.startswith("          ") else line
+            for line in script.splitlines()
+        )
+        env = dict(
+            os.environ,
+            ACCEPTANCE_COMMAND="false; printf 'must-not-run\\n'",
+        )
+        result = subprocess.run(
+            ["bash", "-euo", "pipefail", "-c", script],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertNotIn("must-not-run", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
