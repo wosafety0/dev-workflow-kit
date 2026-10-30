@@ -314,6 +314,8 @@ def _run_task(
                 or name == "PYTHONHOME"
                 or name.startswith("PYTHON")
                 or name.startswith("GIT_")
+                or name.startswith("LD_")
+                or name.startswith("DYLD_")
             ):
                 task_environment.pop(name, None)
         task_environment["PYTHONNOUSERSITE"] = "1"
