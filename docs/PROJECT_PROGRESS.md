@@ -324,3 +324,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Implementation commits: workflow change `49a370ca0e2ff2399791b88cca3eeca0d191298d`; final test-contract correction `b1eaaa14f512d9675170aa67243a27ff3290ba7a`.
 - CI runs triggered for `b1eaaa14f512d9675170aa67243a27ff3290ba7a`: PR-context run [41034870490](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41034870490) was queued at archive time; run [41034863354](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41034863354) was in progress. This entry does not claim those runs passed.
 - This is a narrow credential-exposure reduction. It does not change the second consumer's unexplained pre-step failure, and it is not a full security audit. PR #40 remains Draft/unmerged; no settings, visibility, merge, release, or deployment changed.
+
+
+### Latest exact-head CI archive — 2026-10-30
+
+- Verified PR #40 head `d081fcf74863fbcccbea027a8e1f1b2137197cdf`: Push CI [41035581115](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41035581115) and PR-context CI [41035591455](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41035591455) both completed successfully on that exact SHA.
+- Corrected `docs/ROADMAP.md` in archive commit `aec27ae1d2d345d5a7eb1057a12f4542dcd596ed` to supersede the earlier pending-CI wording with the observed exact-head evidence. This entry documents the evidence for `d081fcf...`; the subsequent archive commits still require their own exact-head verification.
+- First consumer pilot remains passing only for its recorded consumer/Harness SHAs. Second consumer `chatgpt-auto-send-assistant` remains blocked before runner steps with cause unknown; do not count it as passing.
+- No repository Actions settings, permissions, visibility, merge, release, deployment, or local-worktree synchronization changed. PR #40 and both consumer PRs remain Draft/unmerged.
