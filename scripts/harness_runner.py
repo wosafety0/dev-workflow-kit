@@ -36,6 +36,13 @@ _MAX_REVIEW_INPUT_BYTES = 4 * 1024 * 1024
 _GIT_COMMAND_TIMEOUT_SECONDS = 10
 
 
+def _git_environment() -> dict[str, str]:
+    """Ignore replace refs so provenance is derived from the commit objects named by their SHAs."""
+    environment = os.environ.copy()
+    environment["GIT_NO_REPLACE_OBJECTS"] = "1"
+    return environment
+
+
 def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
@@ -127,6 +134,7 @@ def _require_tracked_config(root: Path, config_path: Path) -> None:
             text=True,
             timeout=10,
             check=False,
+            env=_git_environment(),
         )
     except (OSError, subprocess.TimeoutExpired):
         raise HarnessRunnerError("Could not verify tracked Harness config") from None
@@ -150,6 +158,7 @@ def _git_commit_sha(root: Path) -> str:
             text=True,
             timeout=10,
             check=False,
+            env=_git_environment(),
         )
 
     try:
@@ -199,7 +208,7 @@ def _reject_ignored_python_sources(root: Path) -> None:
                 "-z", "--", ".",
             ],
             cwd=root, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            timeout=10, check=False,
+            timeout=10, check=False, env=_git_environment(),
         )
     except (OSError, subprocess.TimeoutExpired):
         raise HarnessRunnerError("Could not verify ignored Python source") from None
@@ -289,6 +298,7 @@ def _git_text(root: Path, args: list[str], field: str) -> str:
             text=True,
             timeout=10,
             check=False,
+            env=_git_environment(),
         )
     except (OSError, subprocess.TimeoutExpired):
         raise HarnessRunnerError(f"Could not verify {field}") from None
@@ -332,6 +342,7 @@ def _git_bytes_bounded(root: Path, args: list[str], field: str) -> bytes:
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             bufsize=0,
+            env=_git_environment(),
         )
         reader = threading.Thread(target=consume_stdout, name="harness-git-output", daemon=True)
         reader.start()
