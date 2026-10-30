@@ -42,6 +42,8 @@ class AcceptanceReportTests(unittest.TestCase):
             lambda p: p.update(head_sha="e" * 40),
             lambda p: p.update(diff_sha256="not-a-digest"),
             lambda p: p.update(changed_files=["../outside.py"]),
+            lambda p: p.update(changed_files=["C:/outside.py"]),
+            lambda p: p.update(changed_files=["C:relative.py"]),
             lambda p: p.update(changed_files=["src/a.py", "src/a.py"]),
         )
         for mutate in mutations:
