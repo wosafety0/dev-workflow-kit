@@ -365,3 +365,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Current PR #37 head: `49d12ba3e53fa227b184a92b4f30f33072f6874e`.
 - Exact-head Push CI [40994746009](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40994746009) and PR-context CI [40994750887](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40994750887) both succeeded for the same exact SHA. Both completed compilation, offline contract tests, redacted report generation, artifact upload, and final required-stage gate.
 - The current head also includes the earlier fixes for review-input mutation and rule quotes spanning the boundary between `global_rules` and `project_instructions`. No local tests or live provider calls are claimed; PR #37 remains Draft/open/unmerged.
+
+## 2026-10-30 — strict acceptance-rules digest validation
+- Static audit found that `scripts/acceptance_report.py` accepted any non-empty `rules_pin`. In CI, a failed digest command could theoretically emit a malformed but non-empty value while the final gate did not directly require the pin step's outcome.
+- Acceptance reports now require `rules_pin` to match `sha256:` plus exactly 64 lowercase hexadecimal characters. The CI hash step now uses `set -euo pipefail`, verifies the contract file exists, and validates the digest before writing its output.
+- Updated report tests and runner fixtures to use valid SHA-256-shaped pins, with negative tests for malformed pins.
+- Current PR #37 head: `4ba0108f5c4804fdedd55b7e3fe8850f8ea56143`. Exact-head Push CI [40994944355](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40994944355) and PR-context CI [40994950381](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40994950381) both succeeded for the same SHA, including compile, offline tests, report generation, artifact upload, and final gate.
+- The current head also includes review-input mutation protection, single-source rule quote validation, precise evidence line ranges, and the documented caller-supplied diff-provenance limitation. No local tests or live provider requests are claimed.
