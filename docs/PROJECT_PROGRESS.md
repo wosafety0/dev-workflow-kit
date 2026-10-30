@@ -219,3 +219,253 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Restored both original regression tests without changing the runner implementation. The unified runner test module now contains 34 test methods, includes every one of the 14 test methods from PR #24's base file, all 31 methods from PR #32's candidate suite, and the additional loopback preflight regression. No duplicate test method names were found.
 - Exact corrected head `731c39a5a8c9d1a21312b2c959a6e6dc3c732123` passed Harness CI [run 40991595301](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40991595301): Python compilation, all offline contract tests, redacted acceptance report build/upload, and final required-stage gate succeeded.
 - This was a source-level inventory plus hosted CI verification; no local tests or live provider requests were run. PR #37 remains Draft/unmerged; original PRs and earlier candidates remain unchanged.
+
+
+## 2026-10-30 — optional Git-bound semantic-review mode
+
+- Created isolated branch `feat/optional-git-bound-review-20261030` from unified candidate head `d035dea4426e2dbbb39b22770fc206a5671bfc68`; PR #37 and all earlier candidate branches remain unchanged.
+- Preserved compatibility mode: caller-supplied semantic-review JSON remains accepted when neither `--review-base` nor `--review-head` is supplied.
+- Added opt-in strict mode requiring both full 40-character commit SHAs. The runner verifies both are commit objects, requires the requested head to equal the clean checked-out `HEAD`, derives the merge base and diff directly from Git, bounds Git diff/name-list reads to 4 MiB, replaces caller-provided `diff` and `changed_files`, and validates the generated input against the semantic-review parser before task execution.
+- Strict-mode acceptance reports use schema version 2 and include base/head/merge-base SHAs, SHA-256 of the exact Git diff bytes, and changed-file paths. Ordinary compatibility-mode reports remain schema version 1.
+- Added regression coverage for caller-diff replacement, generated diff/file-list consistency, malformed review context, checked-out-head mismatch, paired flag requirements, acceptance-report provenance validation, and a runner integration test using a real local Git commit range.
+- Exact implementation head before this archive update: `7bfa3ecefa7d712e9c1fcd0bda840f424a3ad905`. Exact-head GitHub Harness CI [run 41003007865](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003007865) completed successfully: Python compilation, offline contract tests, redacted acceptance report generation/upload, and final required-stage gate all passed.
+- This is hosted CI evidence; no local tests, live provider request, credential use, merge, release, deployment, or game action is claimed. The archive update will trigger a fresh exact-head CI run.
+- Remaining boundaries: strict mode attests the Git diff bytes supplied to the review, not model-review completeness, dependency/runtime identity, or authorization to merge/deploy. Diff/path formats unsupported by the semantic-review parser fail closed.
+- Follow-up audit found the first bounded Git-output reader could block while waiting for EOF before reaching its wait timeout. Replaced it with a streaming reader that enforces both the 4 MiB cap and a wall-clock timeout, and added regressions for oversized output and a hung subprocess. These tests passed on exact head `7bfa3ecefa7d712e9c1fcd0bda840f424a3ad905` in CI [run 41003007865](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003007865).
+- Progress-archive head `52385cbae39d4ff9af91eaf5c354d2d24a67b342` also passed exact-head Push CI [run 41003043999](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003043999) and PR-context CI [run 41003048700](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003048700). Both completed successfully through report upload and the final required-stage gate.
+
+
+## 2026-10-30 — acceptance-report path contract follow-up
+
+- During downstream schema-v2 review, found that `scripts/acceptance_report.py` rejected absolute paths, backslashes, control characters, and traversal segments but did not reject Windows drive-prefixed paths such as `C:/outside.py` and `C:relative.py`. The stable acceptance contract already forbids drive prefixes, so the report validator was inconsistent with the contract.
+- Updated the report validator to reject drive-prefixed provenance paths and added both forms as regression cases in `tests/test_acceptance_report.py`.
+- Exact code head: `4e365c5d501e2b54c5c4e0b93bb20a3ad78771ab`. Exact-head GitHub Push CI [run 41003292886](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003292886) and PR-context CI [run 41003299444](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003299444) both completed successfully. Both run the compile step, full offline contract suite, redacted acceptance-report generation/upload, and final required-stage gate.
+- The acceptance report is an allowlisted summary, not a complete provenance attestation: schema v2 structural validation does not independently re-derive Git ancestry or recompute the diff digest. The runner derives those fields from Git before producing the report.
+- Hosted CI only; no local test run, live provider request, credentials, merge, release, deployment, or game action is claimed. PR #38 remains Draft and unmerged.
+
+
+## 2026-10-30 — downstream acceptance contract audit
+
+- Audited acceptance-report consumers and current-facing docs against the schema-v2 implementation.
+- Fixed a concrete path-contract gap: schema-v2 provenance validation now rejects Windows drive-prefixed paths (`C:/outside.py`, `C:relative.py`) in addition to absolute paths, backslashes, traversal, controls, whitespace, and duplicates. Regression tests cover both drive-prefix forms.
+- Updated `docs/ACCEPTANCE_REPORT_V1.md`: corrected the stale `rules_pin` example (it previously used a digest string rejected by the implementation), defined the exact lowercase SHA-256 shape, and documented the opt-in schema-v2 `review_provenance` extension while preserving schema-v1 compatibility mode.
+- Corrected two unrelated but adjacent stale reuse docs: `docs/REUSABLE_ACCEPTANCE_WORKFLOW.md` now accurately says actions inside the reusable workflow are SHA-pinned, and `README.md` describes the current reusable workflow as Python-only rather than Python/Node.
+- Exact code/documentation head: `33148f621b06a7fdc71a4cfd74c2004cdc5057a6`. Exact-head GitHub Push CI [run 41003415481](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003415481) and PR-context CI [run 41003420942](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003420942) both succeeded. Both completed Python compilation, the full offline contract suite, redacted acceptance-report generation/upload, and the final required-stage gate.
+- Report schema validation is structural only: it validates recorded SHA formats and paths but does not independently recompute Git ancestry or the diff digest. The trusted runner derives the diff/provenance from Git before report construction.
+- Hosted CI only; no local tests, live provider requests, credentials, merge, release, deployment, or game action are claimed. PR #38 remains Draft and unmerged.
+
+
+## 2026-10-30 — acceptance schema documentation precision follow-up
+
+- A second read-through of the report docs found two wording ambiguities: the v1 section described four input fields and six output fields without clearly scoping those statements to schema v1, and the stable contract described `head_sha` as if it were a top-level report field. Clarified that the four-field input/six-field output statements apply to schema v1 and that `review_provenance.head_sha` must equal top-level `commit_sha`.
+- Exact latest code/documentation head: `057a99ade806aeab6faa0c923082571dc296852c`. Exact-head GitHub Push CI [run 41003525867](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003525867) and PR-context CI [run 41003530791](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003530791) both completed successfully. Both passed compile, the full offline contract suite, report generation/upload, and the final required-stage gate.
+- Prior archive commit `0d1e592cd252fa1924f0ccdbcf474d1ab16a199a` independently passed Push CI [run 41003460146](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003460146) and PR-context CI [run 41003464980](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003464980).
+- The report formatter remains a structural validator; the runner is the component that derives and supplies Git provenance. No local tests, live provider request, credentials, merge, release, deployment, or game action is claimed.
+
+
+## 2026-10-30 — exact-head test and artifact evidence detail
+
+- Inspected the final archive-head Push CI job log for run [41003571772](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003571772): `Ran 158 tests in 2.729s`, `OK`, report status `passed`, artifact upload succeeded, and the final orchestration gate passed. The PR-context run [41003576157](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41003576157) also passed all required stages on the same SHA `cdd5cecf76a8498f0158f2d48042a54b81f6a17b`.
+- GitHub Actions artifact metadata identifies artifact ID `12954302746`, name `acceptance-report`, size 366 bytes, and ZIP digest `sha256:1147bf6b1dde880d9fb8e5dcec6f2d272f189e3e0418d3c055dbff20f7943974`. The digest in the job upload log matches the artifact API metadata. The ZIP was not downloaded and independently re-hashed in this audit; do not describe this as independent recomputation.
+
+
+## 2026-10-30 — strict-review path contract alignment
+
+- Follow-up review of the Git-bound diff → semantic-review validator → schema-v2 report chain found a path-contract mismatch: the report builder rejected every whitespace character, while the stable acceptance contract only requires trimmed repository-relative paths and the semantic-review input validator permits internal spaces. This made valid Git filenames such as `src/my file.py` fail closed during strict review. The semantic diff parser also assumed path headers contained no whitespace.
+- Fixed the parser to resolve paths containing spaces against the declared changed-file set; rename paths with spaces are accepted only when explicit rename metadata exactly matches the Git header. Ambiguous/unsupported headers remain rejected.
+- Updated schema-v2 provenance path validation to permit internal spaces while continuing to reject leading/trailing whitespace and unsafe path forms. Both path validators now reject Unicode Cc control characters, including C1 controls, rather than checking only ASCII C0/DEL. Added regression tests for internal-space paths, C1 controls, and existing unsafe-path cases.
+- Latest implementation head: `518ba6b2ce4843c1b1285c859541d3d43784ec40`. Exact-head Push CI [run 41004069453](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41004069453) and PR-context CI [run 41004076034](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41004076034) both succeeded. The PR-context job log reports `Ran 161 tests in 2.837s`, report status `passed`, and successful final orchestration gate.
+- Several intermediate commits intentionally failed CI while regression tests exposed fixture and assertion issues; those were corrected before this verified head. No local test run, live provider request, credentials, merge, release, deployment, or game action is claimed.
+
+
+## 2026-10-30 — real-Git spaced-path end-to-end verification
+
+- Extended the real-Git-range runner regression to commit both a normal source path and `tests/test file.py`, then exercise strict mode through Git diff generation, semantic-review validation, and schema-v2 report construction.
+- Git's unified diff header can append a tab-delimited suffix to a file header. The parser now normalizes that delimiter before comparing paths, and only accepts the simple quoted-space form for paths containing spaces; unsupported/ambiguous quoted paths remain fail-closed. Blocked-run diagnostics remain redacted and do not include raw path values.
+- Exact implementation head `0b5eb8cf11239f63d9667cba3066d4887e934d10`: Push CI [run 41004596293](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41004596293) and PR-context CI [run 41004600921](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41004600921) both succeeded. PR-context log reports `Ran 161 tests in 2.580s`, acceptance status `passed`, successful artifact upload, and final required-stage gate success.
+- Intermediate CI failures exposed the actual Git header representation and caught a test-diagnostic regression; those were fixed before the verified head. No local test run, live provider request, credentials, merge, release, deployment, or game action is claimed.
+
+
+## 2026-10-30 — reject incomplete rename metadata in semantic-review diffs
+
+- Continued auditing the compatibility-mode semantic-review parser. It correctly accepted explicit Git rename metadata, but a content-changing diff whose `diff --git` header named different old/new paths could pass without the required `rename from` / `rename to` metadata. Strict Git-bound mode currently uses `--no-renames`, so this was primarily a malformed caller-supplied diff risk in compatibility mode.
+- Added structural invariants: rename metadata must be paired; distinct old/new paths require matching rename metadata; identical old/new paths must not claim a rename. File-header consistency checks run before these invariants so existing path-spoofing diagnostics remain specific. Added regression tests for missing and incomplete rename metadata while retaining tests for valid pure/content-changing renames.
+- Exact implementation head `f6c220bce593d736a634e814f8552e23682e9c26`: Push CI [run 41005525831](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41005525831) and PR-context CI [run 41005531567](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41005531567) both succeeded. PR-context job log reports `Ran 163 tests in 2.763s`, acceptance status `passed`, artifact upload success, and final required-stage gate success.
+- Intermediate CI runs exposed expected-message and fixture-newline mistakes in the new regressions; those were corrected before this verified head. No local test run, live provider request, credentials, merge, release, deployment, or game action is claimed.
+
+
+## 2026-10-30 — disable Git replacement objects in provenance commands
+
+- Strict-mode review originally relied on Git commands that honored `refs/replace/*`. A repository can keep the worktree clean and `HEAD` unchanged while a replacement ref causes `git diff base head` to read a different commit tree than the object identified by the recorded head SHA. That weakens the intended Git-source binding.
+- Added a dedicated Git subprocess environment with `GIT_NO_REPLACE_OBJECTS=1` and applied it to the Runner's Git metadata, worktree, tracked-config, ignored-source, merge-base, diff, and changed-path commands. This ensures provenance is derived from the actual objects named by the commit SHAs, not replacement refs.
+- Added a real temporary-Git-repository regression: create a real base/head, install a replacement ref whose tree contains forged content, and verify strict review still derives the diff from the original head object.
+- Exact implementation head `11929c11a231123da994ab1008630ef2b3450552`: Push CI [run 41005772744](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41005772744) and PR-context CI [run 41005779128](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41005779128) both succeeded. PR-context job log reports `Ran 164 tests in 2.521s`, acceptance status `passed`, artifact upload success, and final required-stage gate success.
+- Intermediate implementation/test commits were verified or corrected before this exact passing head; no local test run, live provider request, credentials, merge, release, deployment, or game action is claimed.
+
+### Git provenance environment isolation (2026-10-30)
+
+- Implementation commit: `c175014e51e2e5deab63b713b30c3ae92bebd0b7`. Git provenance subprocesses discard inherited `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, and `GIT_COMMON_DIR` while retaining `GIT_NO_REPLACE_OBJECTS=1`.
+- Regression-test commit: `893d7294cb36093f6f078913b513e25d89d88481`. Added a unit test asserting these four overrides are absent from the derived Git environment.
+- Exact implementation/test head `893d7294cb36093f6f078913b513e25d89d88481` passed GitHub Actions push run [41006559844](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41006559844) and pull-request run [41006566427](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41006566427).
+- Scope remains limited: this does not claim full Git environment isolation, independently attest the runtime, or prove protection against concurrent filesystem mutation. No local tests, live provider requests, credentials, merge, release, deployment, or game actions were performed.
+
+### Git provenance: isolate all inherited Git environment overrides (2026-10-30)
+
+- Implementation commit `4fd2114256c1d97dd50ec4cd503eecb777d801b9`: provenance Git subprocesses discard all inherited `GIT_*` variables and then explicitly set `GIT_NO_REPLACE_OBJECTS=1`; ordinary non-Git process environment remains available.
+- Regression-test commit `af18eaf5e5179d7d868eebebeee41fc63eaa2004`: extended environment isolation assertions for Git object directories, alternate objects, and Git config injection variables, alongside repository/worktree/index overrides.
+- Exact implementation/test head `af18eaf5e5179d7d868eebebeee41fc63eaa2004` passed GitHub Actions [push run 41007110682](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41007110682) and [PR run 41007112836](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41007112836), both conclusion `success`.
+- This does not independently attest the executable, Git config files, runtime, concurrent filesystem mutation, or artifact contents. No local tests, live provider requests, credentials, merge, release, deployment, or game actions are claimed.
+
+### Git-bound semantic review: isolate global Git configuration (2026-10-30)
+
+- Audited the strict review runner after inherited `GIT_*` environment isolation. Found that system/global Git configuration could still influence provenance commands, including a configured `core.fsmonitor` helper.
+- Hardened `_git_environment()` to set `GIT_CONFIG_NOSYSTEM=1` and `GIT_CONFIG_GLOBAL=os.devnull` in addition to clearing inherited `GIT_*` variables and setting `GIT_NO_REPLACE_OBJECTS=1`.
+- Disabled `core.fsmonitor` for the Git status invocation used in commit/worktree validation.
+- Added regression assertions that verify the isolated environment explicitly sets both Git configuration controls.
+- Implementation commit: `e04d3f76d2fa11628612d497b88bffc1dee2df64`. Exact-head Push CI [41010495951](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41010495951) and PR-context CI [41010503402](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41010503402) both succeeded.
+- Regression-test commit: `9f3a6b3351b80f9bc64b5cdfd9e22ed6de478855`. Exact-head Push CI [41010765899](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41010765899) and PR-context CI [41010772487](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41010772487) both completed successfully. The PR-context run completed compilation, offline contract tests, redacted acceptance report generation, artifact upload, and the final required-stage gate.
+- Verification boundary: this is hosted CI evidence only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+### Git-bound review: neutralize repository-local binary diff driver settings (2026-10-30)
+
+- Continued the configuration audit after isolating inherited, system, and global Git configuration. A repository-local `diff.<driver>.binary=true` setting combined with a matching `.gitattributes` driver could suppress ordinary text hunks in the generated review diff.
+- Added Git's `--text` option to the strict review diff command so tracked textual source changes remain visible even when a local diff driver marks the path as binary. External diff and textconv remain explicitly disabled.
+- Added a real temporary-Git-repository regression test that sets `diff.review.binary=true`, assigns that driver to `source.py`, changes the source across two commits, and asserts the generated review diff still includes the added line.
+- Implementation commit: `1be7f0044951ea49b110344afbb89a854fb9d43b`.
+- Regression-test head: `56127a867fa8c5ee8c281c0021b4b1b729c24714`. Exact-head Push CI [41011071189](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41011071189) and PR-context CI [41011076799](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41011076799) both succeeded. Both runs completed compilation, the offline contract suite, redacted acceptance report generation, artifact upload, and the final required-stage gate.
+- Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+
+### Git-bound review: fail closed on changed submodule pointers (2026-10-30)
+
+- Continued the bounded audit of repository-local Git configuration. A local `diff.ignoreSubmodules=all` or `submodule.<name>.ignore=all` setting could otherwise make a submodule pointer change disappear from the strict review diff, while the parent repository's diff does not contain the submodule's internal source.
+- Strict review now explicitly uses `--ignore-submodules=none` for raw change metadata, generated diff, and changed-file listing. It inspects bounded raw Git change metadata and rejects changes involving Git mode `160000` with a clear fail-closed error; submodule source is not recursively reviewed by this Harness.
+- Added a real temporary-Git-repository regression with a changed submodule commit and both repository-local ignore settings enabled. The test verifies strict review rejects the submodule pointer change rather than treating the commit metadata as a complete source review.
+- Exact implementation/test head `c717152db535b1b22b1bcea53e259d55a13f0181` passed GitHub Actions Push CI [run 41011490948](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41011490948) and PR-context CI [run 41011496030](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41011496030). Both ran all 167 offline contract tests successfully and passed the final required-stage gate.
+- Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+### Git-bound review: reject ambiguous merge bases (2026-10-30)
+
+- Continued the bounded audit of the strict review baseline. Git histories with criss-cross merges can have more than one best common ancestor; selecting one silently would make the review baseline ambiguous.
+- Strict mode now runs `git merge-base --all` and proceeds only when exactly one valid SHA is returned. Zero, malformed, or multiple results fail closed with an explicit ambiguous-merge-base error. Compatibility mode is unchanged.
+- Added a unit regression for multi-line merge-base output and a real temporary Git repository regression that constructs two criss-cross merge commits, verifies `git merge-base --all` returns both best ancestors, and asserts strict review rejects the range.
+- Exact implementation/test head `660a3843430ff6bf109cc8ed33eeeb7b6639fbdd` passed Push CI [run 41012640138](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41012640138) and PR-context CI [run 41012648370](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41012648370). Both ran all 169 offline contract tests successfully and passed the final required-stage gate.
+- Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+### Git-bound review: isolate ancestry from legacy grafts metadata (2026-10-30)
+
+- Continued auditing repository-local Git metadata that can affect ancestry. The legacy `.git/info/grafts` file can rewrite the parentage Git uses for merge-base calculations even when replace refs are disabled.
+- `_git_environment()` now sets `GIT_GRAFT_FILE` to the platform null device, alongside the existing inherited `GIT_*`, replace-ref, system-config, and global-config isolation.
+- Added a real temporary-repository regression that writes a graft making the head commit appear root-like, then verifies strict review still derives the true parent commit as the merge base and includes the source change. The environment regression also asserts the graft override.
+- Exact implementation/test head `9ab754bafcc791e37b49ea6afc3e7d26e45fde86` passed Push CI [run 41012770557](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41012770557) and PR-context CI [run 41012776765](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41012776765). Both passed the required-stage gate; Push CI ran all 170 offline contract tests successfully.
+- Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+### Git-bound review: reject shallow repository history (2026-10-30)
+
+- Continued the ancestry audit after isolating replace refs and legacy grafts. A shallow repository marks commits as history boundaries; merge-base can therefore return a baseline derived from incomplete ancestry even when the requested commit objects are present.
+- Strict Git-bound review now checks git rev-parse --is-shallow-repository and fails closed unless Git explicitly reports false. Compatibility mode is unchanged.
+- Added a real temporary-repository regression that retains both base/head commit objects, marks the head as a shallow boundary via .git/shallow, confirms Git reports a shallow repository, and verifies strict review rejects it before merge-base/diff derivation.
+- Exact implementation/test head 32096f2bf2ccbc70007ac9a68414b3acaf3d18c8 passed Push CI [run 41013208958](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41013208958) and PR-context CI [run 41013217001](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41013217001). Both ran all 171 offline contract tests successfully, generated a passed acceptance report, uploaded the report artifact, and passed the final required-stage gate.
+- Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+### Acceptance clean-worktree gate: detect dirty submodules (2026-10-30)
+
+- Continued the clean-worktree audit after strict review began rejecting submodule pointer changes. Found that the separate acceptance commit-provenance check used git status without overriding repository-local submodule ignore settings. A local submodule ignore rule could therefore hide modifications inside an otherwise unchanged gitlink.
+- The worktree status command now explicitly uses --ignore-submodules=none, so dirty submodule contents are visible to the clean-worktree gate. Generated artifacts remain excluded as before.
+- Added a real temporary-repository regression: initialize and commit a submodule, modify a tracked file inside it without changing the parent gitlink, set both diff.ignoreSubmodules=all and submodule.deps/sub.ignore=all in the parent repository, and verify the acceptance provenance check rejects the dirty worktree.
+- Exact implementation/test head 436e8527030657b47511529d73bf026c840edc80 passed Push CI [run 41013436852](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41013436852) and PR-context CI [run 41013442141](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41013442141). Both ran all 172 offline contract tests successfully, generated a passed acceptance report, uploaded the report artifact, and passed the final required-stage gate.
+- Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+### Acceptance worktree gate: reject sparse checkouts (2026-10-30)
+
+- Continued the execution-environment audit. A sparse checkout can leave tracked project files absent from the working tree while HEAD still identifies a valid full commit; test discovery may then run against only a subset of the repository.
+- The acceptance provenance check now reads the repository's core.sparseCheckout setting and fails closed when sparse checkout is enabled. If Git cannot establish the sparse-checkout state, the gate also fails closed. Normal full worktrees and compatibility-mode review input are unchanged; the guard is in the common acceptance provenance check.
+- Added a real Git regression that enables cone-mode sparse checkout, selects only docs/ and scripts/, verifies the tracked tests file is absent, and asserts that acceptance provenance rejects the workspace before tasks run.
+- Exact implementation/test head 8c6c422c51ae464b5c1927e7b7a652d9f50b9e82 passed Push CI [run 41013802438](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41013802438) and PR-context CI [run 41013805393](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41013805393). Both ran the complete offline contract suite, built the redacted acceptance report, uploaded the artifact, and passed the required-stage gate.
+- Verification boundary: hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+
+### Acceptance task runtime: isolate Python import environment (2026-10-30)
+
+- Continued the acceptance-environment audit beyond Git metadata. Python task subprocesses inherit ambient interpreter variables by default; caller-controlled `PYTHONPATH`, `PYTHONHOME`, user-site configuration, and related `PYTHON*` variables could influence imports and make acceptance results depend on modules outside the committed repository.
+- The task runner now removes inherited environment entries whose names are `PYTHONPATH`, `PYTHONHOME`, or start with `PYTHON`, then explicitly sets `PYTHONNOUSERSITE=1`. Other environment entries, including `PATH`, remain available to configured tasks.
+- Added a regression test that injects `PYTHONPATH`, `PYTHONHOME`, `PYTHONUSERBASE`, and `PYTHONINSPECT` and verifies none reach the task subprocess while `PYTHONNOUSERSITE=1` is set.
+- Exact implementation/test head `ce490949dcc16dd14c11de16787a899e97ce44c0` passed GitHub Actions Push CI [run 41014360849](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41014360849) and PR-context CI [run 41014365771](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41014365771). Both workflow runs completed successfully.
+- Verification boundary: GitHub-hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+
+### Git-bound review: resolve Git executable outside caller-controlled PATH (2026-10-30)
+
+- Continued the Git provenance audit after isolating Git environment variables and repository-local configuration. Git subprocesses were still invoked by the bare executable name `git`, so a caller-controlled `PATH` could select a different executable and undermine the provenance checks themselves.
+- Added a single `_git_argv()` helper that resolves Git using the platform default executable search path (`os.defpath`) rather than the inherited `PATH`, canonicalizes the executable path, and fails closed if Git cannot be found. All Harness Git metadata/provenance subprocesses now use this helper.
+- Added a regression test that sets an untrusted ambient `PATH` and verifies executable resolution uses `os.defpath` instead.
+- Exact implementation/test head `b77c52fce7ef46595910b7abccee17c213d5117e` passed GitHub Actions Push CI [run 41014953208](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41014953208) and PR-context CI [run 41014960597](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41014960597). Both completed all required stages successfully; Push CI reports all 175 offline contract tests passed.
+- Verification boundary: GitHub-hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+
+### Acceptance task environment: isolate Git configuration overrides (2026-10-30)
+
+- Continued the runtime-environment audit after Python import-path isolation. The runner's own provenance commands already sanitize inherited `GIT_*` variables, but configured acceptance task subprocesses previously inherited them. Variables such as `GIT_DIR`, `GIT_WORK_TREE`, and `GIT_CONFIG_COUNT` could make test subprocesses observe a redirected repository or injected Git configuration.
+- Task subprocess environments now remove inherited `PYTHON*` and `GIT_*` variables, then explicitly set `PYTHONNOUSERSITE=1`, `GIT_NO_REPLACE_OBJECTS=1`, `GIT_CONFIG_NOSYSTEM=1`, `GIT_CONFIG_GLOBAL=os.devnull`, and `GIT_GRAFT_FILE=os.devnull`. Ordinary environment variables needed to locate normal task dependencies remain available.
+- Expanded regression coverage to inject Python import controls, Git repository redirection, and Git config injection, and assert they do not reach the task subprocess.
+- Exact implementation/test head `a2c0d2899318448db122798c3d643dfea29c56ce` passed GitHub Actions Push CI [run 41015352209](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41015352209) and PR-context CI [run 41015355267](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41015355267). Both completed successfully; each CI log reports 175 offline contract tests passed and acceptance status `passed`.
+- Verification boundary: GitHub-hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+
+### Acceptance task environment: block dynamic-loader overrides (2026-10-30)
+
+- Continued the task subprocess environment audit beyond Python and Git settings. Dynamic-loader variables can affect which native code or libraries are loaded before Python task code begins, so relying only on Python/Git variable isolation left an avoidable runtime override surface.
+- Task subprocess environment construction now removes inherited variables with `LD_*` and `DYLD_*` prefixes in addition to the previously filtered `PYTHON*` and `GIT_*` variables. This mitigates common Linux/macOS dynamic-loader override paths; it is not a complete runtime/dependency attestation and does not claim to sanitize every platform-specific environment variable.
+- Expanded the existing regression test with `LD_PRELOAD`, `LD_LIBRARY_PATH`, and `DYLD_INSERT_LIBRARIES` examples.
+- Exact implementation/test head `55d64f190812b750e686f97ee8b746eeb87caa35` passed GitHub Actions Push CI [run 41015468933](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41015468933) and PR-context CI [run 41015476094](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41015476094). Both completed successfully; PR-context logs report all 175 offline contract tests passed and acceptance status `passed`.
+- Verification boundary: GitHub-hosted CI only; no local test run, live provider request, credential use, merge, release, deployment, or game action is claimed. PR #38 remains Draft/open/unmerged.
+
+
+### Acceptance evidence-chain audit — 2026-10-30
+
+- Audited commit `e028030d0244e30c6d7750e1f68ae7f9362e1d17`, `scripts/acceptance_report.py`, `scripts/harness_runner.py`, `scripts/ai_semantic_review.py`, `.github/workflows/ci.yml`, and the related report/runner tests.
+- Push CI [41015524063](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41015524063) tested the branch commit `e028030d0244e30c6d7750e1f68ae7f9362e1d17`; PR-context CI [41015531675](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41015531675) tested GitHub's synthetic merge commit `d18472b39d88e95323971a80593c9af234bfff31`. Both logs show 175 offline contract tests passed and the acceptance report/final gate passed. The different commit identities are expected for push versus PR merge testing, but a bare `commit_sha` field in a standalone report needs event/run context to distinguish their meaning.
+- Downloaded both acceptance-report ZIP artifacts and independently recalculated each ZIP SHA-256. Both matched GitHub's artifact metadata: Push artifact ID `12959601237`, digest prefix `26f0ad6a…`; PR-context artifact ID `12958719971`, digest prefix `50b9bf45…`. Each archive contained only `acceptance-report.json`.
+- The CI workflow calculates `rules_pin` from the checked-out `docs/STABLE_ACCEPTANCE_CONTRACT.md` bytes. The Harness runner captures a clean Git HEAD, derives strict-mode review provenance from Git objects, verifies the review input fingerprint before review, and rechecks ignored Python sources, worktree cleanliness, and HEAD after tasks.
+- The semantic-review command returns success only for a validated `PASS`; non-PASS outcomes fail the task. Strict-mode report schema v2 binds `review_provenance.head_sha` to the report's `commit_sha` and records the exact diff SHA-256 and changed paths.
+- No reproducible implementation defect was established in this audit, so no runtime/code change was made.
+- Remaining evidence-quality improvement (not a current gate failure): make standalone acceptance reports self-identify their CI run/event/attempt and, when applicable, PR source head separately from the actual tested commit. Artifact identity is currently recoverable from GitHub's run/artifact metadata, not fully represented inside the report.
+- Scope limit: this is repository-source and hosted-CI evidence review; it does not attest installed dependency/runtime integrity, guarantee model defect detection, or establish production readiness.
+- PR #38 remains Draft, open, and unmerged. No default-branch change or release was made.
+
+
+### Acceptance report CI identity — 2026-10-30
+
+- Added optional, strictly validated `ci_context` metadata to the acceptance-report builder. Existing reports without CI context retain schema v1 (ordinary) or v2 (Git-bound review); reports carrying CI context use schema v3.
+- Schema v3 records the actual tested commit SHA, positive workflow run ID and attempt, an allowlisted event name (`push`, `pull_request`, or `workflow_dispatch`), and the PR source-head SHA only for pull-request events. The tested commit must match the report's root `commit_sha`; pull-request source head is separately represented to avoid conflating it with GitHub's synthetic merge commit.
+- Added regression tests for schema selection, tested-commit binding, valid push/PR context, missing or extraneous PR head, invalid event values, and malformed run metadata. Updated `.github/workflows/ci.yml` to populate context from GitHub's event/run environment and documented the report behavior in `docs/HARNESS_RUNNER_V1.md`.
+- Implementation commits: `1aaf5af5e444ad2b900c913e1e14617337677fde` (report validator), `048f250650c471747b500019d1d4c0edff024140` (regression tests), `15121683a1cd0df738746c8bf3ad745c32f8800c` (CI workflow), and `06aab3cf5037d5fc36ac79c1211f5cd40e466831` (documentation).
+- Verification update (2026-10-30): PR-context CI run [41018113416](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41018113416) completed successfully on synthetic merge commit `3b7ddb44687fd2c131c43c452528ffe70e7e7b89`, with PR source head `a2b81f764a5b475458176a75087597972594149f`. The job ran 178 offline contract tests, generated schema-v3 acceptance report, uploaded the artifact, and passed the final gate. The downloaded ZIP SHA-256 matched GitHub artifact metadata (`da54a9802f7769e01fa2dcba165b79e89c03e5bf125ceec988e397fd36a2c79f`); the report records run ID, attempt, event, tested merge SHA, and PR source SHA separately. Push CI for the source head remains unverified: the available workflow-run connector only lists PR-triggered runs and the combined-status endpoint returned no status records. Those empty responses are not evidence of success or failure; do not claim the two-gate requirement complete until Push CI is independently verified.
+- PR #38 remains Draft/open/unmerged, with its base unchanged. No merge, release, deployment, or game action was performed.
+
+### Acceptance report CI identity — exact-head push and PR verification (2026-10-30)
+
+- Retrieved the repository Actions run list directly through the GitHub REST endpoint, resolving the earlier limitation of the PR-only wrapper. This is positive evidence for both event types, not an inference from empty status checks.
+- Exact source head `a81a9387bf4f640035a9a6aaf356166e04b946ef` passed Push CI [run 41018404617](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41018404617) and PR-context CI [run 41018414325](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41018414325). Both completed successfully; all required job steps passed, including compilation, offline contract tests, report generation, artifact upload, and final gate.
+- Push run tested the source commit itself. Its schema-v3 report records `event_name: push`, `run_id: 41018404617`, `run_attempt: 1`, and `tested_commit_sha: a81a9387bf4f640035a9a6aaf356166e04b946ef`; `status` and `offline-contract-tests` are both `passed`.
+- Downloaded Push artifact ID `12961055158`; local ZIP SHA-256 `9f012103b1537a81aa9e297343b1ee82bd10aa2ad661b5ed354f86a34447d264` exactly matches GitHub artifact metadata. The ZIP contains only `acceptance-report.json`.
+- PR-context run tested synthetic merge commit `44f45cc39b708c985bc7d22d08f0068bae9f721d` while separately recording PR source head `a81a9387bf4f640035a9a6aaf356166e04b946ef`; its artifact ZIP digest was independently verified in the preceding entry.
+- PR #38 remains Draft/open/unmerged; base remains `integration/pr24-pr33-pr32-20261030`. No merge, release, deployment, local test, live provider request, credential use, or game action was performed.
+
+### Bounded source audit after exact-head CI verification — 2026-10-30
+
+- Reviewed the current PR diff and the implementation surfaces in `scripts/harness_runner.py`, `scripts/ai_semantic_review.py`, `scripts/acceptance_report.py`, `.github/workflows/ci.yml`, the stable acceptance contract, and the corresponding regression tests.
+- Scope covered: schema-v1/v2/v3 selection and allowlists; CI run/event/tested-commit binding; strict-mode commit/head/worktree checks; shallow and ambiguous merge-base rejection; bounded Git output/timeouts; submodule and sparse-checkout rejection; path/diff validation; subprocess environment isolation; and the fail-closed final gate.
+- No reproducible implementation defect was established in this bounded pass, so no runtime code was changed. This is a source-level review, not proof of complete security or defect detection; dependency/runtime attestation, real-provider behavior, and independent external review remain outside the evidence.
+- CI exact-head verification was completed immediately before this audit on head `79bfa5bde773b443a0c1a25ab0dc1256500bfc43`: Push run [41018624001](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41018624001) and PR-context run [41018631294](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41018631294) both succeeded. This documentation-only archive update will trigger new CI; its results must be checked separately before calling the new head verified.
+- PR #38 remains Draft/open/unmerged and base remains `integration/pr24-pr33-pr32-20261030`. No merge, release, deployment, provider request, credential use, or game action was performed.
+
+
+### Exact-head CI and artifact verification — 2026-10-30
+
+- Rechecked PR #38 on source/archive head `efdfe4a35e3c96e7a6e770f4381b14b4ad4503d2`; the PR remains Draft/open/unmerged and base remains `integration/pr24-pr33-pr32-20261030`.
+- Exact-head Push CI [run 41018983068](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41018983068) completed successfully. Its acceptance artifact ID is `12960458700`; downloaded ZIP SHA-256 `840008cdf11b39e837d48178c08b9090e2824559bd498776a97fa19ff4143acc` matches GitHub artifact metadata. The schema-v3 report records event `push`, run ID `41018983068`, and tested commit `efdfe4a35e3c96e7a6e770f4381b14b4ad4503d2`.
+- Exact-head PR-context CI [run 41019130957](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41019130957) completed successfully and records PR source head `efdfe4a35e3c96e7a6e770f4381b14b4ad4503d2`. Its acceptance artifact ID is `12960628288`; downloaded ZIP SHA-256 `db1f4f4c1f3f87670c157701108caf419027afb70e9d722a8897b66c7cb8f0da` matches GitHub artifact metadata. The report correctly distinguishes tested synthetic merge commit `483d3eb8229f34df9f6beddbe9a103b7171ff8d6` from PR source head.
+- Reviewed PR review metadata and changed-file inventory. There are currently no submitted review records or inline review threads; the PR changes 14 files across the runner, semantic-review validator, acceptance report, CI workflow, docs, and regression tests.
+- The bounded implementation review did not establish a reproducible defect. CI validates offline contract tests and report generation, but does not attest installed dependency/runtime integrity, live-provider behavior, or completeness of AI defect detection. No live provider request, credential use, merge, release, deployment, or game action was performed.
+- This archive commit itself triggers CI and must be verified separately. PR #38 remains Draft/open/unmerged; no code behavior was changed in this archive-only update.

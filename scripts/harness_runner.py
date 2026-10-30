@@ -15,11 +15,15 @@ import os
 import re
 import subprocess
 import sys
+import shutil
 import tempfile
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
 from scripts.acceptance_report import AcceptanceReportError, build_acceptance_report
+from scripts.ai_semantic_review import ReviewError, _validate_diff_integrity, validate_input
 from scripts.harness_config import HarnessConfigError, validate_harness_config
 
 
@@ -30,6 +34,34 @@ class HarnessRunnerError(ValueError):
 _SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 _MAX_TIMEOUT_SECONDS = 3600
 _MAX_REVIEW_INPUT_BYTES = 4 * 1024 * 1024
+_GIT_COMMAND_TIMEOUT_SECONDS = 10
+
+def _git_argv(*args: str) -> list[str]:
+    """Resolve Git from the platform's default executable path, not caller-controlled PATH."""
+    executable = shutil.which("git", path=os.defpath)
+    if executable is None:
+        raise FileNotFoundError("Git executable not found on the default executable path")
+    return [os.path.realpath(executable), *args]
+
+
+
+
+def _git_environment() -> dict[str, str]:
+    """Ignore replace refs so provenance is derived from the commit objects named by their SHAs."""
+    environment = os.environ.copy()
+    # Git provenance must not inherit repository redirection from the caller.
+    # Git-specific caller settings can redirect object lookup or inject config.
+    # Keep ordinary process environment (PATH, locale, etc.) intact.
+    for name in tuple(environment):
+        if name.startswith("GIT_"):
+            environment.pop(name, None)
+    environment["GIT_NO_REPLACE_OBJECTS"] = "1"
+    # Do not let user/system Git config silently alter provenance commands.
+    environment["GIT_CONFIG_NOSYSTEM"] = "1"
+    environment["GIT_CONFIG_GLOBAL"] = os.devnull
+    # Ignore the legacy per-repository grafts file, which can rewrite commit ancestry.
+    environment["GIT_GRAFT_FILE"] = os.devnull
+    return environment
 
 
 def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -116,13 +148,14 @@ def _require_tracked_config(root: Path, config_path: Path) -> None:
     try:
         relative = config_path.relative_to(root.resolve()).as_posix()
         result = subprocess.run(
-            ["git", "ls-tree", "-r", "--name-only", "HEAD", "--", f":(literal){relative}"],
+            _git_argv("ls-tree", "-r", "--name-only", "HEAD", "--", f":(literal){relative}"),
             cwd=root,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
             timeout=10,
             check=False,
+            env=_git_environment(),
         )
     except (OSError, subprocess.TimeoutExpired):
         raise HarnessRunnerError("Could not verify tracked Harness config") from None
@@ -139,21 +172,23 @@ def _git_commit_sha(root: Path) -> str:
     """
     def run_git(*args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            ["git", *args],
+            _git_argv(*args),
             cwd=root,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
             timeout=10,
             check=False,
+            env=_git_environment(),
         )
 
     try:
         top = run_git("rev-parse", "--show-toplevel")
         result = run_git("rev-parse", "HEAD")
+        sparse = run_git("config", "--bool", "--get", "core.sparseCheckout")
         status = run_git(
-            "status", "--porcelain=v1", "--untracked-files=all",
-            "--", ".", ":(exclude)artifacts",
+            "-c", "core.fsmonitor=false", "status", "--ignore-submodules=none",
+            "--porcelain=v1", "--untracked-files=all", "--", ".", ":(exclude)artifacts",
         )
     except (OSError, subprocess.TimeoutExpired):
         raise HarnessRunnerError("Could not verify Git commit provenance") from None
@@ -164,6 +199,10 @@ def _git_commit_sha(root: Path) -> str:
     sha = result.stdout.strip()
     if result.returncode != 0 or not _SHA_RE.fullmatch(sha):
         raise HarnessRunnerError("Project root must be a Git worktree with a valid HEAD commit")
+    if sparse.returncode == 0 and sparse.stdout.strip().lower() == "true":
+        raise HarnessRunnerError("Sparse checkouts are not supported for acceptance")
+    if sparse.returncode not in (0, 1):
+        raise HarnessRunnerError("Could not verify sparse-checkout state")
     if status.returncode != 0:
         raise HarnessRunnerError("Could not verify clean Git worktree")
     if status.stdout:
@@ -191,11 +230,11 @@ def _reject_ignored_python_sources(root: Path) -> None:
     try:
         ignored = subprocess.run(
             [
-                "git", "ls-files", "--others", "--ignored", "--exclude-standard",
+                *_git_argv("ls-files", "--others", "--ignored", "--exclude-standard"),
                 "-z", "--", ".",
             ],
             cwd=root, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            timeout=10, check=False,
+            timeout=10, check=False, env=_git_environment(),
         )
     except (OSError, subprocess.TimeoutExpired):
         raise HarnessRunnerError("Could not verify ignored Python source") from None
@@ -266,12 +305,276 @@ def _run_task(
         }
         if stdin_data is not None:
             run_options["input"] = stdin_data
+        # Do not allow caller-controlled Python import paths or user site packages
+        # to replace committed Harness modules during acceptance.
+        task_environment = os.environ.copy()
+        for name in tuple(task_environment):
+            if (
+                name == "PYTHONPATH"
+                or name == "PYTHONHOME"
+                or name.startswith("PYTHON")
+                or name.startswith("GIT_")
+                or name.startswith("LD_")
+                or name.startswith("DYLD_")
+            ):
+                task_environment.pop(name, None)
+        task_environment["PYTHONNOUSERSITE"] = "1"
+        task_environment["GIT_NO_REPLACE_OBJECTS"] = "1"
+        task_environment["GIT_CONFIG_NOSYSTEM"] = "1"
+        task_environment["GIT_CONFIG_GLOBAL"] = os.devnull
+        task_environment["GIT_GRAFT_FILE"] = os.devnull
+        run_options["env"] = task_environment
         result = subprocess.run(argv, **run_options)
     except subprocess.TimeoutExpired:
         return "failed", None
     except OSError:
         return "failed", None
     return ("passed", result.returncode) if result.returncode == 0 else ("failed", result.returncode)
+
+
+def _git_text(root: Path, args: list[str], field: str) -> str:
+    """Run a bounded-time Git metadata command without exposing its stderr."""
+    try:
+        result = subprocess.run(
+            _git_argv(*args),
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=10,
+            check=False,
+            env=_git_environment(),
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise HarnessRunnerError(f"Could not verify {field}") from None
+    if result.returncode != 0:
+        raise HarnessRunnerError(f"Could not verify {field}")
+    return result.stdout.strip()
+
+
+def _git_bytes_bounded(root: Path, args: list[str], field: str) -> bytes:
+    """Read bounded Git output with both a byte cap and a wall-clock timeout."""
+    process: subprocess.Popen[bytes] | None = None
+    reader: threading.Thread | None = None
+    output_chunks: list[bytes] = []
+    reader_errors: list[BaseException] = []
+    oversized = threading.Event()
+    total_bytes = 0
+    timed_out = False
+
+    def consume_stdout() -> None:
+        nonlocal total_bytes
+        assert process is not None and process.stdout is not None
+        try:
+            while total_bytes <= _MAX_REVIEW_INPUT_BYTES:
+                chunk = process.stdout.read(
+                    min(65536, _MAX_REVIEW_INPUT_BYTES + 1 - total_bytes)
+                )
+                if not chunk:
+                    return
+                output_chunks.append(chunk)
+                total_bytes += len(chunk)
+                if total_bytes > _MAX_REVIEW_INPUT_BYTES:
+                    oversized.set()
+                    return
+        except (OSError, ValueError) as exc:
+            reader_errors.append(exc)
+
+    try:
+        process = subprocess.Popen(
+            _git_argv(*args),
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            bufsize=0,
+            env=_git_environment(),
+        )
+        reader = threading.Thread(target=consume_stdout, name="harness-git-output", daemon=True)
+        reader.start()
+        deadline = time.monotonic() + _GIT_COMMAND_TIMEOUT_SECONDS
+        while process.poll() is None:
+            if oversized.is_set():
+                try:
+                    process.kill()
+                except OSError:
+                    pass
+                break
+            if time.monotonic() >= deadline:
+                timed_out = True
+                try:
+                    process.kill()
+                except OSError:
+                    pass
+                break
+            time.sleep(0.01)
+
+        try:
+            process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            try:
+                process.kill()
+            except OSError:
+                pass
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+
+        reader.join(timeout=2)
+        if reader.is_alive():
+            if process.stdout is not None:
+                try:
+                    process.stdout.close()
+                except (OSError, ValueError):
+                    pass
+            reader.join(timeout=2)
+
+        if oversized.is_set():
+            raise HarnessRunnerError(f"{field} exceeds the 4 MiB input limit")
+        if timed_out or reader.is_alive():
+            raise HarnessRunnerError(f"Could not verify {field}")
+        if reader_errors:
+            raise HarnessRunnerError(f"Could not verify {field}") from None
+        if process.returncode != 0:
+            raise HarnessRunnerError(f"Could not verify {field}")
+        return b"".join(output_chunks)
+    except HarnessRunnerError:
+        raise
+    except (OSError, subprocess.TimeoutExpired):
+        if process is not None and process.poll() is None:
+            try:
+                process.kill()
+            except OSError:
+                pass
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                pass
+        raise HarnessRunnerError(f"Could not verify {field}") from None
+    finally:
+        if process is not None and process.stdout is not None:
+            try:
+                process.stdout.close()
+            except (OSError, ValueError):
+                pass
+
+
+def _resolve_git_commit(root: Path, value: str, field: str) -> str:
+    """Require a full immutable commit SHA, not a branch name or abbreviated ref."""
+    if not isinstance(value, str) or not _SHA_RE.fullmatch(value):
+        raise HarnessRunnerError(f"{field} must be a full 40-character Git commit SHA")
+    resolved = _git_text(
+        root,
+        ["rev-parse", "--verify", "--end-of-options", f"{value}^{{commit}}"],
+        field,
+    ).lower()
+    if not _SHA_RE.fullmatch(resolved) or resolved != value.lower():
+        raise HarnessRunnerError(f"{field} must identify an existing Git commit")
+    return resolved
+
+
+def _build_git_bound_review_input(
+    root: Path,
+    source_bytes: bytes,
+    base_value: str,
+    head_value: str,
+    current_head: str,
+) -> tuple[bytes, dict[str, Any]]:
+    """Replace caller diff fields with a bounded diff derived from immutable Git commits."""
+    base_sha = _resolve_git_commit(root, base_value, "review-base")
+    head_sha = _resolve_git_commit(root, head_value, "review-head")
+    if head_sha != current_head.lower():
+        raise HarnessRunnerError("review-head must equal the checked-out Git HEAD")
+
+    shallow = _git_text(
+        root, ["rev-parse", "--is-shallow-repository"], "Git shallow-repository state"
+    ).lower()
+    if shallow != "false":
+        raise HarnessRunnerError("Git-bound semantic review does not support shallow repositories")
+
+    merge_bases = _git_text(
+        root, ["merge-base", "--all", base_sha, head_sha], "Git review merge-base"
+    ).lower().splitlines()
+    if len(merge_bases) != 1 or not _SHA_RE.fullmatch(merge_bases[0]):
+        raise HarnessRunnerError("Git review range has an ambiguous merge-base")
+    merge_base = merge_bases[0]
+
+    raw_diff = _git_bytes_bounded(
+        root,
+        [
+            "diff", "--raw", "--no-renames", "--ignore-submodules=none",
+            merge_base, head_sha, "--",
+        ],
+        "Git review raw change metadata",
+    )
+    if re.search(rb"(?m)^:\d{6} 160000 |^:160000 \d{6} ", raw_diff):
+        raise HarnessRunnerError(
+            "Git-bound semantic review does not support submodule pointer changes"
+        )
+
+    diff_bytes = _git_bytes_bounded(
+        root,
+        [
+            "-c", "core.quotePath=false", "diff",
+            "--text", "--no-ext-diff", "--no-textconv", "--no-renames", "--no-color",
+            "--ignore-submodules=none",
+            "--unified=3", merge_base, head_sha, "--",
+        ],
+        "Git-generated semantic-review diff",
+    )
+    if not diff_bytes:
+        raise HarnessRunnerError("Git base/head range contains no reviewable changes")
+    try:
+        diff = diff_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HarnessRunnerError("Git-generated semantic-review diff is not valid UTF-8") from None
+
+    names_bytes = _git_bytes_bounded(
+        root,
+        ["diff", "--no-ext-diff", "--no-textconv", "--no-renames", "--ignore-submodules=none", "--name-only", "-z",
+         merge_base, head_sha, "--"],
+        "Git review changed-file list",
+    )
+    try:
+        changed_files = sorted(name.decode("utf-8") for name in names_bytes.split(b"\0") if name)
+    except UnicodeDecodeError:
+        raise HarnessRunnerError("Git review changed-file paths are not valid UTF-8") from None
+    if not changed_files or len(changed_files) != len(set(changed_files)):
+        raise HarnessRunnerError("Git review changed-file list is empty or ambiguous")
+
+    try:
+        payload = json.loads(
+            source_bytes.decode("utf-8"),
+            object_pairs_hook=_reject_duplicate_json_keys,
+        )
+    except (UnicodeError, ValueError):
+        raise HarnessRunnerError("review-input must be valid UTF-8 JSON for Git-bound review") from None
+    if not isinstance(payload, dict):
+        raise HarnessRunnerError("review-input must be a JSON object for Git-bound review")
+
+    # In strict mode these fields are never trusted from the caller.
+    payload["diff"] = diff
+    payload["changed_files"] = changed_files
+    try:
+        validate_input(payload)
+        _validate_diff_integrity(payload)
+    except ReviewError:
+        raise HarnessRunnerError(
+            "Git-generated review diff failed semantic-review input validation"
+        ) from None
+
+    task_bytes = (json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8")
+    if len(task_bytes) > _MAX_REVIEW_INPUT_BYTES:
+        raise HarnessRunnerError("Git-bound semantic-review input exceeds the 4 MiB input limit")
+
+    provenance = {
+        "base_sha": base_sha,
+        "head_sha": head_sha,
+        "merge_base_sha": merge_base,
+        "diff_sha256": hashlib.sha256(diff_bytes).hexdigest(),
+        "changed_files": changed_files,
+    }
+    return task_bytes, provenance
 
 
 def _read_review_input(path: Path, field: str) -> bytes:
@@ -360,6 +663,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--review-input", help="Repository-relative semantic-review input JSON")
     parser.add_argument("--review-output", help="Repository-relative semantic-review output JSON")
+    parser.add_argument("--review-base", help="Optional full Git commit SHA for strict Git-bound semantic review")
+    parser.add_argument("--review-head", help="Optional full Git commit SHA for strict Git-bound semantic review")
     parser.add_argument(
         "--timeout-seconds",
         type=int,
@@ -438,6 +743,11 @@ def main(argv: list[str] | None = None) -> int:
         config = validate_harness_config(raw_config)
 
         wants_review = "semantic-review" in config["commands"]
+        strict_review = args.review_base is not None or args.review_head is not None
+        if strict_review and (args.review_base is None or args.review_head is None):
+            raise HarnessRunnerError("--review-base and --review-head must be supplied together")
+        if strict_review and not wants_review:
+            raise HarnessRunnerError("--review-base and --review-head require semantic-review in config")
         if wants_review and config["commands"][-1] != "semantic-review":
             raise HarnessRunnerError(
                 "semantic-review must be the final configured task"
@@ -476,6 +786,14 @@ def main(argv: list[str] | None = None) -> int:
             for task_id in config["commands"]
         ]
         commit_sha = _git_commit_sha(root)
+        review_task_bytes = review_input_bytes
+        review_provenance: dict[str, Any] | None = None
+        if strict_review:
+            if review_input_bytes is None:
+                raise HarnessRunnerError("Git-bound semantic-review requires --review-input")
+            review_task_bytes, review_provenance = _build_git_bound_review_input(
+                root, review_input_bytes, args.review_base, args.review_head, commit_sha
+            )
         rules_pin = _rules_pin(root)
         outcomes: dict[str, str] = {}
         failed = False
@@ -498,7 +816,7 @@ def main(argv: list[str] | None = None) -> int:
                 ):
                     raise HarnessRunnerError("review-input changed during task execution")
             task_stdin = (
-                review_input_bytes if task_id == "semantic-review" else None
+                review_task_bytes if task_id == "semantic-review" else None
             )
             status, exit_code = _run_task(
                 argv_for_task, root, args.timeout_seconds, task_stdin
@@ -531,6 +849,8 @@ def main(argv: list[str] | None = None) -> int:
             "tool_version": f"dev-workflow-kit/harness-runner@{commit_sha}",
             "tests": outcomes,
         }
+        if review_provenance is not None:
+            metadata["review_provenance"] = review_provenance
         report = _write_report(report_path, metadata)
         print(f"Acceptance report written: {report_path.relative_to(root).as_posix()}")
         print(f"Acceptance status: {report['status']}")
