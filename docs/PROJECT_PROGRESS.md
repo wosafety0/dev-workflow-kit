@@ -434,3 +434,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - PR #19's output-alias guard is a sibling branch based directly on PR #13 and is not in the PR #14 → #18 ancestry. PR #32 correctly carries that guard into the #18 line. Do not drop it as a duplicate unless the dependency topology is intentionally redesigned.
 - PR #23/#24 are on the separate runner/loopback line (#20 → #22 → #23 → #24) and are not dependencies of PR #32. No evidence in this audit requires importing them into the PR #32 runner/provenance line.
 - Candidate CI exact-head run [40989353911](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40989353911) succeeded on candidate head `6055555ce94dc15441048b753744db18feaee59a`. Original PR #32 remains open/draft/unmerged and unchanged; no merge or branch mutation was performed.
+
+
+## 2026-10-30 — downstream dependency verification follow-up
+
+- Refreshed live metadata for PRs #20, #22, #23, #24, #32–#35. PR #23 remains open/draft/unmerged and mergeable on base #22's recorded head `f71025d2303737dafe18ae823f93cad9cdd1249d`; PR #24 remains open/draft/unmerged and mergeable on PR #23 head `7962697d273e04716e71fcf95536154b03704032`.
+- Exact-head hosted Harness CI is green for PR #23 head `7962697...` ([run 40804425695](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40804425695)) and PR #24 head `58702b8...` ([run 40805458873](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40805458873)); inspected job steps confirm Python compilation, offline contract tests, redacted report generation, artifact upload, and final gate all succeeded.
+- PR #24 is downstream of the loopback/redirect chain and is not a prerequisite for PR #32's provenance-based candidate. Keep these chains separate unless intentionally building a combined integration branch; do not infer that PR #32 candidate includes PR #23/#24.
+- Original PR #32 remains open/draft/unmerged at its recorded head/base; candidate PR #35 remains open/draft/unmerged and mergeable. No PR or branch topology was changed in this review.
