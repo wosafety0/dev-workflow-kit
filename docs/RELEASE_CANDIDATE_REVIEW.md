@@ -73,6 +73,16 @@ Read-only GitHub PR file-diff inspection found **8 changed files** relative to t
 - A read-only lookup for Git ref `refs/tags/v0.1.0` returned 404, but the complete tag namespace could not be enumerated through the available endpoint. Therefore **no tag-name availability or release preflight is certified**, and no specific release tag is selected.
 - Do not equate this working-branch head with an approved release-candidate SHA. Owner scope approval, consumer-specific acceptance, candidate selection, and a complete tag/release preflight remain open.
 
+### Consumer immutable-pin compatibility comparison — 2026-10-31
+
+Read-only GitHub compare API checks against the last verified Harness documentation head `84f16686811c87618caab025e69c47fa628c7d3a`:
+
+- Public `AI-Worker-Proxy` pins `c4cf3e1c11deec098c6a7a6e3837bbe983dcece5`. Comparison to the reviewed head: `ahead`, 30 commits, zero behind. The compare file list contains **documentation changes only** (`docs/ORCHESTRATION_FAULT_MATRIX.md`, `docs/PROJECT_PROGRESS.md`, `docs/RELEASE_CANDIDATE_REVIEW.md`, `docs/ROADMAP.md`); it does not change the reusable workflow. This establishes identical workflow source between these two refs, not that the public consumer has run with the later SHA. Its successful pinned-head consumer CI remains the evidence for the older pin.
+- Private `chatgpt-auto-send-assistant` pins `37dc07c7d7055a740c754ab543eeecc9e01d9db0`. Comparison to the reviewed head: `ahead`, 51 commits, zero behind. No change to `.github/workflows/reusable-acceptance.yml` appears in the compare file list; later changes include Harness `.github/workflows/ci.yml`, workflow contract tests, and documentation. Thus the reusable workflow definition is unchanged between the private pin and the reviewed head, but **private acceptance remains unexecuted** due to the account-level pre-run gate.
+- The consumer pilot workflow files were re-read: public Node 26/pnpm 11.4.0 runs frozen install, lint, type-check, Prettier; private Node 24/no package manager setup runs `npm test`. Both reference full immutable 40-character Harness SHAs. Neither consumer was repinned or modified.
+- Reviewed head `84f16686811c87618caab025e69c47fa628c7d3a` passed exact-head [Push CI 41211718609](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41211718609) and [PR-context CI 41211723904](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41211723904); all three jobs succeeded in each run. The evidence does not establish an approved release-candidate SHA or substitute for consumer-specific runtime acceptance.
+- **Disposition:** no workflow-definition compatibility change detected in the compared range, but consumer adoption of the later SHA and the private consumer's successful run are unverified. Do not mark consumer safeguards or release gates complete.
+
 ### Remaining release gaps
 
 1. **Consumer-specific safeguards:** Roadmap Stage 4 still requires preserving each consumer's own tests, safety constraints, and archive paths. The successful public pilot proves one integration configuration; the private consumer remains blocked before execution. Keep this criterion unchecked until evidence supports the criterion or the roadmap's acceptance scope is explicitly reviewed and changed.
