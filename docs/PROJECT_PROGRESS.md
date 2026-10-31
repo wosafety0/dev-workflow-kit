@@ -1,5 +1,12 @@
 # Project Progress Log
 
+## Node/pnpm reusable workflow integration gate — 2026-10-31
+
+- Added `reusable-node-pnpm-selftest` to `.github/workflows/ci.yml` in commit `ad25539b13c6574bf241d4a67acc95b6468c081b`. It calls the reusable workflow from the same repository head with Node 24, pnpm 11.4.0, and `node --version && pnpm --version`, exercising both runtime setup actions and consumer command execution.
+- Exact-head CI run [41175594205](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41175594205) was observed in progress when this entry was written. Python self-test, Node/pnpm self-test, and offline contract tests had started; **the full result is not yet verified**.
+- Prior exact-head integration commit `189ebd2924f2eaca61521209552131600f53fa7c` passed Push CI [41171949609](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171949609) and PR CI [41171952383](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171952383); its Python reusable-workflow job succeeded.
+- The earlier independent public Node/pnpm consumer remains a separate successful pilot; this new self-test is an in-repository workflow integration test, not an additional independent consumer. The private consumer remains blocked by the previously confirmed account billing/spending gate. No billing, permissions, secrets, merge, release, or deployment changed.
+
 ## Python reusable workflow integration gate — 2026-10-31
 
 - Added a `reusable-python-selftest` job to `.github/workflows/ci.yml` at commit `189ebd2924f2eaca61521209552131600f53fa7c`. It calls `./.github/workflows/reusable-acceptance.yml` from the same commit with Python 3.12, `package-manager: none`, and the consumer-owned command `python -m unittest discover -s tests -v`.
