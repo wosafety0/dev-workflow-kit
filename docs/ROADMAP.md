@@ -54,6 +54,12 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - Consumer branch head `4fc0c7f52070acef35afb5184bf82e3910577ccb` passed the reusable Node.js 26 + pnpm 11.4.0 acceptance workflow [41098792395](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098792395) and both native lint/type-check runs [41098791776](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098791776) and [41098781379](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098781379).
 - Only the consumer workflow's immutable Harness pin changed; no application behavior, secrets, settings, deployment, or provider API was touched. The separate private consumer's pre-step failure remains unresolved.
 
+## Consumer preservation source cross-check — 2026-10-31
+
+- Public consumer `AI-Worker-Proxy` keeps its existing native lint workflow alongside the separate Harness pilot; the pilot runs frozen-lockfile install, lint, type-check, and Prettier check on head `87c3633621e455f9ba75ec2caf3ae6ba206e60a8`. Exact-head Harness and native checks passed.
+- Private consumer `chatgpt-auto-send-assistant` keeps its `npm test` command (`node scripts/validate.mjs`); `TESTING.md` continues to mark actual Tampermonkey/ChatGPT browser E2E as pending. Its current Harness run is blocked before runner allocation by the recorded account billing/spending eligibility gate, so no runtime result is available.
+- This source-level cross-check found no visible replacement of consumer tests or removal of the documented browser-test limitation. It does **not** close Stage 4: the private consumer still lacks successful exact-head execution, and consumer-specific archive-path expectations have not been fully confirmed. See [release-candidate review](RELEASE_CANDIDATE_REVIEW.md).
+
 ## Stage 4 — consumer integration
 
 - [x] Validate the first consumer pilot through a separate Draft PR at the latest reviewed reusable-workflow pin: [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2), Harness commit `37dc07c7d7055a740c754ab543eeecc9e01d9db0`, consumer head `4fc0c7f52070acef35afb5184bf82e3910577ccb`; exact-head reusable acceptance [41098792395](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098792395), native lint/type-check [41098791776](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098791776) and [41098781379](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098781379) all passed. The PR remains Draft/unmerged.
