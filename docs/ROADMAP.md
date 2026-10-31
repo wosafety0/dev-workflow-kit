@@ -1,4 +1,11 @@
-## Latest archive verification — 2026-10-31
+## Latest exact-head verification — 2026-11-01
+
+- Current Node-consumer branch head before this documentation archive: `a9b6f17099afa07f9cbb2f8a0410560f9c1ed38b`. Exact-head Push CI [41228919858](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41228919858) and PR-context CI [41228924340](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41228924340) both succeeded; all three jobs were green and the offline suite reported **169 tests, OK**.
+- Replaced the Node.js 20 `actions/upload-artifact` v4 pin with verified Node 24-compatible v7.0.2 commit `cf430e030ddbb5b0abf93d22962f4752f3646cd9`, and added a CI workflow pin-contract regression test. The final exact-head offline log contained no Node.js 20 deprecation warning.
+- PR #40 remains Draft/open/unmerged. The private consumer acceptance gate remains blocked before runner allocation by its recorded account billing/spending eligibility condition. The 0.x scope proposal still requires owner approval; green CI is not release authorization.
+- The following 2026-10-31 entries are historical snapshots and are superseded where they identify an older branch head as current. No merge, tag, release, billing/policy change, or deployment occurred.
+
+## Historical archive verification — 2026-10-31 (superseded by 2026-11-01)
 
 - Current branch head reviewed: `2d6399c09f6d979fdd839356238f15bfe1bdc13a` (documentation-only archive update).
 - Exact-head Push CI [41181289361](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41181289361) and PR-context CI [41181291525](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41181291525) both completed successfully on this SHA. All three jobs succeeded in each run.
