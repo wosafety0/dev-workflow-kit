@@ -1,5 +1,14 @@
 # Project Progress Log
 
+## Confirmed private-consumer pre-run billing gate — 2026-10-31
+
+- Read-only GitHub CLI access on the connected Windows device exposed the previously unavailable private caller Actions policy: `enabled=true`, `allowed_actions=all`, `sha_pinning_required=false`; default workflow token permissions are `read` and PR review approval is disabled. No policy change was made.
+- Retrieved check-run annotations for failed private consumer [run 41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827), job/check run `124212281392`, consumer SHA `0d64bf825cc5a76f3d8603f2e0fb431613715b56`. GitHub's failure annotation states: "The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings".
+- This establishes a GitHub account billing/spending gate before runner allocation as the direct reported failure cause, not a failed `npm test` or an observed reusable-workflow defect. The annotation does not distinguish failed payment from spending-limit exhaustion; the actual billing account state has not been inspected.
+- A separate notice about migration of `ubuntu-latest` to Ubuntu 26 is informational, not the failure annotation.
+- Harness exact-head `e591a2ecb746da0dbf32dfaa07c3b757872f2bda` had successful Push CI [41169297683](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41169297683) and PR-context CI [41169300605](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41169300605). The private consumer remains **not accepted** until the owner resolves billing/spending eligibility and a new exact-head consumer run succeeds.
+- No billing settings, Actions policy, consumer code, secrets, repository visibility, merge, release, or deployment changed. Keep Harness PR #40 and consumer PR #1 Draft/unmerged. This archive-only commit requires its own exact-head CI verification.
+
 Last updated: 2026-10-31
 
 ## Latest private-consumer retest — 2026-10-31
