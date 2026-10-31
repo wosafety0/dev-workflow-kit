@@ -48,7 +48,7 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [x] Define a document precedence and stale-content maintenance policy (`docs/DOCUMENT_PRECEDENCE.md`).
 - [ ] Tag an initial 0.x release only after acceptance criteria pass on the exact release candidate and the release scope is reviewed.
 
-### Latest consumer pin verification — 2026-10-31
+### Historical consumer pin verification snapshot — 2026-10-31 (superseded by current verification above)
 
 - The first consumer now tests the latest reviewed Harness workflow SHA `37dc07c7d7055a740c754ab543eeecc9e01d9db0`, whose reusable workflow file blob is `a5fccae44358222a0d453c33afbe90f95d29f191`.
 - Consumer branch head `4fc0c7f52070acef35afb5184bf82e3910577ccb` passed the reusable Node.js 26 + pnpm 11.4.0 acceptance workflow [41098792395](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098792395) and both native lint/type-check runs [41098791776](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098791776) and [41098781379](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098781379).
@@ -59,7 +59,7 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [x] Validate the first consumer pilot through a separate Draft PR at the latest reviewed reusable-workflow pin: [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2), Harness commit `37dc07c7d7055a740c754ab543eeecc9e01d9db0`, consumer head `4fc0c7f52070acef35afb5184bf82e3910577ccb`; exact-head reusable acceptance [41098792395](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098792395), native lint/type-check [41098791776](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098791776) and [41098781379](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098781379) all passed. The PR remains Draft/unmerged.
 - [ ] Preserve each consumer's project-specific tests, safety constraints, and archive paths.
 
-### Latest Harness head and archive verification — 2026-10-30
+### Historical Harness head and archive verification snapshot — 2026-10-30
 
 - Latest verified branch tree before this documentation refresh: `2658d5b042c85d287c5aa7ae3d1ecb96c4ee8443`. Exact-head Push CI [41055557393](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41055557393) and PR-context CI [41055567927](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41055567927) both succeeded on that SHA. This record is a snapshot before the current documentation-only refresh, not a claim that this refresh commit has already passed CI.
 - Both exact-SHA `offline-tests` jobs passed Python compilation, all offline contract tests, redacted acceptance report generation/upload, and the final required-stage gate. Push artifact ID `12975854414`, digest `sha256:f9cef2edecfa3c033e3c3d5ae86ae657e218c5acf8c4f750d792d0ad2714a835`, expires `2026-11-13T12:28:16Z`.
