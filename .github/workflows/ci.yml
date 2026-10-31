@@ -102,3 +102,13 @@ jobs:
       python-version: "3.12"
       package-manager: none
       test-command: "python -m unittest discover -s tests -v"
+
+  reusable-node-pnpm-selftest:
+    # Exercise Node and optional pnpm setup through the real workflow_call boundary.
+    uses: ./.github/workflows/reusable-acceptance.yml
+    with:
+      runtime: node
+      node-version: "24"
+      package-manager: pnpm
+      pnpm-version: "11.4.0"
+      test-command: "node --version && pnpm --version"
