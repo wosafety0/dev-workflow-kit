@@ -1,5 +1,11 @@
 # Project Progress Log
 
+## Reusable troubleshooting guide update — 2026-10-31
+
+- Updated `docs/REUSABLE_ACCEPTANCE_WORKFLOW.md` in commit `ac7d29eae9323a01acecde60965ba78aa0914787`: prioritize check-run annotations for pre-run failures; classify explicit account billing/spending blockers before changing workflow code or permissions; leave consumer acceptance pending until an exact-head run succeeds.
+- Verified prior archival commit `76cd45b311a798b8cbb263d504554a9262a40165` passed both [push CI 41171043445](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171043445) and [PR CI 41171047387](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171047387).
+- No consumer settings, billing settings, secrets, merges, releases, or deployments changed. The current documentation update and this archive commit still require exact-head CI verification.
+
 ## Confirmed private-consumer pre-run billing gate — 2026-10-31
 
 - Read-only GitHub CLI access on the connected Windows device exposed the previously unavailable private caller Actions policy: `enabled=true`, `allowed_actions=all`, `sha_pinning_required=false`; default workflow token permissions are `read` and PR review approval is disabled. No policy change was made.
