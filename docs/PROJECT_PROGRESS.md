@@ -1,3 +1,13 @@
+## Follow-up documentation consistency review — 2026-10-31
+
+- Re-read the current branch's document precedence policy, roadmap, release-candidate review, stable acceptance contract, reusable workflow guide, workflow implementation, workflow contract tests, CI gate tests, runner/config/report contracts, README, and orchestration fault matrix.
+- Corrected a stale claim in `docs/ORCHESTRATION_FAULT_MATRIX.md`: the current CI and reusable acceptance workflows pin invoked third-party Actions to full commit SHAs. The updated text retains the limitation that pins do not attest upstream behavior or dependency provenance.
+- Renamed two superseded roadmap headings so older consumer/Harness evidence is explicitly historical and cannot be mistaken for current status.
+- Updated `docs/RELEASE_CANDIDATE_REVIEW.md` with the consistency correction. No workflow behavior or consumer code changed, and no release or merge action was taken.
+- This archive commit requires exact-head Push and PR-context CI verification. Release remains not ready to tag: release scope/candidate SHA are not finalized, Stage 4 consumer-specific preservation remains unchecked, and the private consumer still has no passing exact-head run.
+
+---
+
 ## Release-candidate review and current-head verification — 2026-10-31
 
 - Re-read `docs/DOCUMENT_PRECEDENCE.md`, `docs/ROADMAP.md`, `docs/REUSABLE_ACCEPTANCE_WORKFLOW.md`, `docs/STABLE_ACCEPTANCE_CONTRACT.md`, `README.md`, `.github/workflows/ci.yml`, `.github/workflows/reusable-acceptance.yml`, `tests/test_reusable_workflow_contract.py`, and `tests/test_ci_gate.py` from branch `feat/reusable-node-runtime-20261030`.
