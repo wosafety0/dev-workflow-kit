@@ -518,3 +518,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Next diagnostic is a read-only inspection in the private consumer's **Settings → Actions → General → Actions permissions** (and any applicable owner/organization policy) to verify that actions and reusable workflows from the public repository are allowed. Do not change settings merely to test; record the existing policy first and only change it after confirming the exact restriction.
 - No rerun, code/config change in the consumer, settings/permission/visibility change, merge, release, or deployment was performed. Private-consumer acceptance remains blocked and is not counted as passing.
 
+
+
+### Consumer-specific safeguard source cross-check — 2026-10-31
+
+- Inspected both consumer PR heads and their pilot workflow/test documentation. Public `AI-Worker-Proxy` retains its native lint workflow in addition to the Harness pilot, whose command includes frozen-lockfile installation, lint, type-check, and Prettier check; exact-head Harness/native checks passed.
+- Private `chatgpt-auto-send-assistant` pilot calls the existing `npm test` script (`node scripts/validate.mjs`). Its `TESTING.md` continues to mark real Tampermonkey/ChatGPT browser E2E as pending; no browser interaction or application behavior was changed.
+- The private pilot still has no successful execution because its recorded GitHub account billing/spending eligibility gate prevents runner allocation. This is not a test pass or a test-code failure.
+- The source-level preservation review found no visible replacement of consumer tests, but the overall Stage 4 criterion remains open until private exact-head acceptance runs successfully and project-specific archive-path expectations are confirmed.
+- Evidence: [public consumer Harness run 41175900745](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41175900745), [public native PR checks 41175900178](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41175900178), [public native Push checks 41175897003](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41175897003), [private consumer Draft PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1), [private blocked run 41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827).
+
