@@ -1,9 +1,16 @@
+## Independent consumer pin refresh — 2026-10-31
+
+- Confirmed the Harness archive commit `c4cf3e1c11deec098c6a7a6e3837bbe983dcece5` passed exact-head Push CI [41175610754](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41175610754) and PR CI [41175615448](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41175615448).
+- Updated only the immutable Harness SHA in `wosafety0/AI-Worker-Proxy`'s pilot workflow from `37dc07c7d7055a740c754ab543eeecc9e01d9db0` to `c4cf3e1c11deec098c6a7a6e3837bbe983dcece5`, producing consumer commit `87c3633621e455f9ba75ec2caf3ae6ba206e60a8` ([commit](https://github.com/wosafety0/AI-Worker-Proxy/commit/87c3633621e455f9ba75ec2caf3ae6ba206e60a8), [Draft PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2)).
+- All three exact-head consumer checks passed: reusable Harness acceptance [41175900745](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41175900745), PR lint/type-check [41175900178](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41175900178), and Push lint/type-check [41175897003](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41175897003). This confirms the newer immutable workflow revision is compatible with this independent Node 26/pnpm 11.4.0 consumer at this exact commit.
+- The consumer PR remains Draft/unmerged. No application code, secrets, repository settings, release, or deployment changed. The separate private consumer remains unaccepted because its prior run was blocked before runner allocation by GitHub's account billing/spending eligibility message.
+
 # Project Progress Log
 
 ## Node/pnpm reusable workflow integration gate — 2026-10-31
 
 - Added `reusable-node-pnpm-selftest` to `.github/workflows/ci.yml` in commit `ad25539b13c6574bf241d4a67acc95b6468c081b`. It calls the reusable workflow from the same repository head with Node 24, pnpm 11.4.0, and `node --version && pnpm --version`, exercising both runtime setup actions and consumer command execution.
-- Exact-head CI run [41175594205](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41175594205) was observed in progress when this entry was written. Python self-test, Node/pnpm self-test, and offline contract tests had started; **the full result is not yet verified**.
+- Exact-head CI runs [41175594205](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41175594205) and [41175597826](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41175597826) both completed successfully on commit `ad25539b13c6574bf241d4a67acc95b6468c081b`. The offline contract tests, Python workflow integration, and Node/pnpm workflow integration all passed.
 - Prior exact-head integration commit `189ebd2924f2eaca61521209552131600f53fa7c` passed Push CI [41171949609](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171949609) and PR CI [41171952383](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171952383); its Python reusable-workflow job succeeded.
 - The earlier independent public Node/pnpm consumer remains a separate successful pilot; this new self-test is an in-repository workflow integration test, not an additional independent consumer. The private consumer remains blocked by the previously confirmed account billing/spending gate. No billing, permissions, secrets, merge, release, or deployment changed.
 
