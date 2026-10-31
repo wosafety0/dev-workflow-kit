@@ -47,6 +47,33 @@ This finding is deliberately limited to the reviewed scope. A green CI run prove
 4. **Release scope:** Review which surfaces are in the initial 0.x release (semantic-review core versus reusable workflow and orchestration features), state known limitations, and verify the README and versioning/upgrade/rollback instructions match that scope.
 5. **Distribution/release procedure:** Before any tag or release, verify the intended tag name does not already exist, document how consumers pin the immutable commit, and define rollback as reverting the consumer pin. No tag/release is created by this review.
 
+## Proposed initial 0.x scope (recommendation; not release authorization)
+
+The most maintainable first release would be a **source-distributed early-development toolkit**, consumed by immutable commit SHA rather than relying on a mutable branch or tag.
+
+### Include
+- Provider-agnostic semantic-review core and its input/output validation contract.
+- Offline contract tests and fail-closed CI evidence generation.
+- Versioned configuration validation and the fixed, allowlisted task runner.
+- Deterministic, redacted acceptance reports and the reusable Python/Node.js acceptance workflow with optional pnpm setup.
+- Documentation that defines consumer responsibilities, security boundaries, known limitations, and immutable-SHA upgrade/rollback.
+
+### Explicitly do not promise
+- A stable API/CLI compatibility guarantee beyond the documented early 0.x contract.
+- Complete defect detection, model quality, or successful live-provider behavior from offline CI.
+- Compatibility with every consumer project without consumer-specific tests and safeguards.
+- Dependency provenance/attestation, sandboxing of arbitrary untrusted shell commands, or production readiness.
+- Autonomous source edits, PR merges, deployments, or business actions.
+- Permanent retention of CI artifacts; the workflow artifact is temporary evidence.
+
+### Distribution and rollback recommendation
+- Record one exact candidate commit SHA and its successful Push and PR-context CI runs.
+- Create a version tag only after the remaining acceptance gates are met and the repository owner approves the release scope.
+- Ask consumers to pin the reviewed 40-character SHA. Rollback is a consumer PR reverting to the previous known-good SHA and its recorded evidence.
+- Keep the existing Draft PRs unmerged until their separate review/merge decisions are made.
+
+This is a bounded scope recommendation for owner review, not evidence that the release is ready and not authorization to tag, publish, or merge.
+
 ## Gate checklist
 
 - [x] Current Harness branch head identified.
