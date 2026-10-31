@@ -509,13 +509,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - No rerun, consumer code change, repository setting change, visibility change, permission change, merge, or deployment was performed. Second-consumer acceptance remains blocked and is not counted as passing.
 - This diagnostic archive is documentation-only and requires Push and PR-context CI on the resulting exact commit before it is considered CI-verified.
 
-### Comparative private-consumer diagnosis — 2026-10-31
+### Historical comparative private-consumer diagnosis — 2026-10-31 (superseded by later check-run annotation)
 
 - Read-only comparison against the already-passing independent consumer shows that public repository `wosafety0/AI-Worker-Proxy` successfully invoked the exact same immutable Harness workflow SHA `37dc07c7d7055a740c754ab543eeecc9e01d9db0`: run [41098792395](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098792395) passed all seven main job steps, including checkout, input validation, Node setup, pnpm setup, and the consumer-owned command.
 - The private repository `wosafety0/chatgpt-auto-send-assistant` invokes the same workflow SHA with valid matching inputs but fails before runner allocation: run [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) has `runner_id=0`, no runner name, and no steps.
 - This comparison reduces the likelihood of a broken reusable workflow or bad immutable pin and makes a caller-repository-specific Actions policy/configuration difference the leading hypothesis. It is **not a confirmed root cause** because the current connector cannot read the private repository's effective Actions permissions/settings or check-run annotations.
 - GitHub's current documentation says a private caller can use a public reusable workflow, provided the caller's Actions permissions allow it ([reusable workflow access rules](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations)). Visibility alone is not the cause.
-- Next diagnostic is a read-only inspection in the private consumer's **Settings → Actions → General → Actions permissions** (and any applicable owner/organization policy) to verify that actions and reusable workflows from the public repository are allowed. Do not change settings merely to test; record the existing policy first and only change it after confirming the exact restriction.
+- Historical next-step note: at the time of this comparison, the connector could not read the private consumer's effective Actions permissions and the available evidence did not yet include the later billing/spending eligibility annotation. The later check-run annotation is the current diagnostic evidence; it identifies an account payment/spending-limit eligibility gate before runner allocation, without distinguishing which billing condition applies. Do not change settings or rerun merely to test.
 - No rerun, code/config change in the consumer, settings/permission/visibility change, merge, release, or deployment was performed. Private-consumer acceptance remains blocked and is not counted as passing.
 
 
