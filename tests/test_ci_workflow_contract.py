@@ -12,7 +12,7 @@ class CIWorkflowContractTests(unittest.TestCase):
         cls.source = WORKFLOW.read_text(encoding="utf-8")
 
     def test_every_external_action_is_pinned_to_a_full_commit_sha(self):
-        uses = re.findall(r"(?m)^\\s+uses:\\s+([^\\s]+)", self.source)
+        uses = re.findall(r"(?m)^[ \t]+uses:[ \t]+([^ \t]+)", self.source)
         actions = [ref for ref in uses if not ref.startswith("./")]
         self.assertGreaterEqual(len(actions), 3)
         for action in actions:
