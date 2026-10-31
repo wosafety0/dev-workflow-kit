@@ -1,3 +1,12 @@
+## Exact-head verification of 0.x scope proposal archive — 2026-10-31
+
+- The preceding documentation archive commit `313fd9ca3d96ecdd52eebe56a5efd79e2f40d7a2` passed exact-head Push CI [41180457386](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180457386) and PR-context CI [41180459656](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180459656).
+- Both runs completed all three jobs successfully: `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance`.
+- The 0.x release scope is documented as a recommendation only; owner approval and remaining acceptance gates are outstanding. No tag, release, merge, or deployment was performed.
+- The private consumer remains blocked before runner allocation by the previously recorded GitHub account billing/spending eligibility message. The public consumer remains a passing single-project pilot at its recorded exact head, not evidence of universal compatibility.
+
+---
+
 ## Initial 0.x scope proposal — 2026-10-31
 
 - Added a bounded recommendation to `docs/RELEASE_CANDIDATE_REVIEW.md`: source-distributed early-development toolkit, immutable commit-SHA consumption, explicit included surfaces, non-goals, and a rollback-by-pin-revert procedure.
