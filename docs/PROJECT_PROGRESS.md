@@ -2,7 +2,7 @@
 
 - Documentation archive head `37206cf610c8d463bbcff37d0c7dfdd2703f35c3` passed exact-head Push CI [41180488847](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180488847) and PR-context CI [41180492414](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180492414). All three jobs succeeded in both runs.
 - Clarified `docs/RELEASE_CANDIDATE_REVIEW.md` to identify `04a6ae3bb64db7fd348bfc2136dbc9430dc4d9ca` as the reviewed implementation baseline, not the current branch head; the subsequent review series is documentation-only. Updated the remaining release gap to distinguish a written scope recommendation from owner approval.
-- The new documentation archive must be verified against its own exact head. The branch remains Draft/open/unmerged and no release action has been taken.
+- CI evidence is accepted only when the tested SHA matches the commit being described; verify each subsequent archive against its own exact head. The branch remains Draft/open/unmerged and no release action has been taken.
 
 ---
 
