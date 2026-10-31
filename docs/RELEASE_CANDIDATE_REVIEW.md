@@ -20,6 +20,10 @@ This is a bounded review of the reusable acceptance workflow, its caller-side CI
 
 ## Bounded review findings
 
+### Documentation drift corrected in follow-up review
+
+A cross-document check found that `docs/ORCHESTRATION_FAULT_MATRIX.md` incorrectly said third-party Actions were still version-tag pinned, although the current workflows use full commit SHA pins. The claim is corrected. Two older roadmap headings that said “Latest” were also relabeled as historical snapshots because their referenced commits are superseded by the current-facing verification section. This is a documentation consistency correction, not a workflow behavior change.
+
 ### No reproducible defect found in the inspected workflow contract
 
 The current source and regression tests cover:
@@ -51,6 +55,7 @@ This finding is deliberately limited to the reviewed scope. A green CI run prove
 - [x] One independent public consumer verified at a pinned Harness SHA.
 - [x] Private-consumer pre-run blocker classified from its check-run annotation.
 - [x] Bounded source/tests review recorded with limitations.
+- [x] Cross-checked current-facing documentation against implementation; corrected the stale version-tag-pinning claim in `docs/ORCHESTRATION_FAULT_MATRIX.md` and labeled superseded roadmap evidence as historical snapshots.
 - [ ] Consumer-specific safeguards acceptance criterion resolved with evidence.
 - [ ] Release scope approved and written down.
 - [ ] Exact release candidate SHA selected and its CI re-verified.
