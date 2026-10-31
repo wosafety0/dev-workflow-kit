@@ -3,7 +3,7 @@
 Review date: 2026-10-31  
 Repository: `wosafety0/dev-workflow-kit`  
 Review branch: `feat/reusable-node-runtime-20261030`  
-Reviewed branch head: `04a6ae3bb64db7fd348bfc2136dbc9430dc4d9ca`  
+Reviewed implementation baseline: `04a6ae3bb64db7fd348bfc2136dbc9430dc4d9ca` (subsequent commits in this review series changed documentation only)  
 Decision: **Not ready to tag or release**
 
 ## Scope
@@ -44,7 +44,7 @@ This finding is deliberately limited to the reviewed scope. A green CI run prove
 1. **Consumer-specific safeguards:** Roadmap Stage 4 still requires preserving each consumer's own tests, safety constraints, and archive paths. The successful public pilot proves one integration configuration; the private consumer remains blocked before execution. Keep this criterion unchecked until evidence supports the criterion or the roadmap's acceptance scope is explicitly reviewed and changed.
 2. **Private consumer evidence:** The account billing/spending eligibility gate needs to be resolved by the account owner. Do not repeatedly rerun, change Actions policy, or count the current run as acceptance.
 3. **Exact release candidate:** Before tagging, choose and record the exact candidate SHA; inspect its diff and run Push and PR-context CI on that same SHA; ensure all required jobs succeed; and re-check the consumer pin/evidence against the candidate being released.
-4. **Release scope:** Review which surfaces are in the initial 0.x release (semantic-review core versus reusable workflow and orchestration features), state known limitations, and verify the README and versioning/upgrade/rollback instructions match that scope.
+4. **Release scope approval:** The recommended scope and non-goals are now documented above. The repository owner still needs to approve or revise that scope; then verify the README and versioning/upgrade/rollback instructions match the approved scope.
 5. **Distribution/release procedure:** Before any tag or release, verify the intended tag name does not already exist, document how consumers pin the immutable commit, and define rollback as reverting the consumer pin. No tag/release is created by this review.
 
 ## Proposed initial 0.x scope (recommendation; not release authorization)
