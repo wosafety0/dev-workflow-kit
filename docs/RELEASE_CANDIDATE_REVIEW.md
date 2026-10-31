@@ -6,6 +6,12 @@ Review branch: `feat/reusable-node-runtime-20261030`
 Reviewed implementation baseline: `04a6ae3bb64db7fd348bfc2136dbc9430dc4d9ca` (subsequent commits in this review series changed documentation only)  
 Decision: **Not ready to tag or release**
 
+## Latest documentation-archive verification — 2026-10-31
+
+- Current reviewed branch head after the consumer safeguard source cross-check: `96c73593ebebaad0a273ec69af8ad1adc7f0f8c6`.
+- Exact-head Push CI [41180765645](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180765645) and PR-context CI [41180769546](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180769546) both completed with conclusion `success`; each passed `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance`.
+- This head contains documentation-only consumer safeguard review/archive changes after the implementation baseline stated above. These results verify the current archive tree and do not close the private-consumer runtime gate, confirm its archive-path expectations, or authorize a release.
+
 ## Scope
 
 This is a bounded review of the reusable acceptance workflow, its caller-side CI integration, documented acceptance contract, workflow-contract regression tests, and current consumer pilot evidence. It is not a full security audit, dependency attestation, live model validation, or production-readiness certification.
