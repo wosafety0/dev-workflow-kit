@@ -1,4 +1,19 @@
-# Roadmap and Acceptance Gates
+## Latest archive verification — 2026-10-31
+
+- Current branch head reviewed: `2d6399c09f6d979fdd839356238f15bfe1bdc13a` (documentation-only archive update).
+- Exact-head Push CI [41181289361](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41181289361) and PR-context CI [41181291525](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41181291525) both completed successfully on this SHA. All three jobs succeeded in each run.
+- Both runs passed `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance`. The reusable workflow jobs executed their consumer-owned acceptance commands successfully; offline tests compiled Python, ran the contract suite, built/uploaded the redacted report, and passed the fail-closed gate.
+- Harness PR #40 remains Draft/open/unmerged. Private-consumer acceptance remains blocked before runner allocation by the recorded account billing/spending eligibility annotation; the consumer-specific safeguards/archive-path gate remains unchecked.
+- The initial 0.x scope remains a recommendation awaiting repository-owner approval. No tag, release, merge, billing/policy change, or deployment is authorized or performed by this archive.
+
+## Current verification and release-candidate review — 2026-10-31
+
+- **Latest verified implementation baseline before the documentation-only review archive:** `04a6ae3bb64db7fd348bfc2136dbc9430dc4d9ca`. Exact-head Push CI [41176249364](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41176249364) and PR-context CI [41176252292](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41176252292) both completed with conclusion `success`. Each run passed `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance`.
+- The current public independent consumer [AI-Worker-Proxy Draft PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2) pins Harness commit `c4cf3e1c11deec098c6a7a6e3837bbe983dcece5` at consumer head `87c3633621e455f9ba75ec2caf3ae6ba206e60a8`. Exact-head reusable acceptance [41175900745](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41175900745), PR lint/type-check [41175900178](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41175900178), and Push lint/type-check [41175897003](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41175897003) all passed. This is evidence for one independent Node.js 26/pnpm 11.4.0 consumer only. The PR remains Draft/unmerged.
+- The private consumer [chatgpt-auto-send-assistant Draft PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) remains **not accepted**. Consumer head `0d64bf825cc5a76f3d8603f2e0fb431613715b56` pins Harness SHA `37dc07c7d7055a740c754ab543eeecc9e01d9db0`. Run [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) did not allocate a runner; check-run annotation `124212281392` identifies an account billing/spending eligibility gate. The message does not distinguish failed payment from spending-limit exhaustion. Do not count this as a test failure or a pass.
+- **Release decision: not ready to tag yet.** The consumer-preservation criterion remains unchecked, the private consumer has no successful exact-head run, and no exact release-candidate SHA has been selected. A bounded initial 0.x scope recommendation is recorded in [RELEASE_CANDIDATE_REVIEW.md](RELEASE_CANDIDATE_REVIEW.md), but it has not been approved by the repository owner. Do not infer release authorization from green CI.
+- Historical entries below that refer to older commits as current, or describe the private-consumer blocker as unknown, are snapshots of earlier evidence and are superseded by this section. No billing, Actions policy, secrets, merge, release, or deployment was changed.
+- The documentation-only review archive at commit `3f6d912ea8e9479dc7108079739a4926dc9552c6` passed exact-head Push CI [41176608897](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41176608897) and PR-context CI [41176612118](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41176612118). All three jobs succeeded in both runs. This verifies the review/archive tree; it does not change the release decision.
 
 ## Document status and precedence
 
@@ -31,21 +46,41 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [x] Verify PR-head CI run [40691689194](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40691689194) succeeded for tested commit `4fa5f05316876cefa39bd8cdbe4187f63ee0757a`. This establishes the result for that exact PR head only; it does not independently verify the later merge commit `9b236112d4d6f07e15480b5b0ae6e9a3ef5c8aea`.
 - [x] Add failure-injection tests for model-provider fail-closed behavior.
 - [x] Add an orchestration fault matrix and test that test, report-generation, and artifact-upload outcomes must all be exactly successful before the final gate opens (`docs/ORCHESTRATION_FAULT_MATRIX.md`, `tests/test_ci_gate.py`).
-- [ ] Exercise real hosted-workflow failure injection (including an actual artifact-upload failure) and verify the resulting run evidence.
+- [x] Exercise hosted-workflow failure injection, including an actual artifact-upload step failure, and verify the run evidence: [run 40712433963](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40712433963). The test intentionally referenced a missing artifact path; the upload step failed and the final gate failed closed with `ARTIFACT_OUTCOME=failure`. This does **not** simulate a GitHub Artifact service outage; service-level outage behavior remains unverified.
 
 ## Stage 3 — versioned distribution
 
 - [x] Add a minimal reusable acceptance workflow with read-only repository permissions and an explicit consumer-owned test command (`.github/workflows/reusable-acceptance.yml`).
+- [x] Extend the reusable acceptance workflow with explicit Python/Node.js runtime selection and optional pinned pnpm setup; reject unsupported runtime/package-manager combinations before the consumer command runs.
 - [x] Document immutable 40-character SHA pinning, security boundaries, and upgrade/rollback procedure (`docs/REUSABLE_ACCEPTANCE_WORKFLOW.md`).
 - [x] Define a document precedence and stale-content maintenance policy (`docs/DOCUMENT_PRECEDENCE.md`).
 - [ ] Tag an initial 0.x release only after acceptance criteria pass on the exact release candidate and the release scope is reviewed.
 
+### Historical consumer pin verification snapshot — 2026-10-31 (superseded by current verification above)
+
+- The first consumer now tests the latest reviewed Harness workflow SHA `37dc07c7d7055a740c754ab543eeecc9e01d9db0`, whose reusable workflow file blob is `a5fccae44358222a0d453c33afbe90f95d29f191`.
+- Consumer branch head `4fc0c7f52070acef35afb5184bf82e3910577ccb` passed the reusable Node.js 26 + pnpm 11.4.0 acceptance workflow [41098792395](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098792395) and both native lint/type-check runs [41098791776](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098791776) and [41098781379](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098781379).
+- Only the consumer workflow's immutable Harness pin changed; no application behavior, secrets, settings, deployment, or provider API was touched. The separate private consumer's pre-step failure remains unresolved.
+
+## Consumer preservation source cross-check — 2026-10-31
+
+- Public consumer `AI-Worker-Proxy` keeps its existing native lint workflow alongside the separate Harness pilot; the pilot runs frozen-lockfile install, lint, type-check, and Prettier check on head `87c3633621e455f9ba75ec2caf3ae6ba206e60a8`. Exact-head Harness and native checks passed.
+- Private consumer `chatgpt-auto-send-assistant` keeps its `npm test` command (`node scripts/validate.mjs`); `TESTING.md` continues to mark actual Tampermonkey/ChatGPT browser E2E as pending. Its current Harness run is blocked before runner allocation by the recorded account billing/spending eligibility gate, so no runtime result is available.
+- This source-level cross-check found no visible replacement of consumer tests or removal of the documented browser-test limitation. It does **not** close Stage 4: the private consumer still lacks successful exact-head execution, and consumer-specific archive-path expectations have not been fully confirmed. See [release-candidate review](RELEASE_CANDIDATE_REVIEW.md).
+
 ## Stage 4 — consumer integration
 
-- [ ] Integrate a consumer through a separate PR pinned to a tested toolkit SHA.
+- [x] Validate the first consumer pilot through a separate Draft PR at the latest reviewed reusable-workflow pin: [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2), Harness commit `37dc07c7d7055a740c754ab543eeecc9e01d9db0`, consumer head `4fc0c7f52070acef35afb5184bf82e3910577ccb`; exact-head reusable acceptance [41098792395](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098792395), native lint/type-check [41098791776](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098791776) and [41098781379](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41098781379) all passed. The PR remains Draft/unmerged.
 - [ ] Preserve each consumer's project-specific tests, safety constraints, and archive paths.
-- [ ] Pilot with a second, unrelated repository without copying the core.
-- [ ] Publish a reusable-MVP decision based on actual evidence.
+
+### Historical Harness head and archive verification snapshot — 2026-10-30
+
+- Latest verified branch tree before this documentation refresh: `2658d5b042c85d287c5aa7ae3d1ecb96c4ee8443`. Exact-head Push CI [41055557393](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41055557393) and PR-context CI [41055567927](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41055567927) both succeeded on that SHA. This record is a snapshot before the current documentation-only refresh, not a claim that this refresh commit has already passed CI.
+- Both exact-SHA `offline-tests` jobs passed Python compilation, all offline contract tests, redacted acceptance report generation/upload, and the final required-stage gate. Push artifact ID `12975854414`, digest `sha256:f9cef2edecfa3c033e3c3d5ae86ae657e218c5acf8c4f750d792d0ad2714a835`, expires `2026-11-13T12:28:16Z`.
+- The reusable acceptance workflow supports Python and Node.js with optional pnpm, validates runtime/package-manager inputs before the consumer command, rejects blank commands, runs the consumer-owned command under Bash strict mode, pins actions to full commit SHAs, and disables checkout credential persistence.
+- First consumer pilot: [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2), pinned to Harness SHA `36533dd7726365fd817f48072e49ea055d339947`; its reusable acceptance run and native lint/type-check runs passed on consumer head `643659014370f85b61964bcbb978833ec6f74428`. The PR remains Draft/unmerged.
+- Second consumer pilot: [chatgpt-auto-send-assistant PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) remains blocked before job steps. Both attempts lack usable runner logs; the effective caller Actions policy and root cause remain unverified. Do not count this as a pass. No settings or visibility were changed.
+- PR #40 remains Draft/open/unmerged. The second-consumer acceptance criterion and initial 0.x release decision remain pending. No merge, release, deployment, or repository access-policy change occurred.
 
 ## Non-negotiable acceptance rules
 
@@ -56,3 +91,74 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - No automatic PR merge or project business actions.
 - Remote GitHub changes must not be described as synced to a local worktree unless independently verified.
 - Documentation conflicts must be resolved under `docs/DOCUMENT_PRECEDENCE.md`; obsolete current-facing descriptions must be updated.
+
+
+### Second-consumer source cross-check — 2026-10-30
+- Revalidated the caller workflow and reusable workflow at the exact pinned Harness SHA. The reusable file exists, declares `workflow_call`, and exposes the input names/types used by the consumer; no obvious workflow path, immutable pin, or input mismatch was found.
+- The second-consumer run still fails before steps with an empty step list and unavailable logs. Effective Actions policy settings could not be read through the available connector, so the cause remains unknown. Do not mark the second-consumer criterion complete or change visibility/settings without an evidence-based, authorized decision.
+- PR #1 remains Draft/unmerged; no consumer implementation, settings, visibility, permissions, release, or deployment changes were made. Historical note: archive CI was pending at the time this entry was written; later exact-head verification is recorded below and supersedes that pending status.
+
+
+### Superseding exact-head verification update — 2026-10-30
+
+- The earlier note above that the archive head's exact-head CI was pending is historical and is superseded by verification of current PR #40 branch head `010bdc400597ca7840bdf4928cd9cdeaae7dbd3b`.
+- Push CI [41032611297](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41032611297) and PR-context CI [41032618160](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41032618160) both succeeded for that exact head. Both completed `offline-tests`, including Python compilation, offline contract tests, redacted acceptance report generation/upload, and the final required-stage gate.
+- This resolves the archive-verification wording only. The second consumer remains blocked before job steps with root cause unknown; its acceptance checkbox remains unchecked. PR #40 remains Draft/open/unmerged, and no settings, permissions, visibility, release, or deployment changed.
+
+### Latest roadmap consistency and checkout credential isolation — 2026-10-30
+
+- Current PR #40 head at the time of this archive: `05cc91a6c272ff54ea5116aacc23b8fc6882ffdb`. This entry supersedes the earlier current-head references above; those remain historical evidence for their respective commits.
+- Push CI [41034922115](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41034922115) and PR-context CI [41034929136](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41034929136) both succeeded for this exact head. Both completed Python compilation, offline contract tests, redacted acceptance report generation/upload, and the final gate.
+- Hardened `.github/workflows/reusable-acceptance.yml` with `persist-credentials: false` on the SHA-pinned checkout step, and added a contract test to prevent accidental removal. This reduces unnecessary credential persistence; it is not evidence that a credential leak occurred.
+- The second consumer still fails before steps with no assigned runner and unavailable logs. Root cause and effective caller Actions policy remain unknown; its acceptance checkbox remains unchecked. No settings, permissions, repository visibility, merge, release, or deployment changed. PR #40 remains Draft/open/unmerged.
+
+
+### Exact-head CI confirmation — 2026-10-30
+
+- Current PR #40 head `d081fcf74863fbcccbea027a8e1f1b2137197cdf` passed Push CI [41035581115](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41035581115) and PR-context CI [41035591455](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41035591455).
+- Both runs completed successfully for this exact SHA. The current head is therefore verified; earlier wording that this commit's CI had not appeared is historical and superseded.
+- The second consumer remains blocked before runner steps with root cause unknown. Its acceptance criterion remains unchecked. PR #40 and consumer PRs remain Draft/unmerged; no settings, permissions, visibility, release, merge, or deployment changed.
+
+
+### Exact-head CI verification — 2026-10-30
+
+- Archive commit `5da6a9d2ad3c1787d3148fdce877a71740ac2fea` passed Push CI [41036222709](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41036222709) and PR-context CI [41036230850](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41036230850), both for the exact same SHA.
+- Both runs completed `offline-tests` successfully: Python compilation, all offline contract tests, redacted acceptance report generation/upload, and the final required-stage gate.
+- The roadmap and progress archive now record this verified state. The next resulting documentation commit requires its own exact-head CI check; second-consumer acceptance remains incomplete and the cause of its pre-step failure remains unknown.
+- PR #40 remains Draft/open/unmerged. No Actions settings, permissions, visibility, merge, release, or deployment changed.
+
+
+### Permission-contract hardening and second-consumer diagnostic update — 2026-10-30
+
+- Current Harness PR #40 head before this archive: `1cd44edbc71dfaff4eb4d03b67d9d7d7eec87244`. The permission contract test now rejects any permission key set to `write`, not only a short allowlist. Exact-head Push CI [41041286644](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41041286644) and PR-context CI [41041302017](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41041302017) both succeeded.
+- New read-only inspection of consumer run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209) confirms GitHub recorded the reusable-workflow reference at the intended immutable SHA `36533dd7726365fd817f48072e49ea055d339947`. This reduces the likelihood of a missing path/ref as the explanation, but does not prove the caller's effective Actions policy is permissive.
+- Attempt 2 job [123960822318](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209/job/123960822318) still has `runner_id: 0`, no runner name, and an empty step list. The log endpoint returns `BlobNotFound`; the annotations endpoint is not accessible through the current GitHub connector. Effective caller/org policy and the failure annotation text remain unverified. Root cause is still unknown; no settings, permissions, or visibility were changed.
+- This update is an evidence clarification, not a second-consumer pass. Its acceptance checkbox remains unchecked. All PRs remain Draft/unmerged; no release or deployment occurred.
+
+
+### Current verified status — 2026-10-30
+
+- Current PR #40 head: `4a2aa5cedb67b1d59c011544eaa50a4b8bca11ee`.
+- Exact-head Push CI [41055907724](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41055907724) and PR-context CI [41055920956](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41055920956) both completed successfully. Each `offline-tests` job passed compilation, all offline contract tests, redacted acceptance report generation/upload, and the final required-stage gate.
+- Push acceptance-report artifact [12976945877](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41055907724) was present and not expired when checked; digest `sha256:fe0bd9167a6a537ae844e175f4f129ba77ddb87daee52f1f6514fea9d07b51d8`, expiry `2026-11-13T12:31:02Z`. It is temporary, not a permanent archive.
+- The second consumer `chatgpt-auto-send-assistant` remains blocked before job steps: run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209) has a failed job and no step details. The root cause and effective caller Actions policy remain unconfirmed; do not count this pilot as passing.
+- This current status supersedes earlier historical entries that describe older branch heads as current or say later CI was still pending. PR #40 and both consumer PRs remain Draft/open/unmerged. No settings, permissions, visibility, merge, release, or deployment changed.
+
+
+
+### Current status superseding older head references — 2026-10-31
+
+- Latest verified implementation head before this documentation-only status refresh: `bd2f2083332b8050c6dd6b5753575bfe0783bc24`. Exact-head Push CI [41056295005](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41056295005) and PR-context CI [41056302765](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41056302765) both succeeded, including compilation, all offline contract tests, redacted acceptance-report generation/upload, and the final required-stage gate.
+- Push acceptance-report artifact [12976294611](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41056295005) had digest `sha256:3561ba3e4a5e30e2d4a6a00a8c0d6b20977a91fa7b3eb05292e58b2efca047c5` and expiry `2026-11-13T12:34:06Z`; it is temporary evidence, not a permanent archive.
+- The reusable workflow currently supports Python and Node.js with optional pnpm, read-only repository permissions, full-SHA action pins, checkout credential persistence disabled, and fail-closed contract tests.
+- First consumer pilot [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2) passed its reusable acceptance run and native lint/type-check on consumer head `643659014370f85b61964bcbb978833ec6f74428`; it remains Draft/unmerged.
+- Second consumer pilot [chatgpt-auto-send-assistant PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) remains blocked before job steps. Run [41021315209](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41021315209) has no assigned runner/steps and unavailable logs; root cause and effective Actions policy remain unverified. This is not a pass.
+- This entry supersedes older entries above that label older SHAs as the current head or describe the newer CI as pending. PR #40 and both consumer PRs remain Draft/open/unmerged; no settings, permissions, visibility, merge, release, or deployment changed.
+
+
+### Workflow-contract regression coverage and latest CI state — 2026-10-31
+
+- Contract tests now explicitly guard the reusable `workflow_call` entry point and the default inputs (Python `3.12`, Node.js `24`, package manager `none`, pnpm `11.4.0`). Regex escaping was corrected in commit [78005435b11150f141da4739b30d2158c40e1377](https://github.com/wosafety0/dev-workflow-kit/commit/78005435b11150f141da4739b30d2158c40e1377).
+- Exact-head Push CI [41103982861](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41103982861) and PR-context CI [41103993312](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41103993312) are both reported successful for that SHA. The connector exposed job-level conclusions but no step details; record only the run-level success.
+- Remaining acceptance risk: [chatgpt-auto-send-assistant PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) still fails before any job steps in [run 41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827). Root cause/effective Actions policy are unknown; do not treat this consumer as passed or change settings to work around it without evidence.
+- Next: verify Push and PR-context CI against the resulting documentation-archive head, then continue diagnosing the second consumer from read-only evidence. PR #40 remains Draft/open/unmerged; no release or deployment occurred.
