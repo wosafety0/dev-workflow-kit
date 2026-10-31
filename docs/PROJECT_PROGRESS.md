@@ -1,3 +1,11 @@
+### Latest exact-head documentation archive verification — 2026-10-31
+
+- Branch head: `1787cf433fda3220fa5caf0f2b46d9ca51c14a7d`, documentation-only release-review archive.
+- Exact-head Push CI [41180951214](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180951214) and PR-context CI [41180955221](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180955221) both succeeded. Each passed `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance`.
+- Job-level inspection confirmed all three jobs succeeded in both runs. Offline steps compiled Python, ran offline contract tests, built/uploaded the redacted acceptance report, and passed the fail-closed gate. Python and Node/pnpm integration jobs validated inputs and executed the consumer-owned acceptance command successfully.
+- PR #40 remains Draft/open/unmerged. The private consumer remains unaccepted because the recorded account billing/spending eligibility gate prevents runner allocation. Consumer-specific safeguards and archive-path acceptance remains open.
+- No merge, tag, release, deployment, billing/policy, permission, or visibility changes were made. Release scope remains unapproved; do not infer release readiness from CI alone.
+
 ## Exact-head CI and review-baseline wording — 2026-10-31
 
 - Documentation archive head `37206cf610c8d463bbcff37d0c7dfdd2703f35c3` passed exact-head Push CI [41180488847](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180488847) and PR-context CI [41180492414](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180492414). All three jobs succeeded in both runs.
