@@ -1,5 +1,11 @@
 # Project Progress Log
 
+## Roadmap consistency correction — 2026-10-31
+
+- Corrected the current-facing top section of `docs/ROADMAP.md` in commit `274fce69b8561c5d0f9becce0b9a3f46a960fdf8`: the private consumer's pre-run billing/spending failure is now identified from GitHub check-run annotations, and older "root cause unknown" statements are explicitly historical.
+- Verified prior archive head `293cdfa3cc8742610bbd77384240e4057dd03985` passed exact-head [Push CI 41171259131](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171259131) and [PR CI 41171262776](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171262776).
+- Private consumer acceptance remains pending; no account billing, repository policy, secrets, merge, release, or deployment changed. Verify the resulting archive commit's CI independently.
+
 ## Reusable troubleshooting guide update — 2026-10-31
 
 - Updated `docs/REUSABLE_ACCEPTANCE_WORKFLOW.md` in commit `ac7d29eae9323a01acecde60965ba78aa0914787`: prioritize check-run annotations for pre-run failures; classify explicit account billing/spending blockers before changing workflow code or permissions; leave consumer acceptance pending until an exact-head run succeeds.
