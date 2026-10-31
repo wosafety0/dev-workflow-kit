@@ -1,3 +1,12 @@
+## Initial 0.x scope proposal — 2026-10-31
+
+- Added a bounded recommendation to `docs/RELEASE_CANDIDATE_REVIEW.md`: source-distributed early-development toolkit, immutable commit-SHA consumption, explicit included surfaces, non-goals, and a rollback-by-pin-revert procedure.
+- The proposal deliberately makes no stable API, complete defect detection, universal consumer compatibility, dependency attestation, production-readiness, or permanent artifact-retention promise.
+- This is a recommendation only. Owner approval of release scope, an exact candidate SHA with successful Push and PR-context CI, and the outstanding consumer-specific acceptance gates remain required before any tag/release action.
+- No tag, release, merge, deployment, or consumer behavior change was made. The final documentation head must pass exact-head Push and PR-context CI.
+
+---
+
 ## Follow-up documentation consistency review — 2026-10-31
 
 - Re-read the current branch's document precedence policy, roadmap, release-candidate review, stable acceptance contract, reusable workflow guide, workflow implementation, workflow contract tests, CI gate tests, runner/config/report contracts, README, and orchestration fault matrix.
