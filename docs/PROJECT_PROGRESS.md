@@ -1,5 +1,12 @@
 # Project Progress Log
 
+## Python reusable workflow integration gate — 2026-10-31
+
+- Added a `reusable-python-selftest` job to `.github/workflows/ci.yml` at commit `189ebd2924f2eaca61521209552131600f53fa7c`. It calls `./.github/workflows/reusable-acceptance.yml` from the same commit with Python 3.12, `package-manager: none`, and the consumer-owned command `python -m unittest discover -s tests -v`.
+- Unlike source-only contract tests, this exercises GitHub's actual `workflow_call` entry point, runtime setup, and consumer-command execution. In [Push run 41171949609](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171949609), the `reusable-python-selftest / acceptance` job's consumer-command step was already `success` when inspected; the overall run and PR run [41171952383](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171952383) were still in progress. **Do not mark full exact-head CI as passed until both conclude successfully.**
+- Previous exact-head `2dd42a147095258ee5eb208d4e3e69df88c19b0b` passed Push CI [41171607449](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171607449) and PR CI [41171612192](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171612192).
+- This integration test is an in-repository Python caller, **not** a second independent external consumer. The private consumer remains blocked by GitHub's reported billing/spending gate. No billing, repository policy, secrets, merge, release, or deployment changed.
+
 ## Roadmap consistency correction — 2026-10-31
 
 - Corrected the current-facing top section of `docs/ROADMAP.md` in commit `274fce69b8561c5d0f9becce0b9a3f46a960fdf8`: the private consumer's pre-run billing/spending failure is now identified from GitHub check-run annotations, and older "root cause unknown" statements are explicitly historical.
