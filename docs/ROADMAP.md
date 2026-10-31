@@ -1,7 +1,7 @@
 ## Latest archive verification — 2026-10-31
 
-- Current branch head reviewed: `1787cf433fda3220fa5caf0f2b46d9ca51c14a7d` (documentation-only archive update).
-- Exact-head Push CI [41180951214](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180951214) and PR-context CI [41180955221](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180955221) both completed successfully on this SHA.
+- Current branch head reviewed: `2d6399c09f6d979fdd839356238f15bfe1bdc13a` (documentation-only archive update).
+- Exact-head Push CI [41181289361](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41181289361) and PR-context CI [41181291525](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41181291525) both completed successfully on this SHA. All three jobs succeeded in each run.
 - Both runs passed `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance`. The reusable workflow jobs executed their consumer-owned acceptance commands successfully; offline tests compiled Python, ran the contract suite, built/uploaded the redacted report, and passed the fail-closed gate.
 - Harness PR #40 remains Draft/open/unmerged. Private-consumer acceptance remains blocked before runner allocation by the recorded account billing/spending eligibility annotation; the consumer-specific safeguards/archive-path gate remains unchecked.
 - The initial 0.x scope remains a recommendation awaiting repository-owner approval. No tag, release, merge, billing/policy change, or deployment is authorized or performed by this archive.
