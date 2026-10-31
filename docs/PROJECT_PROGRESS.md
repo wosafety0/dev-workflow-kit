@@ -400,3 +400,13 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The added contract assertions are now covered by a successful exact-head CI result. PR #40 remains Draft/open/unmerged.
 - Second consumer [chatgpt-auto-send-assistant PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) remains blocked before job steps: run [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) reports failure with an empty step list. Root cause and effective Actions policy remain unknown; this consumer is not accepted.
 - No repository settings, permissions, visibility, merge, release, deployment, or consumer configuration changed in this round. The documentation archive itself requires exact-head CI verification.
+
+
+### Second-consumer pre-run diagnostics — 2026-10-31
+
+- Rechecked consumer PR #1 and workflow run [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827). The run is a `pull_request` event on consumer SHA `0d64bf825cc5a76f3d8603f2e0fb431613715b56`; GitHub records the called workflow path and immutable SHA `37dc07c7d7055a740c754ab543eeecc9e01d9db0`.
+- Retrieved the reusable workflow file at both the called SHA and the latest Harness branch head `acdccdcf48ec87ede49973782ab564b7ec4618b4`. Both resolve to the same blob SHA `a5fccae44358222a0d453c33afbe90f95d29f191`, ruling out workflow-file content drift between those two refs as the explanation.
+- Used the dedicated job-step and job-log tools: the job has no steps, and log retrieval returns `BlobNotFound`. PR #1 has no comments with further diagnostic context. The commit combined-status endpoint also returns no statuses.
+- Reconfirmed repository visibility through repository metadata: Harness is public and consumer is private. This combination is supported when caller Actions policy permits the reusable workflow; visibility alone does not identify the root cause. The available connector cannot read the Actions permissions settings endpoint, so effective repository/organization policy remains unknown.
+- No rerun, consumer code change, repository setting change, visibility change, permission change, merge, or deployment was performed. Second-consumer acceptance remains blocked and is not counted as passing.
+- This diagnostic archive is documentation-only and requires Push and PR-context CI on the resulting exact commit before it is considered CI-verified.
