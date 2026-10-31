@@ -1,3 +1,10 @@
+## Exact-head verification of the current documentation archive — 2026-10-31
+
+- Documentation commits `b7630e80a88712c33844f7d43878e2762d66d7be` and `8937805f54bd727dfbab4c6ab20cb53f60f08a21` record the successful independent consumer upgrade and reconcile the current roadmap with verified evidence.
+- Final archive head `8937805f54bd727dfbab4c6ab20cb53f60f08a21` passed exact-head Push CI [41176206654](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41176206654) and PR-context CI [41176208960](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41176208960). In both runs, `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance` succeeded.
+- The consumer-side exact-head result is also green at `87c3633621e455f9ba75ec2caf3ae6ba206e60a8`; the public consumer PR remains Draft/unmerged. The private consumer remains blocked by the previously observed account billing/spending eligibility annotation; it is not counted as accepted.
+- No code behavior, secrets, repository settings, merge, release, or deployment changed in this documentation-only archive.
+
 ## Independent consumer pin refresh — 2026-10-31
 
 - Confirmed the Harness archive commit `c4cf3e1c11deec098c6a7a6e3837bbe983dcece5` passed exact-head Push CI [41175610754](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41175610754) and PR CI [41175615448](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41175615448).
