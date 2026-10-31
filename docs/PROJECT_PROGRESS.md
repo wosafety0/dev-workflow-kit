@@ -1,3 +1,11 @@
+## Exact-head CI and review-baseline wording — 2026-10-31
+
+- Documentation archive head `37206cf610c8d463bbcff37d0c7dfdd2703f35c3` passed exact-head Push CI [41180488847](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180488847) and PR-context CI [41180492414](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180492414). All three jobs succeeded in both runs.
+- Clarified `docs/RELEASE_CANDIDATE_REVIEW.md` to identify `04a6ae3bb64db7fd348bfc2136dbc9430dc4d9ca` as the reviewed implementation baseline, not the current branch head; the subsequent review series is documentation-only. Updated the remaining release gap to distinguish a written scope recommendation from owner approval.
+- The new documentation archive must be verified against its own exact head. The branch remains Draft/open/unmerged and no release action has been taken.
+
+---
+
 ## Exact-head verification of 0.x scope proposal archive — 2026-10-31
 
 - The preceding documentation archive commit `313fd9ca3d96ecdd52eebe56a5efd79e2f40d7a2` passed exact-head Push CI [41180457386](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180457386) and PR-context CI [41180459656](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41180459656).
