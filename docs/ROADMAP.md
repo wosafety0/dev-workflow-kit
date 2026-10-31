@@ -1,11 +1,14 @@
 # Roadmap and Acceptance Gates
 
 
-## Latest private-consumer retest — 2026-10-31
+## Current verification and private-consumer diagnosis — 2026-10-31
 
-- Updated the Draft private consumer [chatgpt-auto-send-assistant PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) to pin the reusable workflow to Harness SHA `37dc07c7d7055a740c754ab543eeecc9e01d9db0`. Consumer commit: `0d64bf825cc5a76f3d8603f2e0fb431613715b56`.
-- New exact-head run [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) failed before any job steps; the job has an empty step list and its log endpoint returns `BlobNotFound`. This reproduces the pre-step failure with the latest reviewed Harness pin, so the old pin is not a sufficient explanation. Root cause and effective caller Actions policy remain unknown.
-- No repository Actions settings, permissions, secrets, or visibility were changed. Do not mark the private-consumer acceptance as passed; the PR remains Draft/open/unmerged.
+- The private consumer [chatgpt-auto-send-assistant PR #1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) remains Draft/unmerged and **not accepted**. Consumer head `0d64bf825cc5a76f3d8603f2e0fb431613715b56` pins Harness workflow SHA `37dc07c7d7055a740c754ab543eeecc9e01d9db0`. Its [run 41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) did not allocate a runner or execute job steps.
+- **Confirmed pre-run blocker:** GitHub check-run `124212281392` contains a failure annotation: "The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings". The message does not identify which of the two billing/spending conditions applies. Repository Actions settings were read-only verified as enabled with `allowed_actions=all`; default workflow token permissions are `read`. Do not infer a test-command or reusable-workflow defect from this run.
+- **Verified Harness head:** commit `293cdfa3cc8742610bbd77384240e4057dd03985` passed [Push CI 41171259131](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171259131) and [PR CI 41171262776](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41171262776). Both completed successfully on that exact SHA. A later documentation commit must be verified independently.
+- The first public consumer [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2) remains the successful independent Node/pnpm pilot, but it is Draft/unmerged. The private consumer remains blocked until the account owner resolves the billing/spending condition and a fresh exact-head consumer run succeeds.
+- Historical entries below that state the private failure root cause or effective repository policy was unknown describe the evidence available **at that earlier time**, and are superseded by this diagnosis. No billing, Actions policy, secrets, merge, release, or deployment was changed.
+
 ## Document status and precedence
 
 When current-facing documents conflict, follow the latest applicable, verified project version and correct the obsolete descriptions. Use [DOCUMENT_PRECEDENCE.md](DOCUMENT_PRECEDENCE.md) for the required resolution and maintenance procedure. A newer timestamp alone does not establish correctness; implementation claims require code/tests, and verification claims require evidence tied to the relevant commit. This roadmap describes the current development branch and does not imply its changes have been merged into `main`.
