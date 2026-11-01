@@ -240,7 +240,7 @@ class HarnessRunnerTests(unittest.TestCase):
         self.write_config(["semantic-review"])
         review_path = self.root / "artifacts" / "review-input.json"
         payload = self.write_review_input(review_path)
-        payload["diff"] = "\\ud800"
+        payload["diff"] = "\ud800"
         review_path.write_text(json.dumps(payload), encoding="utf-8")
         with patch("scripts.harness_runner._git_commit_sha", return_value=self.base_commit_sha), patch(
             "scripts.harness_runner._run_task"
