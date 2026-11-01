@@ -45,11 +45,11 @@ class HarnessRunnerTests(unittest.TestCase):
             stdout=subprocess.PIPE, text=True,
         ).stdout.strip()
 
-    def write_review_input(self, path):
+    def write_review_input(self, path, diff="", changed_files=None):
         payload = {
             "task": "review the committed change",
-            "diff": "",
-            "changed_files": [],
+            "diff": diff,
+            "changed_files": [] if changed_files is None else changed_files,
             "global_rules": "Follow the supplied project rules.",
             "project_instructions": "Review only the committed source change.",
         }
@@ -66,7 +66,7 @@ class HarnessRunnerTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def run_runner(self, *extra, config="harness.json"):
+    def run_runner(self, *extra, config="harness.json", add_review_base=True):
         args = [
             "--project-root", str(self.root),
             "--config", config,
@@ -74,7 +74,7 @@ class HarnessRunnerTests(unittest.TestCase):
             "--timeout-seconds", "10",
             *extra,
         ]
-        if "--review-input" in extra and "--review-base-commit" not in extra:
+        if add_review_base and "--review-input" in extra and "--review-base-commit" not in extra:
             args.extend(["--review-base-commit", self.base_commit_sha])
         stdout = StringIO()
         stderr = StringIO()
@@ -252,6 +252,55 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("does not exactly match the canonical Git diff", stderr)
         run_task.assert_not_called()
+
+    def test_semantic_review_requires_explicit_base_commit(self):
+        self.write_config(["semantic-review"])
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+                add_review_base=False,
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("semantic-review requires --review-base-commit", stderr)
+        run_task.assert_not_called()
+
+    def test_semantic_review_accepts_canonical_diff_for_declared_base_and_head(self):
+        self.write_config(["semantic-review"])
+        source_dir = self.root / "src"
+        source_dir.mkdir()
+        source_file = source_dir / "feature.py"
+        source_file.write_text("def feature():\\n    return 42\\n", encoding="utf-8")
+        subprocess.run(["git", "add", "src/feature.py"], cwd=self.root, check=True)
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test", "-c",
+             "user.email=harness-test@example.invalid", "commit", "-qm", "add feature"],
+            cwd=self.root, check=True,
+        )
+        diff = subprocess.run(
+            [
+                "git", "diff", "--binary", "--full-index", "--no-ext-diff",
+                "--no-textconv", "--no-color", "--no-renames", "--no-relative",
+                "--diff-algorithm=myers", "--src-prefix=a/", "--dst-prefix=b/",
+                f"{self.base_commit_sha}...HEAD", "--",
+            ],
+            cwd=self.root, check=True, stdout=subprocess.PIPE,
+        ).stdout.decode("utf-8")
+        self.write_review_input(
+            self.root / "artifacts" / "review-input.json",
+            diff=diff,
+            changed_files=["src/feature.py"],
+        )
+        with patch("scripts.harness_runner._run_task", return_value=("passed", 0)) as run_task:
+            code, stdout, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
+        self.assertIn("Semantic review diff provenance: verified", stdout)
+        run_task.assert_called_once()
 
     def test_semantic_review_requires_explicit_input_and_output_before_any_task_runs(self):
         self.write_config(["python-unittest", "semantic-review"])
