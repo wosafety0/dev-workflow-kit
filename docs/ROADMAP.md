@@ -1,3 +1,11 @@
+## 2026-11-01 — Consumer execution trust boundary and contract regression
+
+- Completed a source-level review of both current consumer PR heads and clarified in the reusable-workflow guide that `test-command` is executable consumer-controlled shell, not a sandbox. A `pull_request` caller can run PR-controlled workflow/test code; read-only permissions and absence of explicitly passed secrets reduce risk but do not isolate execution or restrict network egress.
+- Added a reusable-workflow contract regression test forbidding secrets declarations, direct secrets-context references, and `secrets: inherit` in the reusable workflow. The test is intentionally scoped to the called workflow; it cannot enforce caller-side policy or prevent a consumer from creating a separate privileged workflow.
+- Exact test-contract head `b7bdf5deba5b3b919af3760408893829e5a01f80` passed PR-context CI [41271489648](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41271489648): offline tests, Python selftest, Node/pnpm selftest, report upload, and final gate all succeeded. The preceding documentation head `2415539ccd09abb5e2b6f9efb413909948ff9c89` passed PR-context CI [41271405922](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41271405922). Push-triggered CI for these exact SHAs was not independently retrieved.
+- Public consumer remains accepted only for its recorded exact head and immutable Harness pin. Private consumer remains unaccepted: no runner was allocated due to the recorded account payment/spending eligibility gate; static validation does not substitute for browser E2E.
+- Stage 4 consumer safeguards and private runtime acceptance remain incomplete. Initial 0.x scope approval, exact release candidate, and tag/release preflight remain open. No consumer changes, merge, tag, release, deployment, billing, permission, visibility, or Actions-policy change occurred.
+
 ## 2026-11-01 — Consumer PR execution boundary review
 
 - Re-read the exact current consumer heads: public `AI-Worker-Proxy` `87c3633621e455f9ba75ec2caf3ae6ba206e60a8` and private `chatgpt-auto-send-assistant` `0d64bf825cc5a76f3d8603f2e0fb431613715b56`. Both pilot workflows trigger on `pull_request`, request only `contents: read`, and pin the reusable workflow by a full 40-character SHA. Neither caller explicitly maps secrets into the reusable workflow.
