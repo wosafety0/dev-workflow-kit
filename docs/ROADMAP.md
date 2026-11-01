@@ -1,3 +1,11 @@
+## Latest exact-head CI and archive verification — 2026-11-01
+
+- Current branch head: `93cdcf41767202267d11e6dafb14d9da71a504e1`. Exact-head Push CI [41256265375](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256265375) and PR-context CI [41256269341](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256269341) both completed successfully for this same SHA.
+- Job-level inspection of the PR-context run confirms all three required jobs passed: `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance`. The offline path completed compilation, offline contract tests, redacted acceptance-report generation/upload, and the fail-closed final gate; both reusable runtime selftests executed their consumer-owned acceptance commands.
+- This supersedes the preceding 2026-11-01 entry's statement that the documentation archive's own PR-context run was still in progress. PR #40 remains Open/Draft/unmerged.
+- The passing public consumer remains one independent pilot, not proof of universal compatibility. The private consumer remains blocked before runner allocation by the recorded account billing/spending eligibility gate. Stage 4 consumer-specific safeguards/archive-path acceptance remains unchecked.
+- The proposed initial 0.x scope still requires repository-owner approval. No exact release-candidate SHA has been selected and no tag/release preflight is certified. No merge, tag, release, deployment, billing, or Actions-policy change occurred.
+
 ## Latest exact-head verification — 2026-11-01
 
 - Current Node-consumer branch head before this documentation archive: `a9b6f17099afa07f9cbb2f8a0410560f9c1ed38b`. Exact-head Push CI [41228919858](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41228919858) and PR-context CI [41228924340](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41228924340) both succeeded; all three jobs were green and the offline suite reported **169 tests, OK**.
