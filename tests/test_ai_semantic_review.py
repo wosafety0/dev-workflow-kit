@@ -150,16 +150,16 @@ class SemanticReviewValidationTests(unittest.TestCase):
 
     def test_binary_changes_cannot_receive_semantic_pass(self):
         for binary_marker in (
-            "Binary files a/assets/logo.png and b/assets/logo.png differ\\n",
-            "GIT binary patch\\nliteral 1\\nA\\n",
+            "Binary files a/assets/logo.png and b/assets/logo.png differ\n",
+            "GIT binary patch\nliteral 1\nA\n",
         ):
             with self.subTest(binary_marker=binary_marker):
                 payload = dict(self.payload)
                 payload["diff"] += (
-                    "diff --git a/assets/logo.png b/assets/logo.png\\n"
-                    "index 1234567..89abcde 100644\\n"
-                    "--- a/assets/logo.png\\n"
-                    "+++ b/assets/logo.png\\n"
+                    "diff --git a/assets/logo.png b/assets/logo.png\n"
+                    "index 1234567..89abcde 100644\n"
+                    "--- a/assets/logo.png\n"
+                    "+++ b/assets/logo.png\n"
                     + binary_marker
                 )
                 payload["changed_files"] = ["src/client.py", "README.md", "assets/logo.png"]
