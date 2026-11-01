@@ -1,8 +1,8 @@
-## Latest exact-head CI and archive verification — 2026-11-01
+## Pre-archive head CI and archive verification — 2026-11-01
 
-- Current branch head: `20f9470ab43299d457d0c027a97604b410b0d761`. Exact-head Push CI [41256483538](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256483538) and PR-context CI [41256487977](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256487977) both completed successfully for this same SHA.
+- Verified pre-archive head: `f62dc4ae4ff578a921a8850b678790b0b162e080`. Exact-head Push CI [41256664945](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256664945) and PR-context CI [41256669345](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256669345) both completed successfully for this same SHA.
 - Job-level inspection confirms all three jobs passed in both runs: `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance`. Offline compilation, contract tests, redacted report generation/upload, and the fail-closed gate all succeeded; both reusable runtime selftests executed their consumer-owned acceptance commands.
-- This corrects the preceding three documentation commits, which had repeated the prior `93cdcf41767202267d11e6dafb14d9da71a504e1` verification as if it were the current branch head. That earlier evidence remains valid only for its own SHA. Commits `111ca05e...`, `4097bc80...`, and `20f9470a...` changed documentation only.
+- This entry labels `f62dc4ae...` as the verified pre-archive head and supersedes the preceding stale current-head labels. The archive commit created after that verified head is documentation-only; its own CI is verified separately and does not recursively update this snapshot.
 - PR #40 remains Open/Draft/unmerged. The passing public consumer remains one independent pilot, not proof of universal compatibility. The private consumer remains blocked before runner allocation by the recorded account billing/spending eligibility gate. Stage 4 consumer-specific safeguards/archive-path acceptance remains unchecked.
 - The proposed initial 0.x scope still requires repository-owner approval. No exact release-candidate SHA has been selected and no tag/release preflight is certified. No merge, tag, release, deployment, billing, or Actions-policy change occurred.
 
