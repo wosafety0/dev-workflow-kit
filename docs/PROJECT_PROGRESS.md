@@ -816,3 +816,9 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added a shared Git subprocess environment builder that removes inherited `GIT_*` variables before all six Runner-owned Git call sites. This prevents caller-controlled repository, worktree, index, object-store, and Git-config environment overrides from changing provenance checks. It does not attest the Git executable or host environment.
 - Added `test_commit_provenance_ignores_git_repository_redirect_environment`, which clones the fixture, creates a different empty commit with the same tree, redirects ambient Git metadata to that clone, and verifies the Runner still reports the project's actual HEAD.
 - Implementation/test head `c0694f70ffdb366e88e2a0f402faba46a1ee947b` passed exact-head Push CI [41363394505](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41363394505) and PR-context CI [41363396870](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41363396870). All three jobs succeeded in both runs; the new Git-environment redirection regression executed successfully and the offline suite reported **193 tests, OK**.
+
+
+## 2026-11-02 — Git provenance environment guard archive verification
+- Progress archive head `42939318d76149eea9d88a7be0d215385b1bfacc` passed exact-head Push CI [41363462323](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41363462323) and PR-context CI [41363467599](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41363467599).
+- All three jobs succeeded in both runs: offline-tests, reusable Node/pnpm acceptance, and reusable Python acceptance. Both offline logs confirm **193 tests, OK**, including the Git environment redirection regression.
+- The Python task path remains standard-library-only; no dependency installation or lockfile was introduced. Runtime executable, standard library, Git executable, host OS, and hosted runner image remain documented trust boundaries.
