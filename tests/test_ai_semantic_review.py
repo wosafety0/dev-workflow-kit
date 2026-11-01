@@ -60,6 +60,14 @@ class SemanticReviewValidationTests(unittest.TestCase):
             }],
         }
 
+    def test_rejects_review_without_explicit_limitations(self):
+        for review in (self.pass_review(), self.finding()):
+            with self.subTest(status=review["status"]):
+                review["limitations"] = []
+                with self.assertRaisesRegex(ReviewError, "limitations must identify at least one"):
+                    validate_review(self.payload, review)
+
+
     def test_accepts_structurally_valid_pass(self):
         self.assertEqual(validate_review(self.payload, self.pass_review())["status"], "PASS")
 
