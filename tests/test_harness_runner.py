@@ -1280,5 +1280,33 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(report["status"], "passed")
         self.assertEqual(report["tests"], {"python-unittest": "passed"})
 
+
+    def test_report_write_failure_cleans_temporary_artifact(self):
+        output = self.root / "artifacts" / "report.json"
+        with patch(
+            "scripts.harness_runner.json.dumps",
+            side_effect=OSError("simulated disk write failure"),
+        ):
+            with self.assertRaisesRegex(
+                harness_runner.HarnessRunnerError,
+                "Could not write the acceptance report",
+            ):
+                harness_runner._write_report(
+                    output,
+                    {
+                        "commit_sha": "a" * 40,
+                        "rules_pin": "sha256:" + "b" * 64,
+                        "tool_version": "test",
+                        "tests": {"python-unittest": "passed"},
+                    },
+                    lambda metadata: {
+                        "schema_version": 1,
+                        **metadata,
+                        "status": "passed",
+                    },
+                )
+        self.assertFalse(output.exists())
+        self.assertEqual(list(output.parent.iterdir()), [])
+
 if __name__ == "__main__":
     unittest.main()
