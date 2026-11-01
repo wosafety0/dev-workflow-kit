@@ -200,6 +200,7 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
     mapped_spans = []
     offset = 0
     old_line = new_line = None
+    deleted_file = bool(re.search(r"(?m)^\+\+\+ /dev/null$", section))
     for line in section.splitlines(keepends=True):
         line_start = offset
         line_end = offset + len(line)
@@ -209,9 +210,9 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
         elif old_line is not None and new_line is not None and line:
             prefix = line[0]
             if prefix == " ":
-                # Findings cite the resulting file's coordinates. Deleted files have no
-                # resulting-side coordinates, so use the old-file line numbers there.
-                context_line = old_line if re.search(r"(?m)^\+\+\+ /dev/null$", section) else new_line
+                # Findings cite resulting-file coordinates. A deleted file has no
+                # resulting side, so its context lines retain old-file coordinates.
+                context_line = old_line if deleted_file else new_line
                 mapped_spans.append((line_start, line_end, {context_line}, "context"))
                 old_line += 1
                 new_line += 1
@@ -233,10 +234,17 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
         for line_start, line_end, source_lines, kind in mapped_spans:
             if evidence_start < line_end and evidence_end > line_start:
                 numbers.update(source_lines)
-                if kind in {"deleted", "added"}:
-                    evidence_kinds.add(kind)
-        if evidence_kinds == {"deleted", "added"}:
-            raise ReviewError("Evidence mixes deleted and added lines with different source coordinates")
+                evidence_kinds.add(kind)
+        uses_old_coordinates = "deleted" in evidence_kinds or (
+            deleted_file and "context" in evidence_kinds
+        )
+        uses_new_coordinates = "added" in evidence_kinds or (
+            not deleted_file and "context" in evidence_kinds
+        )
+        if uses_old_coordinates and uses_new_coordinates:
+            raise ReviewError(
+                "Evidence mixes old-file and resulting-file lines with different source coordinates"
+            )
     return {number for number in numbers if number >= 1}
 
 
