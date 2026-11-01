@@ -252,6 +252,15 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
     return {number for number in numbers if number >= 1}
 
 
+def _contains_binary_patch(sections: list[tuple[str, str]]) -> bool:
+    """Detect binary diff metadata whose payload is not reviewable as source text."""
+    return any(
+        re.search(r"(?m)^(?:GIT binary patch|Binary files .+ differ)\\s*$", section)
+        is not None
+        for _, section in sections
+    )
+
+
 def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
     """Validate schema and ground every finding in the supplied diff and rules."""
     validate_input(payload)
@@ -276,6 +285,11 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
 
     changed_files = set(payload["changed_files"])
     sections = _validate_diff_integrity(payload)
+    has_binary_patch = _contains_binary_patch(sections)
+    if review["status"] == "PASS" and has_binary_patch:
+        raise ReviewError(
+            "PASS is forbidden when binary changes are present; use INCONCLUSIVE unless evidence-backed findings require NEEDS_CHANGES"
+        )
     rule_sources = (payload["global_rules"], payload["project_instructions"])
     for finding in review["findings"]:
         if not isinstance(finding, dict) or set(finding) != {
@@ -337,7 +351,9 @@ def build_messages(payload: dict[str, Any]) -> list[dict[str, str]]:
         "rule_quote. The file and line range must identify the exact file and source line(s) "
         "containing that evidence. If evidence is insufficient, use INCONCLUSIVE. PASS means no "
         "actionable rule or correctness issue was found in the reviewed scope; it is not proof "
-        "of total compliance. Return JSON only, matching the requested schema exactly."
+        "of total compliance. If the diff contains binary patch metadata, do not return PASS "
+        "because the binary payload is not reviewable as source text; use INCONCLUSIVE unless "
+        "evidence-backed findings require NEEDS_CHANGES. Return JSON only, matching the requested schema exactly."
     )
     user = {
         "task": payload["task"],
