@@ -1,3 +1,10 @@
+## 2026-11-01 — Bind semantic-review diffs to Git source commits
+
+- Targeted provenance audit confirmed that the previous input SHA-256 only protected the caller-supplied JSON bytes against mutation between preflight and execution; it did not establish that the embedded diff came from the checked-out source.
+- Added mandatory `--review-base-commit` for Harness `semantic-review` runs. Before any task starts, the runner resolves current `HEAD`, verifies the declared full base SHA is available and has a merge base with `HEAD`, regenerates a canonical three-dot Git diff with fixed options, and byte-compares it to the input `diff`. The existing preflight fingerprint and check/use protection remain in place.
+- The binding proves correspondence to the declared base and checked-out HEAD; it cannot prove that the caller chose the correct target branch. The standalone CLI is explicitly documented as lower-level and unbound. The synthetic negative smoke fixture now uses the standalone CLI instead of falsely implying it is a repository-derived patch.
+- Implementation and regression tests are committed pending exact-head CI verification.
+
 ## 2026-11-01 — Isolate Python task subprocess imports
 
 - A targeted execution-environment audit confirmed that the runner inherited the caller's Python import environment. Repository tasks could therefore be influenced by `PYTHONPATH`, user-site packages, `sitecustomize`, or `.pth` startup hooks not represented by the clean Git worktree.

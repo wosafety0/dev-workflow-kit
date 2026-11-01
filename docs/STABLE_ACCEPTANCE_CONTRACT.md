@@ -96,3 +96,11 @@ This document is a living 0.x contract. A change that weakens a fail-closed rule
 - Fixed Python task invocations in the Harness runner must use isolated mode (`-I`) and disable site initialization (`-S`). This prevents inherited `PYTHONPATH`, user-site packages, `sitecustomize`, and `.pth` startup hooks from altering task imports.
 - The current Harness task implementation must remain compatible with the Python standard library alone unless a separately reviewed dependency-installation contract is introduced.
 - This boundary does not attest the Python executable, standard library, host operating system, Git executable, or the underlying runner image; the Harness is not a sandbox.
+
+
+## Semantic-review source provenance
+
+- When the Harness runner executes the `semantic-review` task, it must require an explicit full `--review-base-commit` SHA. The current source is the clean worktree's `HEAD`.
+- The runner must regenerate the canonical three-dot Git diff from the declared base to `HEAD` with fixed options: binary/full-index output, no external diff or text conversion, no color, no rename detection, repository-root-relative paths, and the Myers algorithm. The UTF-8 bytes of the input `diff` must exactly equal the generated Git output before any task executes.
+- The declared base must resolve to an available commit and share a merge base with `HEAD`. A missing base, unavailable commit, malformed input, or byte mismatch blocks the run.
+- This binds the reviewed patch to the checked-out source and declared base; it does not prove that the caller selected the correct target branch/base policy. The standalone semantic-review CLI remains an explicit lower-level interface and does not claim runner-level Git provenance.

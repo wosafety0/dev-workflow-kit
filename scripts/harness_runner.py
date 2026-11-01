@@ -294,6 +294,76 @@ def _read_review_input(path: Path, field: str) -> bytes:
     return data
 
 
+def _verify_review_diff_provenance(
+    root: Path, review_input_bytes: bytes, base_commit: str
+) -> None:
+    """Bind caller-supplied review diff bytes to the current HEAD and an explicit base."""
+    if not isinstance(base_commit, str) or not _SHA_RE.fullmatch(base_commit):
+        raise HarnessRunnerError("--review-base-commit must be a full 40-character Git commit SHA")
+    try:
+        payload = json.loads(
+            review_input_bytes.decode("utf-8"),
+            object_pairs_hook=_reject_duplicate_json_keys,
+        )
+    except (UnicodeError, ValueError):
+        raise HarnessRunnerError("review-input must be valid UTF-8 JSON for provenance verification") from None
+    if not isinstance(payload, dict) or not isinstance(payload.get("diff"), str):
+        raise HarnessRunnerError("review-input must contain a string diff for provenance verification")
+    if not isinstance(payload.get("changed_files"), list):
+        raise HarnessRunnerError("review-input must contain changed_files for provenance verification")
+
+    def run_git(*args: str) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.run(
+            ["git", *args],
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=20,
+            check=False,
+        )
+
+    try:
+        head = run_git("rev-parse", "HEAD")
+        if head.returncode != 0:
+            raise HarnessRunnerError("Could not resolve source commit for review provenance")
+        source_commit = head.stdout.decode("ascii", errors="strict").strip().lower()
+        if not _SHA_RE.fullmatch(source_commit):
+            raise HarnessRunnerError("Could not resolve source commit for review provenance")
+        resolved_base = run_git("rev-parse", "--verify", f"{base_commit.lower()}^{{commit}}")
+        if resolved_base.returncode != 0 or (
+            resolved_base.stdout.decode("ascii", errors="strict").strip().lower() != base_commit.lower()
+        ):
+            raise HarnessRunnerError("--review-base-commit must identify an available Git commit")
+        merge_base = run_git("merge-base", base_commit.lower(), source_commit)
+        if merge_base.returncode != 0 or not _SHA_RE.fullmatch(
+            merge_base.stdout.decode("ascii", errors="strict").strip()
+        ):
+            raise HarnessRunnerError("review base and source commit must share a Git merge base")
+        expected = run_git(
+            "diff",
+            "--binary",
+            "--full-index",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--no-color",
+            "--no-renames",
+            "--no-relative",
+            "--diff-algorithm=myers",
+            "--src-prefix=a/",
+            "--dst-prefix=b/",
+            f"{base_commit.lower()}...{source_commit}",
+            "--",
+        )
+    except (OSError, subprocess.TimeoutExpired, UnicodeError):
+        raise HarnessRunnerError("Could not verify semantic-review diff provenance") from None
+    if expected.returncode != 0:
+        raise HarnessRunnerError("Could not generate canonical Git diff for semantic-review provenance")
+    if payload["diff"].encode("utf-8") != expected.stdout:
+        raise HarnessRunnerError(
+            "review-input diff does not exactly match the canonical Git diff from --review-base-commit to HEAD"
+        )
+
+
 def _write_report(output_path: Path, metadata: dict[str, Any]) -> dict[str, Any]:
     report = build_acceptance_report(metadata)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -368,6 +438,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--review-input", help="Repository-relative semantic-review input JSON")
     parser.add_argument("--review-output", help="Repository-relative semantic-review output JSON")
+    parser.add_argument("--review-base-commit", help="Full Git commit SHA of the target base used to generate the review diff")
     parser.add_argument(
         "--timeout-seconds",
         type=int,
@@ -454,7 +525,9 @@ def main(argv: list[str] | None = None) -> int:
             raise HarnessRunnerError(
                 "semantic-review requires both --review-input and --review-output"
             )
-        if not wants_review and (review_input is not None or review_output is not None):
+        if wants_review and not args.review_base_commit:
+            raise HarnessRunnerError("semantic-review requires --review-base-commit")
+        if not wants_review and (review_input is not None or review_output is not None or args.review_base_commit is not None):
             raise HarnessRunnerError(
                 "--review-input and --review-output are only valid when semantic-review is configured"
             )
@@ -484,6 +557,9 @@ def main(argv: list[str] | None = None) -> int:
             for task_id in config["commands"]
         ]
         commit_sha = _git_commit_sha(root)
+        if wants_review and review_input_bytes is not None:
+            _verify_review_diff_provenance(root, review_input_bytes, args.review_base_commit)
+            print(f"Semantic review diff provenance: verified against {args.review_base_commit.lower()}...HEAD")
         rules_pin = _rules_pin(root)
         outcomes: dict[str, str] = {}
         failed = False
