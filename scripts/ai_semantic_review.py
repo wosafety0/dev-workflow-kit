@@ -255,7 +255,7 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
 def _contains_binary_patch(sections: list[tuple[str, str]]) -> bool:
     """Detect binary diff metadata whose payload is not reviewable as source text."""
     return any(
-        re.search(r"(?m)^(?:GIT binary patch|Binary files .+ differ)\\s*$", section)
+        re.search(r"(?m)^(?:GIT binary patch|Binary files .+ differ)\s*$", section)
         is not None
         for _, section in sections
     )
