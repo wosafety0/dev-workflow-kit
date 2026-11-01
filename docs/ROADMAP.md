@@ -185,3 +185,10 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - Private consumer run [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) remains blocked before runner allocation (`runner_id: 0`, no steps) by the recorded account payment/spending eligibility annotation. It is not accepted.
 - GitHub Releases inventory is empty; tag enumeration was unavailable through the connector, so tag availability is not certified. The initial 0.x scope still requires explicit owner approval; consumer-specific safeguards, private exact-head execution, candidate selection, and release preflight remain open.
 - This is a pre-archive status record. The archive commit's CI is tracked separately; no merge, tag, release, deployment, billing, permission, visibility, or Actions-policy change occurred.
+
+## Tag namespace and archive-head CI — 2026-11-01
+
+- GitHub matching tag refs query returned an empty array: the repository currently has zero tag refs. This supersedes the earlier note that the tags-list endpoint was unavailable. The empty namespace is current-state evidence only, not a completed future tag-name preflight.
+- Archive head `0342ef1beab6a0048e566c865191c0f78e146910` passed Push [41257280862](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41257280862) and PR-context [41257284495](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41257284495); all three jobs succeeded in both runs.
+- PR #40 remains Open/Draft/unmerged. Private consumer exact-head acceptance remains blocked before runner allocation by the recorded account payment/spending eligibility gate; do not count it as passing.
+- Owner approval of the bounded initial 0.x scope, consumer-specific safeguards acceptance, private exact-head execution, exact candidate selection, and final tag/release preflight remain unchecked. No tag/release/merge/deployment or account/policy change occurred.

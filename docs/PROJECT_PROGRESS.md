@@ -587,3 +587,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Read-only release inventory returned zero GitHub Releases. The available GitHub connector rejected the repository tags-list endpoint, so the complete tag namespace and tag-name availability remain unverified; no tag/release preflight is certified.
 - The proposed bounded initial 0.x scope still awaits explicit repository-owner approval. Consumer-specific safeguards/archive-path acceptance, private exact-head execution, exact candidate selection, and release preflight remain open. No merge, tag, release, deployment, billing, permission, visibility, or Actions-policy change occurred.
 - This entry records verification of the pre-archive head. The archive commit's own CI must be checked independently; do not create a recursive archive solely to record that result.
+
+## 2026-11-01 — Tag namespace and archive-head CI confirmation
+
+- Independently queried GitHub's matching tag refs endpoint; it returned an empty array. The repository currently has zero Git tag refs. This supersedes the earlier note that the tags-list endpoint was unavailable; no tag exists at the time of this check.
+- Revalidated archive head `0342ef1beab6a0048e566c865191c0f78e146910`. Push CI [41257280862](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41257280862) and PR-context CI [41257284495](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41257284495) both succeeded. Each run passed `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance`.
+- PR #40 remains Open/Draft/unmerged. Public consumer pilot remains successful at its recorded pinned SHA; private consumer remains blocked before runner allocation by the account payment/spending eligibility gate and is not accepted.
+- Empty current tag namespace does not itself complete release preflight. Initial 0.x scope approval, consumer-specific safeguards acceptance, private exact-head execution, exact release-candidate SHA selection, and final tag-name preflight remain outstanding. No tag, merge, release, deployment, billing, permission, visibility, or Actions-policy change occurred.
+- This is the final status note for this verification cycle. The archive commit's CI is independently tracked; do not create another archive solely to restate its own CI result.
