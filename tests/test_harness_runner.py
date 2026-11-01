@@ -305,7 +305,7 @@ class HarnessRunnerTests(unittest.TestCase):
                 "--review-input", "artifacts/review-input.json",
                 "--review-output", "artifacts/review.json",
             )
-        self.assertEqual(code, 0)
+        self.assertEqual(code, 0, stderr)
         self.assertEqual(stderr, "")
         self.assertIn("Semantic review diff provenance: verified", stdout)
         run_task.assert_called_once()
