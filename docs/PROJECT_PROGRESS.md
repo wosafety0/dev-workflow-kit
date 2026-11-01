@@ -1,3 +1,10 @@
+## 2026-11-01 — Binary-diff semantic PASS guard
+
+- Targeted false-PASS review found that a structurally valid Git file section containing binary markers (`Binary files ... differ` or `GIT binary patch`) could otherwise be accepted with `PASS` despite the binary payload not being available as reviewable source text.
+- Added `_contains_binary_patch()` and a deterministic validator gate: binary-bearing diffs cannot receive `PASS`. `INCONCLUSIVE` remains valid; `NEEDS_CHANGES` can still report evidence-backed findings in reviewable text sections. The model instructions now state the same boundary, while the validator remains authoritative.
+- Added `test_binary_changes_cannot_receive_semantic_pass`, covering both Git binary marker forms and confirming `INCONCLUSIVE` remains accepted. The source and regression test are on the development branch; exact-head CI verification is pending at this archive point.
+- This does not verify the binary content or bind caller-supplied diff data to Git HEAD. Those remain explicit input-provenance and review-scope limitations.
+
 ## 2026-11-01 — Semantic-review mixed-coordinate evidence guard
 
 - Targeted review found a deterministic validator gap: evidence spanning a deleted line and a context line in an ordinary modified file could combine old-file and resulting-file coordinates into a misleading line range (for example, old line 11 plus new line 21 accepted as range 11–21). The prior validator already rejected deleted+added evidence but did not reject deleted+context evidence.
