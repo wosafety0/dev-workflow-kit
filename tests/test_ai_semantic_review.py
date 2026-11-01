@@ -478,7 +478,7 @@ class SemanticReviewValidationTests(unittest.TestCase):
         # Combining them into 11-21 would falsely imply one source coordinate system.
         finding["line_start"] = 11
         finding["line_end"] = 21
-        with self.assertRaisesRegex(ReviewError, "mixes old-file and resulting-file"):
+        with self.assertRaisesRegex(ReviewError, "mixes deleted and context"):
             validate_review(payload, review)
 
 
