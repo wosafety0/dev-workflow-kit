@@ -417,6 +417,96 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("Semantic review diff provenance: verified", stdout)
         run_task.assert_called_once()
 
+    def test_semantic_review_diff_provenance_includes_submodule_changes_despite_git_config(self):
+        self.write_config(["semantic-review"])
+        submodule_temp = tempfile.TemporaryDirectory()
+        self.addCleanup(submodule_temp.cleanup)
+        submodule_root = Path(submodule_temp.name)
+        subprocess.run(["git", "init", "-q"], cwd=submodule_root, check=True)
+        subprocess.run(
+            ["git", "config", "user.name", "Harness Test"],
+            cwd=submodule_root, check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.email", "harness-test@example.invalid"],
+            cwd=submodule_root, check=True,
+        )
+        (submodule_root / "module.py").write_text("VALUE = 1\\n", encoding="utf-8")
+        subprocess.run(["git", "add", "module.py"], cwd=submodule_root, check=True)
+        subprocess.run(
+            ["git", "commit", "-qm", "initial submodule"],
+            cwd=submodule_root, check=True,
+        )
+        first_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=submodule_root, check=True,
+            stdout=subprocess.PIPE, text=True,
+        ).stdout.strip()
+
+        submodule_path = self.root / "vendor" / "submodule"
+        submodule_path.parent.mkdir(parents=True)
+        subprocess.run(
+            ["git", "clone", "-q", str(submodule_root), str(submodule_path)],
+            cwd=self.root, check=True,
+        )
+        subprocess.run(
+            ["git", "update-index", "--add", "--cacheinfo",
+             f"160000,{first_sha},vendor/submodule"],
+            cwd=self.root, check=True,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test", "-c",
+             "user.email=harness-test@example.invalid", "commit", "-qm", "add submodule"],
+            cwd=self.root, check=True,
+        )
+
+        (submodule_root / "module.py").write_text("VALUE = 2\\n", encoding="utf-8")
+        subprocess.run(["git", "commit", "-qam", "advance submodule"], cwd=submodule_root, check=True)
+        second_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=submodule_root, check=True,
+            stdout=subprocess.PIPE, text=True,
+        ).stdout.strip()
+        subprocess.run(["git", "fetch", "-q", "origin"], cwd=submodule_path, check=True)
+        subprocess.run(["git", "checkout", "-q", second_sha], cwd=submodule_path, check=True)
+        subprocess.run(
+            ["git", "update-index", "--cacheinfo",
+             f"160000,{second_sha},vendor/submodule"],
+            cwd=self.root, check=True,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test", "-c",
+             "user.email=harness-test@example.invalid", "commit", "-qm", "advance submodule"],
+            cwd=self.root, check=True,
+        )
+        subprocess.run(
+            ["git", "config", "diff.ignoreSubmodules", "all"],
+            cwd=self.root, check=True,
+        )
+
+        diff = subprocess.run(
+            [
+                "git", "diff", "--binary", "--full-index", "--no-ext-diff",
+                "--no-textconv", "--no-color", "--no-renames", "--no-relative",
+                "--ignore-submodules=none", "--diff-algorithm=myers",
+                "--src-prefix=a/", "--dst-prefix=b/",
+                f"{self.base_commit_sha}...HEAD", "--",
+            ],
+            cwd=self.root, check=True, stdout=subprocess.PIPE,
+        ).stdout.decode("utf-8")
+        self.assertIn("Subproject commit", diff)
+        self.write_review_input(
+            self.root / "artifacts" / "review-input.json",
+            diff=diff,
+            changed_files=["vendor/submodule"],
+        )
+        with patch("scripts.harness_runner._run_task", return_value=("passed", 0)) as run_task:
+            code, stdout, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 0, stderr)
+        self.assertIn("Semantic review diff provenance: verified", stdout)
+        run_task.assert_called_once()
+
     def test_semantic_review_requires_explicit_input_and_output_before_any_task_runs(self):
         self.write_config(["python-unittest", "semantic-review"])
         with patch("scripts.harness_runner._run_task") as run_task:
