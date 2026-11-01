@@ -211,7 +211,7 @@ def _reject_ignored_python_sources(root: Path) -> None:
         if not raw_path:
             continue
         ignored_path = Path(os.fsdecode(raw_path))
-        if ignored_path.suffix != ".py":
+        if ignored_path.suffix not in {".py", ".pyc", ".so", ".pyd"}:
             continue
         parent_parts = ignored_path.parts[:-1]
         # Only recognized repository-root environments/artifacts are excluded.
