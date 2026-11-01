@@ -842,6 +842,17 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(target.read_text(encoding="utf-8"), '{"keep": true}')
         self.assertTrue(report.is_symlink())
 
+    def test_documented_script_entrypoint_supports_direct_execution(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        result = subprocess.run(
+            [sys.executable, str(repo_root / "scripts" / "harness_runner.py"), "--help"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Run reviewed Harness task IDs", result.stdout)
 
 if __name__ == "__main__":
     unittest.main()
