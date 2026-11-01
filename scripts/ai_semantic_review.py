@@ -41,6 +41,18 @@ class ReviewError(ValueError):
     """Raised when model output is malformed or not evidence-grounded."""
 
 
+def _is_safe_relative_path(path: str) -> bool:
+    """Return whether a diff/config path is a normalized repository-relative path."""
+    parts = path.split("/")
+    return not (
+        path.startswith("/")
+        or "\\" in path
+        or re.match(r"^[A-Za-z]:", path)
+        or any(part in {"", ".", ".."} for part in parts)
+        or any(ord(char) < 32 or ord(char) == 127 for char in path)
+    )
+
+
 def validate_input(payload: dict[str, Any]) -> None:
     required = ("task", "diff", "changed_files", "global_rules", "project_instructions")
     for key in required:
@@ -57,14 +69,7 @@ def validate_input(payload: dict[str, Any]) -> None:
     for path in payload["changed_files"]:
         if len(path) > MAX_CHANGED_FILE_PATH_LENGTH:
             raise ReviewError("changed_files path is too long")
-        parts = path.split("/")
-        if (
-            path.startswith("/")
-            or "\\" in path
-            or re.match(r"^[A-Za-z]:", path)
-            or any(part in {"", ".", ".."} for part in parts)
-            or any(ord(char) < 32 or ord(char) == 127 for char in path)
-        ):
+        if not _is_safe_relative_path(path):
             raise ReviewError("changed_files contains an unsafe path")
     if len(set(payload["changed_files"])) != len(payload["changed_files"]):
         raise ReviewError("changed_files must not contain duplicate paths")
@@ -143,6 +148,8 @@ def _diff_sections(diff: str) -> list[tuple[str, str]]:
         if not parsed:
             raise ReviewError("Unsupported or malformed Git diff path header")
         old_path, new_path = parsed.groups()
+        if not _is_safe_relative_path(old_path) or not _is_safe_relative_path(new_path):
+            raise ReviewError("Git diff contains an unsafe path")
         section = diff[header.start():end]
         _validate_hunk_integrity(section)
         old_header = re.search(r"(?m)^--- (.+)$", section)
