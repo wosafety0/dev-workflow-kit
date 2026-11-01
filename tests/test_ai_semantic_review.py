@@ -750,6 +750,19 @@ class SemanticReviewValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ReviewError, "new-file header does not match"):
             validate_review(payload, self.pass_review())
 
+    def test_rejects_rename_with_unsafe_source_path(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/../outside.txt b/safe.txt\\n"
+            "similarity index 100%\\n"
+            "rename from ../outside.txt\\n"
+            "rename to safe.txt\\n"
+        )
+        payload["changed_files"] = ["safe.txt"]
+        with self.assertRaisesRegex(ReviewError, "Git diff contains an unsafe path"):
+            validate_review(payload, self.pass_review())
+
+
     def test_rejects_rename_from_path_header_mismatch(self):
         payload = dict(self.payload)
         payload["diff"] = (
