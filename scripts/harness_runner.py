@@ -19,6 +19,11 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+# Keep the documented ``python scripts/harness_runner.py`` entry point working.
+# Direct script execution places scripts/ rather than the repository root on sys.path.
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from scripts.acceptance_report import AcceptanceReportError, build_acceptance_report
 from scripts.harness_config import HarnessConfigError, validate_harness_config
 
