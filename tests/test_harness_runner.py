@@ -604,9 +604,9 @@ class HarnessRunnerTests(unittest.TestCase):
     def test_runner_rejects_ignored_python_source_in_nested_env_directory(self):
         helper = self.root / "src" / "env" / "helper.py"
         helper.parent.mkdir(parents=True)
-        helper.write_text("VALUE = 'mutable nested source'\\n", encoding="utf-8")
+        helper.write_text("VALUE = 'mutable nested source'\n", encoding="utf-8")
         (self.root / ".gitignore").write_text(
-            "src/env/helper.py\\n", encoding="utf-8"
+            "src/env/helper.py\n", encoding="utf-8"
         )
         subprocess.run(
             ["git", "add", ".gitignore"], cwd=self.root, check=True,
