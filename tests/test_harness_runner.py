@@ -601,6 +601,31 @@ class HarnessRunnerTests(unittest.TestCase):
 
 
 
+    def test_runner_rejects_ignored_python_bytecode_before_execution(self):
+        helper = self.root / "tests" / "helper.pyc"
+        helper.write_bytes(b"\x00\x01compiled-python-bytecode")
+        (self.root / ".gitignore").write_text(
+            "tests/helper.pyc\n", encoding="utf-8"
+        )
+        subprocess.run(
+            ["git", "add", ".gitignore"], cwd=self.root, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test",
+             "-c", "user.email=harness-test@example.invalid",
+             "commit", "-qm", "ignore Python bytecode helper"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("ignored Python source", stderr)
+        run_task.assert_not_called()
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
+
+
     def test_runner_rejects_ignored_python_source_in_nested_env_directory(self):
         helper = self.root / "src" / "env" / "helper.py"
         helper.parent.mkdir(parents=True)
