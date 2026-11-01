@@ -287,8 +287,10 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
         isinstance(item, str) and item.strip() for item in review["checked_scope"]
     ):
         raise ReviewError("checked_scope must identify at least one reviewed area")
-    if not all(isinstance(item, str) and item.strip() for item in review["limitations"]):
-        raise ReviewError("limitations entries must be non-empty strings")
+    if not review["limitations"] or not all(
+        isinstance(item, str) and item.strip() for item in review["limitations"]
+    ):
+        raise ReviewError("limitations must identify at least one review boundary")
 
     changed_files = set(payload["changed_files"])
     sections = _validate_diff_integrity(payload)
