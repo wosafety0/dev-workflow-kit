@@ -431,7 +431,7 @@ class HarnessRunnerTests(unittest.TestCase):
             ["git", "config", "user.email", "harness-test@example.invalid"],
             cwd=submodule_root, check=True,
         )
-        (submodule_root / "module.py").write_text("VALUE = 1\\n", encoding="utf-8")
+        (submodule_root / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
         subprocess.run(["git", "add", "module.py"], cwd=submodule_root, check=True)
         subprocess.run(
             ["git", "commit", "-qm", "initial submodule"],
@@ -459,7 +459,7 @@ class HarnessRunnerTests(unittest.TestCase):
             cwd=self.root, check=True,
         )
 
-        (submodule_root / "module.py").write_text("VALUE = 2\\n", encoding="utf-8")
+        (submodule_root / "module.py").write_text("VALUE = 2\n", encoding="utf-8")
         subprocess.run(["git", "commit", "-qam", "advance submodule"], cwd=submodule_root, check=True)
         second_sha = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=submodule_root, check=True,
