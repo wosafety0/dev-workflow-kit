@@ -242,7 +242,9 @@ class HarnessRunnerTests(unittest.TestCase):
         payload = self.write_review_input(review_path)
         payload["diff"] = "diff --git a/fake.py b/fake.py\\n"
         review_path.write_text(json.dumps(payload), encoding="utf-8")
-        with patch("scripts.harness_runner._run_task") as run_task:
+        with patch("scripts.harness_runner._git_commit_sha", return_value=self.base_commit_sha), patch(
+            "scripts.harness_runner._run_task"
+        ) as run_task:
             code, _, stderr = self.run_runner(
                 "--review-input", "artifacts/review-input.json",
                 "--review-output", "artifacts/review.json",
