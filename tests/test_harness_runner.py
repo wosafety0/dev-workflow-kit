@@ -3,6 +3,7 @@ import json
 import marshal
 import os
 import py_compile
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -25,6 +26,9 @@ class HarnessRunnerTests(unittest.TestCase):
         (self.root / "scripts").mkdir()
         (self.root / "tests").mkdir()
         (self.root / "artifacts").mkdir()
+        repo_root = Path(__file__).resolve().parents[1]
+        for relative in ("scripts/harness_config.py", "scripts/acceptance_report.py"):
+            shutil.copyfile(repo_root / relative, self.root / relative)
         (self.root / "docs" / "STABLE_ACCEPTANCE_CONTRACT.md").write_text(
             "contract", encoding="utf-8"
         )
@@ -138,28 +142,27 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(stderr, "")
 
     def test_trusted_helper_imports_bypass_poisoned_project_pycache(self):
-        import scripts.acceptance_report as report_module
-        import scripts.harness_config as config_module
-
-        root = Path(__file__).resolve().parents[1]
-        modules = (report_module, config_module)
+        helper_sources = (
+            self.root / "scripts" / "acceptance_report.py",
+            self.root / "scripts" / "harness_config.py",
+        )
         cache_paths = [
-            Path(importlib.util.cache_from_source(module.__file__))
-            for module in modules
+            Path(importlib.util.cache_from_source(str(source)))
+            for source in helper_sources
         ]
         originals = {path: path.read_bytes() if path.exists() else None for path in cache_paths}
         try:
-            for path, module in zip(cache_paths, modules):
+            for path, source in zip(cache_paths, helper_sources):
                 path.parent.mkdir(parents=True, exist_ok=True)
-                py_compile.compile(module.__file__, cfile=str(path), doraise=True)
+                py_compile.compile(str(source), cfile=str(path), doraise=True)
                 compiled = path.read_bytes()
                 malicious = compile(
                     "raise RuntimeError('poisoned helper bytecode executed')",
-                    module.__file__,
+                    str(source),
                     "exec",
                 )
                 path.write_bytes(compiled[:16] + marshal.dumps(malicious))
-            build_report, validate_config = harness_runner._load_trusted_helpers(root)
+            build_report, validate_config = harness_runner._load_trusted_helpers(self.root)
             self.assertTrue(callable(build_report))
             self.assertTrue(callable(validate_config))
         finally:

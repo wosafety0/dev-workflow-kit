@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib
+import importlib.util
 import json
 import os
 import re
@@ -246,14 +246,25 @@ def _load_trusted_helpers(root: Path):
             sys.pycache_prefix = str(cache_path)
             sys.dont_write_bytecode = True
             try:
-                config_module = importlib.import_module("scripts.harness_config")
-                report_module = importlib.import_module("scripts.acceptance_report")
-                config_module = importlib.reload(config_module)
-                report_module = importlib.reload(report_module)
+                loaded_modules = {}
+                for module_name, relative in (
+                    ("_harness_trusted_config", "scripts/harness_config.py"),
+                    ("_harness_trusted_report", "scripts/acceptance_report.py"),
+                ):
+                    source_path = root / relative
+                    spec = importlib.util.spec_from_file_location(module_name, source_path)
+                    if spec is None or spec.loader is None:
+                        raise ImportError("trusted helper module has no source loader")
+                    module = importlib.util.module_from_spec(spec)
+                    sys.modules[module_name] = module
+                    spec.loader.exec_module(module)
+                    loaded_modules[module_name] = module
+                config_module = loaded_modules["_harness_trusted_config"]
+                report_module = loaded_modules["_harness_trusted_report"]
             finally:
                 sys.pycache_prefix = old_prefix
                 sys.dont_write_bytecode = old_dont_write
-    except (ImportError, OSError, RuntimeError):
+    except Exception:
         raise HarnessRunnerError("Could not load trusted Harness helper modules") from None
     return report_module.build_acceptance_report, config_module.validate_harness_config
 
