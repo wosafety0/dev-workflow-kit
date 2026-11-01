@@ -1,3 +1,13 @@
+## 2026-11-01 — Exact-head CI and regression-cause archive
+
+- Current pre-archive head `78ecab1eea5efae51aaa5ccef970d15d78625f1d` passed exact-head Push CI [41229475265](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41229475265) and PR-context CI [41229480451](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41229480451). All three jobs succeeded in each run.
+- Preserved the intermediate regression accurately: `cc9fae27f5ba39c210ecaed7fbca7e3f2549922f` failed both CI contexts because a newly added test used double-escaped whitespace regex tokens and matched zero action declarations. Logs confirm one assertion failure, with the Node/pnpm workflow selftest itself successful; the same offline test suite failure propagated into the Python selftest.
+- Fixed in `a9b6f17099afa07f9cbb2f8a0410560f9c1ed38b` by matching horizontal whitespace explicitly. The same maintenance updated upload-artifact to the Node 24-compatible full SHA pin. Exact-head Push [41228919858](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41228919858) and PR [41228924340](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41228924340) both passed; offline suite reported 169 tests, OK. Later docs heads `e6eac8a4...` and `78ecab1e...` passed both CI contexts.
+- Release-review document now records the failure cause, correction, exact-head evidence, and remaining release gates. This entry is a documentation archive; verify its own exact-head CI separately.
+- Private consumer acceptance remains blocked before runner allocation by the recorded account billing/spending eligibility gate. No consumer repin, merge, tag, release, deployment, billing, or Actions-policy change occurred.
+
+---
+
 ## 2026-11-01 — Node 24 artifact-upload pin and exact-head verification
 
 - Re-inspected exact-head CI for the preceding Node-consumer branch head `527d9684fa16382ecc00a50895f1e0d949e0b847`. The three CI jobs passed, but the offline job log still emitted a Node.js 20 deprecation warning for `actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02` (v4).
