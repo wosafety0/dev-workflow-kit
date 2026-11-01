@@ -1,3 +1,9 @@
+## 2026-11-01 — Reusable entrypoint trigger regression guard
+
+- Added `test_reusable_workflow_is_not_directly_triggered` to the reusable workflow contract suite. It asserts the called workflow exposes `workflow_call` and does not acquire direct `push`, `pull_request`, `pull_request_target`, or `workflow_dispatch` triggers. This keeps the acceptance entry point reusable-only; consumer-specific PR trust policy remains the caller's responsibility.
+- The exact test head `0f964dc07cee3dc8d952cf9bdb8788646ddfb52e` passed PR-context CI [41274381898](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41274381898): offline contract suite, Python reusable selftest, Node/pnpm reusable selftest, report upload, and fail-closed gate all succeeded. Temporary artifact [13070786417](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41274381898) expires 2026-11-15. Push-triggered CI for this exact SHA was not independently retrieved.
+- PR #40 remains Draft/open/unmerged. No consumer was rerun or repinned; private consumer execution and browser E2E remain pending. No merge, tag, release, deployment, or account/policy change occurred.
+
 ## 2026-11-01 — Consumer execution boundary and secret-contract hardening
 
 - Reviewed exact consumer heads: public `AI-Worker-Proxy` `87c3633621e455f9ba75ec2caf3ae6ba206e60a8` and private `chatgpt-auto-send-assistant` `0d64bf825cc5a76f3d8603f2e0fb431613715b56`. Both pilot workflows use `pull_request`, explicitly request `contents: read`, and pin the reusable workflow by a full commit SHA; neither caller explicitly maps secrets into the reusable workflow.
