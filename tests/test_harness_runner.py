@@ -833,6 +833,50 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("clean", stderr)
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
+    def test_commit_provenance_ignores_git_repository_redirect_environment(self):
+        actual_head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.root, check=True,
+            stdout=subprocess.PIPE, text=True,
+        ).stdout.strip()
+        alternate_temp = tempfile.TemporaryDirectory()
+        self.addCleanup(alternate_temp.cleanup)
+        alternate_root = Path(alternate_temp.name)
+        subprocess.run(
+            ["git", "clone", "-q", str(self.root), str(alternate_root)],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Harness Test"],
+            cwd=alternate_root, check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.email", "harness-test@example.invalid"],
+            cwd=alternate_root, check=True,
+        )
+        subprocess.run(
+            ["git", "commit", "--allow-empty", "-qm", "alternate repository identity"],
+            cwd=alternate_root, check=True,
+        )
+        alternate_head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=alternate_root, check=True,
+            stdout=subprocess.PIPE, text=True,
+        ).stdout.strip()
+        self.assertNotEqual(actual_head, alternate_head)
+
+        with patch.dict(
+            os.environ,
+            {
+                "GIT_DIR": str(alternate_root / ".git"),
+                "GIT_WORK_TREE": str(self.root),
+            },
+        ):
+            redirected_head = subprocess.run(
+                ["git", "rev-parse", "HEAD"], cwd=self.root, check=True,
+                stdout=subprocess.PIPE, text=True,
+            ).stdout.strip()
+            self.assertEqual(redirected_head, alternate_head)
+            self.assertEqual(harness_runner._git_commit_sha(self.root), actual_head)
+
     def test_commit_provenance_rejects_nested_project_root(self):
         self.initialize_git_worktree()
         with self.assertRaisesRegex(harness_runner.HarnessRunnerError, "repository root"):
