@@ -5,6 +5,8 @@
 - Exact implementation/test head `f6981b9b289dedba9c7a5135be1cdbe872e2f21f` passed PR-context CI [41277329054](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41277329054): all three jobs succeeded; offline suite reported **182 tests, OK**.
 - This does not attest native extensions or bytecode installed inside the explicitly excluded root virtual environment; dependency/runtime integrity remains a separate trust boundary.
 
+- Final documentation/archive head `084ac349445628e414c1c17f679e170c789ff173` passed exact-head PR-context CI [41277404744](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41277404744): all three jobs succeeded; offline suite reported **182 tests, OK**.
+
 ## 2026-11-01 — Stable acceptance contract synchronized with verified gates
 
 - Updated `docs/STABLE_ACCEPTANCE_CONTRACT.md` to reflect the verified implementation and regression coverage: safe old/new paths in diff headers (including rename sources), binary metadata cannot receive `PASS`, explicit non-empty `limitations` are required, and added/context versus deleted-line coordinate mapping is documented.
