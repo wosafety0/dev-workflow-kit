@@ -1,3 +1,12 @@
+## Latest exact-head archive verification — 2026-11-01
+
+- Current branch head: `93cdcf41767202267d11e6dafb14d9da71a504e1`. Exact-head Push CI [41256265375](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256265375) and PR-context CI [41256269341](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256269341) both completed successfully for the same SHA.
+- PR-context job-level inspection confirms all three jobs succeeded: `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance`. The offline job completed compilation, offline contract tests, redacted acceptance-report generation/upload, and the final fail-closed gate; both reusable runtime jobs executed their consumer-owned acceptance commands.
+- This supersedes the preceding archive note that PR-context CI was still in progress. PR #40 remains Open/Draft/unmerged.
+- This CI result verifies the current Harness branch archive only. It does not resolve private-consumer acceptance, prove browser end-to-end behavior, establish consumer archive-path requirements, approve the 0.x scope, or select a release-candidate SHA.
+- The private consumer remains blocked before runner allocation by the recorded account billing/spending eligibility gate; no rerun or billing/Actions-policy change was performed. Consumer-specific safeguard acceptance remains open.
+- No consumer repin, merge, tag, release, deployment, billing, or repository policy change occurred.
+
 # 0.x Release Candidate Review
 
 Review date: 2026-10-31  
