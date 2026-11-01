@@ -15,6 +15,11 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         self.assertRegex(self.source, r"(?m)^permissions:\n  contents: read\s*$")
         self.assertNotRegex(self.source, r"(?m)^\s+[a-zA-Z0-9_-]+:\s*write\b")
 
+    def test_reusable_workflow_does_not_accept_or_reference_secrets(self):
+        self.assertNotRegex(self.source, r"(?m)^\\s+secrets:\\s*$")
+        self.assertNotRegex(self.source, r"\\$\\{\\{\\s*secrets\\.")
+        self.assertNotIn("secrets: inherit", self.source)
+
     def test_checkout_does_not_persist_credentials(self):
         self.assertRegex(
             self.source,
