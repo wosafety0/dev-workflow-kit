@@ -801,3 +801,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Extended the deterministic unreviewable-payload guard to reject `PASS` for binary metadata, mode-160000 gitlinks, and canonical Git LFS v1 pointers. `INCONCLUSIVE` remains valid; evidence-backed findings in reviewable text can still produce `NEEDS_CHANGES`.
 - Added regression coverage for a real-format gitlink diff and a modified Git LFS pointer, including the accepted `INCONCLUSIVE` path. Updated semantic-review, runner, and stable-contract documentation.
 - Exact implementation/test head `bc586607c29bdbdebee751e596b93e621fca7739` passed Push CI [41362981754](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41362981754) and PR-context CI [41362986318](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41362986318). All three jobs succeeded in both runs; offline suite reported **191 tests, OK**, including `test_external_git_payloads_cannot_receive_semantic_pass`. The archive commit that records this result requires its own exact-head CI verification.
+
+
+## 2026-11-02 — Prevent local Git config from hiding submodule diff provenance
+- Targeted review of the canonical diff command found that Git's local `diff.ignoreSubmodules=all` setting could suppress changed submodule gitlinks entirely. A temporary Git-repository reproduction produced an empty diff for a committed gitlink change under that setting; the explicit command-line option `--ignore-submodules=none` restored the change.
+- Added `--ignore-submodules=none` to the runner's canonical source-binding command and added a regression fixture that advances a real local submodule while the parent repository is configured to ignore all submodules. The test requires the canonical diff to include the `Subproject commit` evidence and verifies the runner accepts only that complete diff.
+- Updated `docs/HARNESS_RUNNER_V1.md` and `docs/STABLE_ACCEPTANCE_CONTRACT.md` to pin this behavior.
+- Implementation and regression test are committed; exact-head CI verification is pending. The earlier CI success at `c44f77d6f2b0aae07689e6127b203e1df4e3d77b` does not cover this new guard.
