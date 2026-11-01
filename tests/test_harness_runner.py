@@ -238,13 +238,21 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_semantic_review_rejects_diff_not_matching_git_source(self):
         self.write_config(["semantic-review"])
+        subprocess.run(["git", "add", "harness.json"], cwd=self.root, check=True)
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test", "-c",
+             "user.email=harness-test@example.invalid", "commit", "-qm", "configure semantic review"],
+            cwd=self.root, check=True,
+        )
+        self.base_commit_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.root, check=True,
+            stdout=subprocess.PIPE, text=True,
+        ).stdout.strip()
         review_path = self.root / "artifacts" / "review-input.json"
         payload = self.write_review_input(review_path)
         payload["diff"] = "diff --git a/fake.py b/fake.py\\n"
         review_path.write_text(json.dumps(payload), encoding="utf-8")
-        with patch("scripts.harness_runner._git_commit_sha", return_value=self.base_commit_sha), patch(
-            "scripts.harness_runner._run_task"
-        ) as run_task:
+        with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(
                 "--review-input", "artifacts/review-input.json",
                 "--review-output", "artifacts/review.json",
@@ -290,7 +298,7 @@ class HarnessRunnerTests(unittest.TestCase):
         self.write_review_input(
             self.root / "artifacts" / "review-input.json",
             diff=diff,
-            changed_files=["src/feature.py"],
+            changed_files=["harness.json", "src/feature.py"],
         )
         with patch("scripts.harness_runner._run_task", return_value=("passed", 0)) as run_task:
             code, stdout, stderr = self.run_runner(
