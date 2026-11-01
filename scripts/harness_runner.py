@@ -456,8 +456,8 @@ def _write_report(
             suffix=".tmp",
             delete=False,
         ) as temporary:
-            temporary.write(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
             temporary_path = Path(temporary.name)
+            temporary.write(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
         os.replace(temporary_path, output_path)
     except OSError:
         if temporary_path is not None:
