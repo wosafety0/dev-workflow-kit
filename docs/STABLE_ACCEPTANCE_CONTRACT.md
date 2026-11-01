@@ -108,7 +108,6 @@ This document is a living 0.x contract. A change that weakens a fail-closed rule
 
 ## Python bytecode-cache isolation
 
-- The runner must not import repository helper modules before verifying the clean Git worktree and ignored-code inventory.
-- Trusted project helper modules must be loaded with a fresh temporary `sys.pycache_prefix` and bytecode writes disabled, so an ignored or poisoned `__pycache__` entry cannot replace the committed source.
+- The runner must not execute helper code from mutable worktree files before task-integrity checks. Trusted helper modules must be loaded from their committed Git blob contents, not from worktree files or bytecode caches.
 - Each Python task subprocess must use a fresh private `-X pycache_prefix` directory and `-B`, in addition to `-I -S`. The task must not read or write project-local bytecode caches.
 - This prevents project-local bytecode cache injection; it does not attest Python interpreter or standard-library bytecode installed outside the project.

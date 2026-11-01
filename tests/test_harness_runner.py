@@ -188,6 +188,20 @@ class HarnessRunnerTests(unittest.TestCase):
                 else:
                     path.write_bytes(original)
 
+    def test_trusted_helper_loading_ignores_modified_worktree_source(self):
+        helper_path = self.root / "scripts" / "harness_config.py"
+        helper_path.write_text(
+            "raise RuntimeError('modified worktree helper executed')\\n",
+            encoding="utf-8",
+        )
+        _, validate_config = harness_runner._load_trusted_helpers(self.root)
+        validated = validate_config({
+            "schema_version": 1,
+            "project": "fixture",
+            "commands": ["python-unittest"],
+        })
+        self.assertEqual(validated["commands"], ["python-unittest"])
+
     def test_runner_executes_fixed_task_end_to_end(self):
         with patch("scripts.harness_runner._git_commit_sha", return_value="c" * 40), patch(
             "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64

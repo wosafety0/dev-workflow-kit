@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib.util
 import json
+import types
 import os
 import re
 import subprocess
@@ -222,50 +222,61 @@ def _reject_ignored_python_sources(root: Path) -> None:
 
 
 def _load_trusted_helpers(root: Path):
-    """Load project helper modules after source checks, bypassing repository pyc caches."""
+    """Execute helper source from committed Git blobs, never from worktree pyc or dirty files."""
+    loaded_modules = {}
     helper_paths = (
-        ("scripts/harness_config.py", "Harness config module"),
-        ("scripts/acceptance_report.py", "acceptance report module"),
+        ("_harness_trusted_config", "scripts/harness_config.py", "Harness config module"),
+        ("_harness_trusted_report", "scripts/acceptance_report.py", "acceptance report module"),
     )
-    for relative, label in helper_paths:
-        source = _resolve_trusted_source(root, relative, label)
-        if not source.is_file():
+    for module_name, relative, label in helper_paths:
+        source_path = _resolve_trusted_source(root, relative, label)
+        if not source_path.is_file():
             raise HarnessRunnerError(f"{label} is missing")
-
-    try:
-        with tempfile.TemporaryDirectory(prefix="harness-import-cache-") as cache_dir:
-            cache_path = Path(cache_dir).resolve()
-            try:
-                cache_path.relative_to(root.resolve())
-            except ValueError:
-                pass
-            else:
-                raise HarnessRunnerError("temporary Python import cache must be outside the project root")
-            old_prefix = sys.pycache_prefix
-            old_dont_write = sys.dont_write_bytecode
-            sys.pycache_prefix = str(cache_path)
-            sys.dont_write_bytecode = True
-            try:
-                loaded_modules = {}
-                for module_name, relative in (
-                    ("_harness_trusted_config", "scripts/harness_config.py"),
-                    ("_harness_trusted_report", "scripts/acceptance_report.py"),
-                ):
-                    source_path = root / relative
-                    spec = importlib.util.spec_from_file_location(module_name, source_path)
-                    if spec is None or spec.loader is None:
-                        raise ImportError("trusted helper module has no source loader")
-                    module = importlib.util.module_from_spec(spec)
-                    sys.modules[module_name] = module
-                    spec.loader.exec_module(module)
-                    loaded_modules[module_name] = module
-                config_module = loaded_modules["_harness_trusted_config"]
-                report_module = loaded_modules["_harness_trusted_report"]
-            finally:
-                sys.pycache_prefix = old_prefix
-                sys.dont_write_bytecode = old_dont_write
-    except Exception:
-        raise HarnessRunnerError("Could not load trusted Harness helper modules") from None
+        try:
+            tree_entry = subprocess.run(
+                ["git", "ls-tree", "HEAD", "--", relative],
+                cwd=root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                timeout=10,
+                check=False,
+            )
+            if tree_entry.returncode != 0:
+                raise HarnessRunnerError(f"{label} is not available in the current Git HEAD")
+            entry = tree_entry.stdout.decode("utf-8", errors="strict").strip()
+            metadata, separator, entry_path = entry.partition("\\t")
+            fields = metadata.split()
+            if (
+                not separator
+                or entry_path != relative
+                or len(fields) != 3
+                or fields[0] not in {"100644", "100755"}
+                or fields[1] != "blob"
+                or not _SHA_RE.fullmatch(fields[2])
+            ):
+                raise HarnessRunnerError(f"{label} must be a committed regular source file")
+            blob = subprocess.run(
+                ["git", "cat-file", "blob", fields[2]],
+                cwd=root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                timeout=10,
+                check=False,
+            )
+            if blob.returncode != 0:
+                raise HarnessRunnerError(f"Could not read committed {label}")
+            module = types.ModuleType(module_name)
+            module.__file__ = str(source_path)
+            module.__package__ = "scripts"
+            sys.modules[module_name] = module
+            exec(compile(blob.stdout, str(source_path), "exec"), module.__dict__)
+            loaded_modules[module_name] = module
+        except HarnessRunnerError:
+            raise
+        except Exception:
+            raise HarnessRunnerError(f"Could not load committed {label}") from None
+    config_module = loaded_modules["_harness_trusted_config"]
+    report_module = loaded_modules["_harness_trusted_report"]
     return report_module.build_acceptance_report, config_module.validate_harness_config
 
 
@@ -559,9 +570,7 @@ def main(argv: list[str] | None = None) -> int:
 
         _require_tracked_config(root, config_path)
 
-        # Verify source integrity before importing any project helper modules.
-        commit_sha = _git_commit_sha(root)
-        _reject_ignored_python_sources(root)
+        # Load only committed helper blobs; dirty worktree state is rejected before tasks.
         build_acceptance_report, validate_harness_config = _load_trusted_helpers(root)
 
         try:
@@ -610,6 +619,8 @@ def main(argv: list[str] | None = None) -> int:
             (task_id, _task_argv(task_id, root, review_input, review_output))
             for task_id in config["commands"]
         ]
+        _reject_ignored_python_sources(root)
+        commit_sha = _git_commit_sha(root)
         if wants_review and review_input_bytes is not None:
             _verify_review_diff_provenance(root, review_input_bytes, args.review_base_commit)
             print(f"Semantic review diff provenance: verified against {args.review_base_commit.lower()}...HEAD")
