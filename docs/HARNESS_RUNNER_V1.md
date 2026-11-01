@@ -20,6 +20,8 @@ Run:
 python scripts/harness_runner.py --config examples/harness-config.json
 ```
 
+The direct script entry point bootstraps the repository root on Python's module search path before importing local Harness modules, so this documented command works from the repository root.
+
 The runner writes `artifacts/acceptance-report.json`. It requires the project root to be the Git repository root with a valid HEAD and a clean worktree outside generated `artifacts/`. The `--config` file must be tracked by the current HEAD and must not resolve under `artifacts/`; prior passing artifacts are invalidated before config validation. Duplicate JSON object keys at every nesting level are rejected. For an opt-in live model test, see [SEMANTIC_REVIEW_SMOKE_TEST.md](SEMANTIC_REVIEW_SMOKE_TEST.md) and the semantic-review example config/input.
 
 ## Task mapping
