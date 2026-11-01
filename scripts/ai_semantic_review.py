@@ -242,8 +242,12 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
             not deleted_file and "context" in evidence_kinds
         )
         if uses_old_coordinates and uses_new_coordinates:
+            if "deleted" in evidence_kinds and "added" in evidence_kinds:
+                raise ReviewError(
+                    "Evidence mixes deleted and added lines with different source coordinates"
+                )
             raise ReviewError(
-                "Evidence mixes old-file and resulting-file lines with different source coordinates"
+                "Evidence mixes deleted and context lines with different source coordinates"
             )
     return {number for number in numbers if number >= 1}
 
