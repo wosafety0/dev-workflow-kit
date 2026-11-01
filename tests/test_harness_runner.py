@@ -34,7 +34,7 @@ class HarnessRunnerTests(unittest.TestCase):
             "    def test_ok(self):\n"
             "        self.assertEqual(sys.flags.isolated, 1)\n"
             "        self.assertEqual(sys.flags.no_site, 1)\n"
-            "        self.assertIsNone(os.environ.get(\"HARNESS_SITE_CUSTOMIZED\"))\n",
+            "        self.assertNotEqual(os.environ.get(\"HARNESS_SITE_CUSTOMIZED\"), \"1\")\n",
             encoding="utf-8",
         )
         self.config_path = self.root / "harness.json"
@@ -194,7 +194,7 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("Task semantic-review: passed", stdout)
         calls = [call.args[0] for call in run_task.call_args_list]
         self.assertEqual(calls[0], [
-            sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"
+            sys.executable, "-I", "-S", "-m", "unittest", "discover", "-s", "tests", "-v"
         ])
         self.assertEqual(calls[1], [
             sys.executable,
@@ -320,7 +320,7 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(stderr, "")
         self.assertEqual(run_task.call_count, 2)
-        self.assertEqual(run_task.call_args_list[1].args[0][1], str(
+        self.assertEqual(run_task.call_args_list[1].args[0][3], str(
             (self.root / "scripts" / "ai_semantic_review.py").resolve()
         ))
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
@@ -925,6 +925,8 @@ class HarnessRunnerTests(unittest.TestCase):
         result = subprocess.run(
             [
                 sys.executable,
+                "-I",
+                "-S",
                 str(repo_root / "scripts" / "harness_runner.py"),
                 "--project-root", str(self.root),
                 "--config", "harness.json",

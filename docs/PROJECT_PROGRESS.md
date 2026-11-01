@@ -3,7 +3,7 @@
 - A targeted execution-environment audit confirmed that the runner inherited the caller's Python import environment. A repository task could therefore be influenced by `PYTHONPATH`, user-site packages, `sitecustomize`, or `.pth` startup hooks that were not represented by the clean Git worktree.
 - Updated both fixed Python task argv mappings to use `-I -S`: isolated mode ignores Python environment/user-site injection, and `-S` disables site initialization and its startup hooks. The current Harness tasks use only the Python standard library, so third-party site packages are not required.
 - Added a real subprocess regression fixture that asserts isolated/no-site flags and proves a malicious `sitecustomize.py` supplied through `PYTHONPATH` does not execute. This does not attest the selected interpreter binary, standard library, host OS, or Git executable, and it does not turn the runner into a sandbox.
-- Implementation and documentation are committed at the current branch head; exact-head Push and PR-context CI must pass before this is recorded as verified.
+- Initial exact-head Push [41306762145](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41306762145) and PR-context [41306765729](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41306765729) both failed: 183 tests ran, with three stale argv/test-fixture assertions failing after the new flags were inserted. The reusable Node/pnpm job passed. This is a regression-test update defect, not evidence that the isolation flags fail at runtime; corrected assertions and the environment-injection fixture are included in the follow-up commit.
 
 ## 2026-11-01 — Reject ignored Python bytecode and extension modules
 
