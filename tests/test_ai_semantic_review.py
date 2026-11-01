@@ -148,6 +148,31 @@ class SemanticReviewValidationTests(unittest.TestCase):
         payload["changed_files"] = ["new_name.py"]
         self.assertEqual(validate_review(payload, self.pass_review())["status"], "PASS")
 
+    def test_binary_changes_cannot_receive_semantic_pass(self):
+        for binary_marker in (
+            "Binary files a/assets/logo.png and b/assets/logo.png differ\\n",
+            "GIT binary patch\\nliteral 1\\nA\\n",
+        ):
+            with self.subTest(binary_marker=binary_marker):
+                payload = dict(self.payload)
+                payload["diff"] += (
+                    "diff --git a/assets/logo.png b/assets/logo.png\\n"
+                    "index 1234567..89abcde 100644\\n"
+                    "--- a/assets/logo.png\\n"
+                    "+++ b/assets/logo.png\\n"
+                    + binary_marker
+                )
+                payload["changed_files"] = ["src/client.py", "README.md", "assets/logo.png"]
+                with self.assertRaisesRegex(ReviewError, "PASS is forbidden when binary changes"):
+                    validate_review(payload, self.pass_review())
+
+                inconclusive = self.pass_review()
+                inconclusive["status"] = "INCONCLUSIVE"
+                self.assertEqual(
+                    validate_review(payload, inconclusive)["status"], "INCONCLUSIVE"
+                )
+
+
     def test_accepts_file_deletion(self):
         payload = dict(self.payload)
         payload["diff"] = (
