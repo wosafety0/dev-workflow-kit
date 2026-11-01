@@ -1,10 +1,13 @@
-## 2026-11-01 — Latest archive head and complete CI verification
+## 2026-11-01 — Current branch head and exact-head CI verification
 
-- Current branch head: `93cdcf41767202267d11e6dafb14d9da71a504e1`. Its Push CI [41256265375](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256265375) and PR-context CI [41256269341](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256269341) both completed with conclusion `success` for this exact SHA.
-- PR-context job inspection confirms all three jobs succeeded: `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance`. The offline job compiled Python, ran the offline contract suite, generated and uploaded the redacted acceptance report, and passed the final fail-closed gate; both reusable integration jobs validated inputs and executed their consumer-owned acceptance commands.
-- This completes the exact-head CI verification left pending in the preceding archive entry. No implementation or consumer repository changed in this verification step.
-- PR #40 remains Open/Draft/unmerged. Public consumer evidence remains limited to the recorded passing AI-Worker-Proxy pilot. Private consumer `chatgpt-auto-send-assistant` remains blocked before runner allocation by the recorded account billing/spending eligibility gate; it is not a test pass or code failure.
-- Stage 4 consumer-specific safeguard/archive-path acceptance, repository-owner approval of the proposed 0.x scope, exact release-candidate selection, and tag/release preflight remain open. No consumer repin, merge, tag, release, deployment, billing, or Actions-policy change occurred.
+- Correct current branch head: `20f9470ab43299d457d0c027a97604b410b0d761`. Exact-head Push CI [41256483538](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256483538) and PR-context CI [41256487977](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256487977) both completed with conclusion `success` for this same SHA.
+- Job-level inspection confirms all three jobs passed in both runs: `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance`. Both offline jobs compiled Python, ran the offline contract suite, built and uploaded the redacted acceptance report, and passed the final fail-closed gate. Both reusable jobs validated inputs and ran their consumer-owned acceptance commands.
+- Documentation correction: commits `111ca05e26fde2066a4fa66e88130de1e5c73fdf`, `4097bc804da1510a3f5a6387102bd78f5cd7b13b`, and `20f9470ab43299d457d0c027a97604b410b0d761` successively updated this progress record, roadmap, and release review, but repeated the prior `93cdcf41767202267d11e6dafb14d9da71a504e1` CI evidence instead of identifying their resulting branch head. This entry corrects that stale current-head claim; the earlier `93cdcf41...` CI remains valid historical evidence for that earlier SHA only.
+- The three commits above were documentation-only. No workflow implementation or consumer repository changed. PR #40 remains Open/Draft/unmerged.
+- The public consumer remains one passing independent pilot only. Private consumer acceptance remains blocked before runner allocation by the recorded account billing/spending eligibility gate; it is neither a test pass nor a code failure. Stage 4 consumer-specific safeguard/archive-path acceptance, owner approval of the proposed 0.x scope, exact release-candidate selection, and tag/release preflight remain open.
+- No consumer repin, merge, tag, release, deployment, billing, Actions-policy, permission, or visibility change occurred. This archive does not authorize release.
+
+---
 
 ---
 
