@@ -280,7 +280,7 @@ class HarnessRunnerTests(unittest.TestCase):
         source_dir.mkdir()
         source_file = source_dir / "feature.py"
         source_file.write_text("def feature():\\n    return 42\\n", encoding="utf-8")
-        subprocess.run(["git", "add", "src/feature.py"], cwd=self.root, check=True)
+        subprocess.run(["git", "add", "harness.json", "src/feature.py"], cwd=self.root, check=True)
         subprocess.run(
             ["git", "-c", "user.name=Harness Test", "-c",
              "user.email=harness-test@example.invalid", "commit", "-qm", "add feature"],
