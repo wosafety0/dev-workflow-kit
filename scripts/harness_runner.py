@@ -404,6 +404,7 @@ def _verify_review_diff_provenance(
             "--no-color",
             "--no-renames",
             "--no-relative",
+            "--ignore-submodules=none",
             "--diff-algorithm=myers",
             "--src-prefix=a/",
             "--dst-prefix=b/",
