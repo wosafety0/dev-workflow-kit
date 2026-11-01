@@ -498,14 +498,14 @@ def call_model(payload: dict[str, Any]) -> Any:
             )
     except ReviewError:
         raise
-    except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, ValueError) as exc:
+    except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, ValueError, RecursionError) as exc:
         raise ReviewError(f"Model request failed ({type(exc).__name__}); review cannot pass") from None
     try:
         content = response_data["choices"][0]["message"]["content"]
         if not isinstance(content, str):
             raise TypeError
         return json.loads(content, object_pairs_hook=_reject_duplicate_json_keys)
-    except (KeyError, IndexError, TypeError, ValueError):
+    except (KeyError, IndexError, TypeError, ValueError, RecursionError):
         raise ReviewError("Model response was not valid JSON in the expected chat-completions shape") from None
 
 
@@ -532,9 +532,9 @@ def _write_json_atomically(output_path: Path, artifact: dict[str, Any]) -> None:
             suffix=".tmp",
             delete=False,
         ) as temporary:
+            temporary_path = Path(temporary.name)
             json.dump(artifact, temporary, ensure_ascii=False, indent=2)
             temporary.write("\n")
-            temporary_path = Path(temporary.name)
         # Recheck the final path after the potentially long provider request.
         _reject_symlink_components(output_path, "output")
         os.replace(temporary_path, output_path)
@@ -545,7 +545,7 @@ def _write_json_atomically(output_path: Path, artifact: dict[str, Any]) -> None:
             except OSError:
                 pass
         raise
-    except OSError:
+    except (OSError, UnicodeError):
         if temporary_path is not None:
             try:
                 temporary_path.unlink()
