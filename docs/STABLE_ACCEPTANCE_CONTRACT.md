@@ -17,11 +17,11 @@ The review input must contain non-empty string fields:
 - \`global_rules\`
 - \`project_instructions\`
 
-It must also contain \`changed_files\`, a list of non-empty, trimmed path strings. Duplicate paths are rejected. Paths must be repository-relative and must not contain absolute-path prefixes, Windows separators, drive prefixes, empty path segments, \`.\` or \`..\` segments, or control characters. A path longer than 4096 characters is rejected.
+It must also contain \`changed_files\`, a list of non-empty, trimmed path strings. Duplicate paths are rejected. Paths must be repository-relative and must not contain absolute-path prefixes, Windows separators, drive prefixes, empty path segments, \`.\` or \`..\` segments, or control characters. A path longer than 4096 characters is rejected. Both old and new paths in every \`diff --git\` header must pass the same safety checks, including rename source paths; validating only the destination is insufficient.
 
 ## 3. Diff integrity and numeric bounds
 
-The supplied diff must be structurally parseable and consistent with the declared changed-file set. The validator rejects malformed hunk headers and bodies, hunk counts that disagree with the body, unsupported path/header mismatches, duplicate file sections, and evidence that cannot be mapped to the diff.
+The supplied diff must be structurally parseable and consistent with the declared changed-file set. The validator rejects malformed hunk headers and bodies, hunk counts that disagree with the body, unsupported path/header mismatches, duplicate file sections, and evidence that cannot be mapped to the diff. Added-line and context-line evidence uses resulting-file coordinates; deleted-line evidence uses old-file coordinates. Context within a deleted file also uses old-file coordinates. Evidence that combines old-file and resulting-file coordinates in one finding is rejected. Binary patch metadata (\`Binary files ... differ\` or \`GIT binary patch\`) makes a semantic \`PASS\` invalid because the binary payload is not reviewable as source text.
 
 Hunk numeric fields are bounded before integer conversion. Supported hunk values and computed line ranges must not exceed 2,147,483,647. Over-limit or malformed values must be rejected as a review-validation error; they must not escape as an uncaught conversion exception or be treated as valid evidence.
 
@@ -32,7 +32,7 @@ The output must be a JSON object with exactly these top-level keys:
 - \`status\`: one of \`PASS\`, \`NEEDS_CHANGES\`, \`INCONCLUSIVE\`
 - \`summary\`: non-empty string
 - \`checked_scope\`: non-empty list of non-empty strings
-- \`limitations\`: list of non-empty strings
+- \`limitations\`: non-empty list of non-empty strings
 - \`findings\`: list of findings matching the validator's required schema
 
 Each finding must use a supported severity and identify a changed file, a valid line range, a rule reference and quote, diff evidence, rationale, and recommendation. Findings must be supported by the supplied diff and rules; unverified claims must not be accepted as grounded findings.
@@ -43,6 +43,9 @@ The following conditions must never yield an accepted passing review:
 
 - Missing or malformed required input.
 - Unsafe or inconsistent changed-file paths.
+- Unsafe rename source paths, even when the destination path is safe.
+- Binary changes that receive a `PASS` despite the binary payload being unavailable for source review.
+- A review result with an empty `limitations` list.
 - Malformed or internally inconsistent diff structure.
 - Hunk numbers outside supported bounds.
 - Invalid output schema or unsupported status/severity.
@@ -85,4 +88,4 @@ This document is a living 0.x contract. A change that weakens a fail-closed rule
 - The config must be tracked by the current Git HEAD and must not resolve under generated `artifacts/`; a blocked run must invalidate stale passing report/review artifacts before configuration validation.
 - Config, report, review-input, and review-output paths reject symlink components. Trusted test, semantic-review, and contract sources must resolve inside the project root, outside `artifacts/`, and contain no symlinked source paths.
 - The runner must preserve fail-fast task ordering and revalidate the full Git worktree (tracked changes and non-ignored untracked files outside `artifacts/`), HEAD commit SHA, ignored Python source inventory, and generated output paths after task execution before writing the final acceptance report. Task-created or task-modified source files must block report emission.
-- Before task execution and again after all tasks, the runner must reject ignored Python source files that could be imported from the project tree, excluding generated artifacts, common virtual-environment directories, and Python cache directories. This protects source-to-commit provenance but does not attest the installed dependency environment.
+- Before task execution and again after all tasks, the runner must reject ignored Python source files that could be imported from the project tree, excluding only repository-root generated artifacts and recognized repository-root virtual-environment directories (`.venv`, `venv`, `env`, `.tox`), plus `__pycache__` directories at any depth. Nested project directories with environment-like names are not exempt. This protects source-to-commit provenance but does not attest the installed dependency environment.
