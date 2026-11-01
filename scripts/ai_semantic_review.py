@@ -259,13 +259,25 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
     return {number for number in numbers if number >= 1}
 
 
-def _contains_binary_patch(sections: list[tuple[str, str]]) -> bool:
-    """Detect binary diff metadata whose payload is not reviewable as source text."""
-    return any(
-        re.search(r"(?m)^(?:GIT binary patch|Binary files .+ differ)\s*$", section)
-        is not None
-        for _, section in sections
-    )
+def _contains_unreviewable_payload(sections: list[tuple[str, str]]) -> bool:
+    """Detect binary, Git submodule, and Git LFS changes whose payload is not reviewable."""
+    for _, section in sections:
+        if re.search(r"(?m)^(?:GIT binary patch|Binary files .+ differ)\s*$", section):
+            return True
+        # Git records submodules as mode 160000 gitlinks. The parent diff contains
+        # only the referenced commit IDs, not the submodule source being reviewed.
+        if re.search(r"(?m)^index [0-9a-f]{7,64}\.\.[0-9a-f]{7,64} 160000$", section):
+            return True
+        # Git LFS stores a small pointer in the Git tree, not the referenced object.
+        # Detect the canonical v1 pointer even when oid/size lines are additions,
+        # deletions, or context lines in a modified pointer.
+        if (
+            re.search(r"(?m)^[ +-]version https://git-lfs\.github\.com/spec/v1$", section)
+            and re.search(r"(?m)^[ +-]oid sha256:[0-9a-f]{64}$", section)
+            and re.search(r"(?m)^[ +-]size [0-9]+$", section)
+        ):
+            return True
+    return False
 
 
 def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
@@ -294,10 +306,10 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
 
     changed_files = set(payload["changed_files"])
     sections = _validate_diff_integrity(payload)
-    has_binary_patch = _contains_binary_patch(sections)
-    if review["status"] == "PASS" and has_binary_patch:
+    has_unreviewable_payload = _contains_unreviewable_payload(sections)
+    if review["status"] == "PASS" and has_unreviewable_payload:
         raise ReviewError(
-            "PASS is forbidden when binary changes are present; use INCONCLUSIVE unless evidence-backed findings require NEEDS_CHANGES"
+            "PASS is forbidden when binary changes or external payloads are present; use INCONCLUSIVE unless evidence-backed findings require NEEDS_CHANGES"
         )
     rule_sources = (payload["global_rules"], payload["project_instructions"])
     for finding in review["findings"]:
@@ -360,9 +372,11 @@ def build_messages(payload: dict[str, Any]) -> list[dict[str, str]]:
         "rule_quote. The file and line range must identify the exact file and source line(s) "
         "containing that evidence. If evidence is insufficient, use INCONCLUSIVE. PASS means no "
         "actionable rule or correctness issue was found in the reviewed scope; it is not proof "
-        "of total compliance. If the diff contains binary patch metadata, do not return PASS "
-        "because the binary payload is not reviewable as source text; use INCONCLUSIVE unless "
-        "evidence-backed findings require NEEDS_CHANGES. Return JSON only, matching the requested schema exactly."
+        "of total compliance. If the diff contains binary patch metadata, Git submodule "
+        "gitlinks (mode 160000), or Git LFS pointer files, do not return PASS because the "
+        "underlying payload is not reviewable from the parent repository diff; use INCONCLUSIVE "
+        "unless evidence-backed findings require NEEDS_CHANGES. Return JSON only, matching "
+        "the requested schema exactly."
     )
     user = {
         "task": payload["task"],

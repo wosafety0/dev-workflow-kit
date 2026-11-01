@@ -156,6 +156,40 @@ class SemanticReviewValidationTests(unittest.TestCase):
         payload["changed_files"] = ["new_name.py"]
         self.assertEqual(validate_review(payload, self.pass_review())["status"], "PASS")
 
+    def test_external_git_payloads_cannot_receive_semantic_pass(self):
+        gitlink = (
+            "diff --git a/vendor/library b/vendor/library\n"
+            "index 263f3fb2afdf444cd7c2a1eaf2dbf8c5096f2058..9dfdfc14f469ff720689174533c19458b51c6ec5 160000\n"
+            "--- a/vendor/library\n"
+            "+++ b/vendor/library\n"
+            "@@ -1 +1 @@\n"
+            "-Subproject commit 263f3fb2afdf444cd7c2a1eaf2dbf8c5096f2058\n"
+            "+Subproject commit 9dfdfc14f469ff720689174533c19458b51c6ec5\n"
+        )
+        lfs = (
+            "diff --git a/assets/scene.exr b/assets/scene.exr\n"
+            "index 1234567890abcdef1234567890abcdef12345678..abcdef1234567890abcdef1234567890abcdef12 100644\n"
+            "--- a/assets/scene.exr\n"
+            "+++ b/assets/scene.exr\n"
+            "@@ -1,3 +1,3 @@\n"
+            " version https://git-lfs.github.com/spec/v1\n"
+            "-oid sha256:" + "1" * 64 + "\n"
+            "+oid sha256:" + "2" * 64 + "\n"
+            " size 4096\n"
+        )
+        for path, section in (("vendor/library", gitlink), ("assets/scene.exr", lfs)):
+            with self.subTest(path=path):
+                payload = dict(self.payload)
+                payload["diff"] += section
+                payload["changed_files"] = ["src/client.py", "README.md", path]
+                with self.assertRaisesRegex(
+                    ReviewError, "PASS is forbidden when binary changes or external payloads"
+                ):
+                    validate_review(payload, self.pass_review())
+                inconclusive = self.pass_review()
+                inconclusive["status"] = "INCONCLUSIVE"
+                self.assertEqual(validate_review(payload, inconclusive)["status"], "INCONCLUSIVE")
+
     def test_binary_changes_cannot_receive_semantic_pass(self):
         for binary_marker in (
             "Binary files a/assets/logo.png and b/assets/logo.png differ\n",

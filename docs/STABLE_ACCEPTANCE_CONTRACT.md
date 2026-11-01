@@ -21,7 +21,7 @@ It must also contain \`changed_files\`, a list of non-empty, trimmed path string
 
 ## 3. Diff integrity and numeric bounds
 
-The supplied diff must be structurally parseable and consistent with the declared changed-file set. The validator rejects malformed hunk headers and bodies, hunk counts that disagree with the body, unsupported path/header mismatches, duplicate file sections, and evidence that cannot be mapped to the diff. Added-line and context-line evidence uses resulting-file coordinates; deleted-line evidence uses old-file coordinates. Context within a deleted file also uses old-file coordinates. Evidence that combines old-file and resulting-file coordinates in one finding is rejected. Binary patch metadata (\`Binary files ... differ\` or \`GIT binary patch\`) makes a semantic \`PASS\` invalid because the binary payload is not reviewable as source text.
+The supplied diff must be structurally parseable and consistent with the declared changed-file set. The validator rejects malformed hunk headers and bodies, hunk counts that disagree with the body, unsupported path/header mismatches, duplicate file sections, and evidence that cannot be mapped to the diff. Added-line and context-line evidence uses resulting-file coordinates; deleted-line evidence uses old-file coordinates. Context within a deleted file also uses old-file coordinates. Evidence that combines old-file and resulting-file coordinates in one finding is rejected. Binary patch metadata (\`Binary files ... differ\` or \`GIT binary patch\`), Git submodule gitlinks (mode \`160000\`), and Git LFS v1 pointer files make a semantic \`PASS\` invalid because their underlying payload is not reviewable from the parent repository diff.
 
 Hunk numeric fields are bounded before integer conversion. Supported hunk values and computed line ranges must not exceed 2,147,483,647. Over-limit or malformed values must be rejected as a review-validation error; they must not escape as an uncaught conversion exception or be treated as valid evidence.
 
@@ -44,7 +44,7 @@ The following conditions must never yield an accepted passing review:
 - Missing or malformed required input.
 - Unsafe or inconsistent changed-file paths.
 - Unsafe rename source paths, even when the destination path is safe.
-- Binary changes that receive a `PASS` despite the binary payload being unavailable for source review.
+- Binary, Git submodule gitlink, or Git LFS pointer changes that receive a `PASS` despite their underlying payload being unavailable for source review.
 - A review result with an empty `limitations` list.
 - Malformed or internally inconsistent diff structure.
 - Hunk numbers outside supported bounds.

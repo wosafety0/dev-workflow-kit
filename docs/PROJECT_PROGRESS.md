@@ -792,3 +792,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 
 
 - Follow-up exact-head verification: documentation archive commit 10d9d27ce4843b9113371f371584ba3447dd6634 passed PR-context CI run 41338979938; offline-tests, reusable Python acceptance, and reusable Node/pnpm acceptance all completed successfully. The progress file at the tested archive head was read back as blob 9bf0ab8b56a4159eb881034fb71eb5b14c9961aa.
+
+
+## 2026-11-02 — Reject PASS for external Git payloads
+
+- Targeted provenance review reproduced a Git submodule update with a normal text diff: the parent repository exposes only `Subproject commit <sha>` lines and an `index ... 160000` gitlink mode, not the submodule source. The existing binary-marker guard therefore did not prevent a false semantic-review `PASS`.
+- Git LFS has the analogous boundary: the parent Git tree contains a small v1 pointer (version, SHA-256 object ID, and size), not the referenced binary object. A review of that pointer alone cannot establish review of the underlying asset.
+- Extended the deterministic unreviewable-payload guard to reject `PASS` for binary metadata, mode-160000 gitlinks, and canonical Git LFS v1 pointers. `INCONCLUSIVE` remains valid; evidence-backed findings in reviewable text can still produce `NEEDS_CHANGES`.
+- Added regression coverage for a real-format gitlink diff and a modified Git LFS pointer, including the accepted `INCONCLUSIVE` path. Updated semantic-review, runner, and stable-contract documentation.
+- Implementation and exact-head CI verification are pending; do not treat this entry as a tested result until GitHub Actions succeeds.
