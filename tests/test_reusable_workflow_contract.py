@@ -283,8 +283,8 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
         self.assertRegex(self.source, r"(?m)^  workflow_call:\s*$")
 
     def test_reusable_workflow_is_not_directly_triggered(self):
-        trigger_block = self.source.split("on:\\n", 1)[1].split("\\npermissions:", 1)[0]
-        self.assertRegex(trigger_block, r"(?m)^  workflow_call:\\s*$")
+        trigger_block = self.source.split("on:\n", 1)[1].split("\npermissions:", 1)[0]
+        self.assertRegex(trigger_block, r"(?m)^  workflow_call:\s*$")
         self.assertNotRegex(
             trigger_block,
             r"(?m)^  (?:push|pull_request|pull_request_target|workflow_dispatch):",
