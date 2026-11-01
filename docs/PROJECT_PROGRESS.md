@@ -1,3 +1,9 @@
+## 2026-11-01 — Require explicit semantic-review limitations
+
+- Targeted false-confidence review found that `validate_review()` accepted an empty `limitations` list for `PASS` and `NEEDS_CHANGES`, even though the output contract asks the model to state limitations or uncertainty. An empty list could leave a structurally valid `PASS` without any visible scope boundary.
+- Changed validation to require at least one non-empty limitation for every result and added `test_rejects_review_without_explicit_limitations` for both `PASS` and `NEEDS_CHANGES`. This is a disclosure/contract guard, not proof that stated limitations are complete or accurate.
+- Exact implementation/test head `70cfda0cdf37a0d5ea6e1efe27d98073577abb69` is awaiting CI verification.
+
 ## 2026-11-01 — Deleted-line coordinate documentation correction
 
 - Clarified the existing evidence-mapping contract in `docs/SEMANTIC_REVIEW.md` and `docs/HARNESS_RUNNER_V1.md`: added/context lines use resulting-file coordinates; deleted lines use old-file coordinates; context in a deleted file also uses old-file coordinates. This corrects an omission in the prior wording without changing implementation behavior.
