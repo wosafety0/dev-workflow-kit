@@ -358,7 +358,11 @@ def _verify_review_diff_provenance(
         raise HarnessRunnerError("Could not verify semantic-review diff provenance") from None
     if expected.returncode != 0:
         raise HarnessRunnerError("Could not generate canonical Git diff for semantic-review provenance")
-    if payload["diff"].encode("utf-8") != expected.stdout:
+    try:
+        supplied_diff = payload["diff"].encode("utf-8")
+    except UnicodeEncodeError:
+        raise HarnessRunnerError("review-input diff contains invalid Unicode") from None
+    if supplied_diff != expected.stdout:
         raise HarnessRunnerError(
             "review-input diff does not exactly match the canonical Git diff from --review-base-commit to HEAD"
         )

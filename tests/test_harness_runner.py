@@ -236,6 +236,23 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("inside the artifacts/", stderr)
         run_task.assert_not_called()
 
+    def test_semantic_review_rejects_unencodable_diff_before_task_execution(self):
+        self.write_config(["semantic-review"])
+        review_path = self.root / "artifacts" / "review-input.json"
+        payload = self.write_review_input(review_path)
+        payload["diff"] = "\\ud800"
+        review_path.write_text(json.dumps(payload), encoding="utf-8")
+        with patch("scripts.harness_runner._git_commit_sha", return_value=self.base_commit_sha), patch(
+            "scripts.harness_runner._run_task"
+        ) as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("invalid Unicode", stderr)
+        run_task.assert_not_called()
+
     def test_semantic_review_rejects_diff_not_matching_git_source(self):
         self.write_config(["semantic-review"])
         subprocess.run(["git", "add", "harness.json"], cwd=self.root, check=True)
