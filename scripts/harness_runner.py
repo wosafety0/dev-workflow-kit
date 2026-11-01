@@ -244,7 +244,7 @@ def _load_trusted_helpers(root: Path):
             if tree_entry.returncode != 0:
                 raise HarnessRunnerError(f"{label} is not available in the current Git HEAD")
             entry = tree_entry.stdout.decode("utf-8", errors="strict").strip()
-            metadata, separator, entry_path = entry.partition("\\t")
+            metadata, separator, entry_path = entry.partition("\t")
             fields = metadata.split()
             if (
                 not separator
