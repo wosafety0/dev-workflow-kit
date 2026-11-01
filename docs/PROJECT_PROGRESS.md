@@ -1,3 +1,10 @@
+## 2026-11-01 — Validate both paths in Git diff headers
+
+- Targeted path-boundary review found that `_diff_sections()` compared only the changed-file path (the rename destination) with `changed_files`. A crafted rename section could use an unsafe source such as `../outside.txt` while targeting a safe path and still pass the path-membership check.
+- Added a shared normalized-relative-path predicate and applied it to `changed_files` plus both old/new paths parsed from every `diff --git` header. Added `test_rejects_rename_with_unsafe_source_path` to cover a traversal source paired with a safe destination.
+- Exact implementation/test head `c93a2f3583f4e7ff19af89d126433101d36c3cd9` passed PR-context CI [41276746636](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41276746636): all three jobs succeeded; offline suite reported **179 tests, OK**.
+- This is metadata/path validation only; it does not establish that caller-supplied diff contents are authoritative or correspond to Git HEAD.
+
 ## 2026-11-01 — Binary-diff semantic PASS guard
 
 - Targeted false-PASS review found that a structurally valid Git file section containing binary markers (`Binary files ... differ` or `GIT binary patch`) could otherwise be accepted with `PASS` despite the binary payload not being available as reviewable source text.
