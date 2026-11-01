@@ -789,3 +789,6 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Final candidate HEAD f07d46a9a52c656109aa6ad8e0adf5a25d1446f4 passed exact PR-context CI run 41338902570: 190 offline tests passed; reusable Node/pnpm and Python acceptance self-tests passed; acceptance report upload and final gate passed.
 - GitHub readback: scripts/harness_runner.py blob e7ddc863c9ec6b97d4b5c676d42a49ce480d0120; tests/test_harness_runner.py blob c5a7002fb3cfbc5aed512cf99b2a8b99d0ac6c46. This progress entry records the tested candidate head; the new documentation commit's own CI is not claimed until separately checked.
 - PR #40 remains Draft/open. No merge, release, or deployment was performed.
+
+
+- Follow-up exact-head verification: documentation archive commit 10d9d27ce4843b9113371f371584ba3447dd6634 passed PR-context CI run 41338979938; offline-tests, reusable Python acceptance, and reusable Node/pnpm acceptance all completed successfully. The progress file at the tested archive head was read back as blob 9bf0ab8b56a4159eb881034fb71eb5b14c9961aa.
