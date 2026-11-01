@@ -16,6 +16,7 @@ class HarnessRunnerTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+        (self.root / ".gitignore").write_text("__pycache__/\n", encoding="utf-8")
         (self.root / "docs").mkdir()
         (self.root / "scripts").mkdir()
         (self.root / "tests").mkdir()
