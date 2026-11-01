@@ -829,3 +829,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Exact consumer run [41363620693](https://github.com/quirrellrevess-code/quirrellrevess-Research/actions/runs/41363620693) succeeded on consumer commit `024f906d0836dbbde4407018159104ce60f10c4c`; the reusable job checked out the consumer repo, set up Python 3.12, and executed its explicitly declared 19-module offline command: **144 tests passed**.
 - This provides a second independent consumer pilot alongside the Node/pnpm pilot in `wosafety0/AI-Worker-Proxy`. It verifies the Python runtime and consumer-owned command path for the exact pinned Harness workflow SHA; it is not a release or production distribution. Both source PR #40 and consumer pilot PR remain Draft/unmerged.
 - The separate private consumer `wosafety0/chatgpt-auto-send-assistant` still has failed acceptance runs before useful job logs are available. The connector cannot retrieve the job log blobs or check-run annotations in this run, so the pre-run root cause remains **UNVERIFIED**. No billing, spending, repository-access, or organization policy settings were changed; no repeated retries were issued.
+
+
+## 2026-11-02 — Normalize deeply nested JSON failures and clean failed artifacts
+- Targeted API-boundary testing reproduced `RecursionError` from deeply nested JSON (10,000 levels) in both the review-input parser and provider/model response parsing. The review previously failed by uncaught exception rather than its controlled failure path.
+- The artifact writer also assigned its temporary path only after serialization completed. A model-produced string containing an escaped lone Unicode surrogate caused UTF-8 serialization to fail before the path was recorded, leaving a partial `.tmp` file behind.
+- Added explicit `RecursionError` handling for review input, provider response envelope, and model-produced review JSON. These cases now return controlled failure outcomes and cannot produce a passing review.
+- The artifact writer now records the temporary path immediately after file creation and removes it on both filesystem and Unicode serialization failures.
+- Added regression coverage for deeply nested provider envelopes and model content, deeply nested review input without a traceback, and invalid-Unicode serialization cleanup.
+- Implementation and tests are committed; exact-head Push and PR-context CI verification is pending.
