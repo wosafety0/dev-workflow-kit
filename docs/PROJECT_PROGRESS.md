@@ -1,8 +1,15 @@
+## 2026-11-01 — Reject ignored Python bytecode and extension modules
+
+- A deeper runner provenance audit found that `_reject_ignored_python_sources()` inspected only `.py` files. Ignored legacy `.pyc` modules and native Python extension modules (`.so`, `.pyd`) in project import paths could therefore be executed without being represented by the recorded Git commit.
+- Expanded the guard to cover `.py`, `.pyc`, `.so`, and `.pyd` files while preserving the explicitly scoped root-environment and `__pycache__` exclusions. Added `test_runner_rejects_ignored_python_bytecode_before_execution` to ensure an ignored `.pyc` blocks execution before any task starts.
+- Exact implementation/test head `f6981b9b289dedba9c7a5135be1cdbe872e2f21f` passed PR-context CI [41277329054](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41277329054): all three jobs succeeded; offline suite reported **182 tests, OK**.
+- This does not attest native extensions or bytecode installed inside the explicitly excluded root virtual environment; dependency/runtime integrity remains a separate trust boundary.
+
 ## 2026-11-01 — Stable acceptance contract synchronized with verified gates
 
 - Updated `docs/STABLE_ACCEPTANCE_CONTRACT.md` to reflect the verified implementation and regression coverage: safe old/new paths in diff headers (including rename sources), binary metadata cannot receive `PASS`, explicit non-empty `limitations` are required, and added/context versus deleted-line coordinate mapping is documented.
 - Synchronized the runner exclusion rule: only recognized repository-root environment/artifact directories are exempt; `__pycache__` is exempt at any depth. Nested project directories named `env` or `.venv-custom` are not exempt.
-- This is a contract/documentation update, not a weakening of any gate. The runner computes the stable-contract SHA-256 at execution time; the updated contract therefore changes the recorded `rules_pin` automatically. Exact-head CI verification is pending.
+- This is a contract/documentation update, not a weakening of any gate. The runner computes the stable-contract SHA-256 at execution time; the updated contract therefore changes the recorded `rules_pin` automatically. Exact contract-synchronization head `19f6313566ae55bd4a80ce87326f8ca627a57b37` passed PR-context CI [41277280715](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41277280715): all three jobs succeeded; offline suite reported **181 tests, OK**.
 
 ## 2026-11-01 — Require explicit semantic-review limitations
 
