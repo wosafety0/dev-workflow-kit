@@ -66,7 +66,9 @@ class HarnessRunnerTests(unittest.TestCase):
             "global_rules": "Follow the supplied project rules.",
             "project_instructions": "Review only the committed source change.",
         }
-        Path(path).write_text(json.dumps(payload), encoding="utf-8")
+        review_path = Path(path)
+        review_path.parent.mkdir(parents=True, exist_ok=True)
+        review_path.write_text(json.dumps(payload), encoding="utf-8")
         return payload
 
     def write_config(self, commands):
