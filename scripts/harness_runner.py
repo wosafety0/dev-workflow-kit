@@ -34,6 +34,15 @@ _MAX_TIMEOUT_SECONDS = 3600
 _MAX_REVIEW_INPUT_BYTES = 4 * 1024 * 1024
 
 
+def _git_environment() -> dict[str, str]:
+    """Prevent caller-controlled GIT_* variables from redirecting provenance checks."""
+    environment = os.environ.copy()
+    for name in tuple(environment):
+        if name.upper().startswith("GIT_"):
+            environment.pop(name, None)
+    return environment
+
+
 def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
@@ -125,6 +134,7 @@ def _require_tracked_config(root: Path, config_path: Path) -> None:
             text=True,
             timeout=10,
             check=False,
+            env=_git_environment(),
         )
     except (OSError, subprocess.TimeoutExpired):
         raise HarnessRunnerError("Could not verify tracked Harness config") from None
@@ -148,6 +158,7 @@ def _git_commit_sha(root: Path) -> str:
             text=True,
             timeout=10,
             check=False,
+            env=_git_environment(),
         )
 
     try:
@@ -197,7 +208,7 @@ def _reject_ignored_python_sources(root: Path) -> None:
                 "-z", "--", ".",
             ],
             cwd=root, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            timeout=10, check=False,
+            timeout=10, check=False, env=_git_environment(),
         )
     except (OSError, subprocess.TimeoutExpired):
         raise HarnessRunnerError("Could not verify ignored Python source") from None
@@ -240,6 +251,7 @@ def _load_trusted_helpers(root: Path):
                 stderr=subprocess.DEVNULL,
                 timeout=10,
                 check=False,
+                env=_git_environment(),
             )
             if tree_entry.returncode != 0:
                 raise HarnessRunnerError(f"{label} is not available in the current Git HEAD")
@@ -262,6 +274,7 @@ def _load_trusted_helpers(root: Path):
                 stderr=subprocess.DEVNULL,
                 timeout=10,
                 check=False,
+                env=_git_environment(),
             )
             if blob.returncode != 0:
                 raise HarnessRunnerError(f"Could not read committed {label}")
@@ -376,6 +389,7 @@ def _verify_review_diff_provenance(
             stderr=subprocess.DEVNULL,
             timeout=20,
             check=False,
+            env=_git_environment(),
         )
 
     try:
