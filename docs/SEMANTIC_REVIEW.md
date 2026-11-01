@@ -22,7 +22,7 @@ No provider is selected by default. Never commit these values or print them in l
 
 Statuses are `PASS`, `NEEDS_CHANGES`, and `INCONCLUSIVE`. The validator checks exact output keys, status and severity values, changed-file membership, positive integer line ranges, and exact substrings for diff evidence and quoted rules. `PASS` with findings and `NEEDS_CHANGES` without findings are rejected. Missing configuration, request errors, malformed JSON, or invalid evidence block the review rather than becoming a pass.
 
-These checks establish only that the response is structurally valid and quotes supplied material. They do not prove reasoning correctness, that line numbers match the quoted text, or that every defect was found. A `PASS` is not proof of total compliance.
+These checks establish that the response is structurally valid, that each finding quotes exact supplied diff/rule material, and that its `line_start`/`line_end` exactly match the source lines mapped from the cited diff evidence. Context-line evidence uses resulting-file coordinates; deleted-file evidence uses old-file coordinates. Repeated evidence within the cited file section is rejected as ambiguous. These checks do not prove reasoning correctness, that the supplied diff/instructions are authoritative or complete, or that every defect was found. A `PASS` is not proof of total compliance.
 
 ## Run offline tests
 
