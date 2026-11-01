@@ -459,6 +459,29 @@ class SemanticReviewValidationTests(unittest.TestCase):
             validate_review(payload, review)
 
 
+    def test_rejects_evidence_mixing_deleted_and_context_coordinates(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/src/client.py b/src/client.py\n"
+            "--- a/src/client.py\n"
+            "+++ b/src/client.py\n"
+            "@@ -10,3 +20,2 @@\n"
+            " context before\n"
+            "-removed line\n"
+            " context after\n"
+        )
+        payload["changed_files"] = ["src/client.py"]
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["evidence"] = "-removed line\n context after"
+        # The deleted line is old-file line 11; the context line is new-file line 21.
+        # Combining them into 11-21 would falsely imply one source coordinate system.
+        finding["line_start"] = 11
+        finding["line_end"] = 21
+        with self.assertRaisesRegex(ReviewError, "mixes old-file and resulting-file"):
+            validate_review(payload, review)
+
+
     def test_accepts_no_newline_at_end_of_file_marker(self):
         payload = dict(self.payload)
         payload["diff"] = (
