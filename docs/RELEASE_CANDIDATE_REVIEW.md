@@ -1,3 +1,14 @@
+## 2026-11-01 — CI checkout credential hardening and exact-head verification (pre-archive f43024686b53b4e3668284539656d80bd19c6cfe)
+
+- Security review found that the main `.github/workflows/ci.yml` offline-test job used `actions/checkout` with the default credential persistence behavior. Although the workflow grants only `contents: read`, leaving the token in local Git configuration was unnecessary while repository code/tests execute. Added `persist-credentials: false` to the checkout step.
+- Added `test_checkout_does_not_persist_credentials` to `tests/test_ci_workflow_contract.py`, asserting the main CI checkout explicitly disables credential persistence. The reusable consumer workflow already had this protection; this change aligns the main CI job with it.
+- Preserved the intermediate regression accurately: commit `545e1f743ab01085996a2219ab0e5ddf13b85cc8` failed Push and PR CI because the newly added regex assertion double-escaped whitespace. Corrected the assertion to use whitespace matching in `f43024686b53b4e3668284539656d80bd19c6cfe`; this was a test-expression defect, not a workflow runtime failure.
+- Final exact-head Push CI [41270535774](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41270535774) and PR-context CI [41270538970](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41270538970) both completed successfully on `f43024686b53b4e3668284539656d80bd19c6cfe`. Job-level inspection confirms `offline-tests`, `reusable-python-selftest / acceptance`, and `reusable-node-pnpm-selftest / acceptance` all passed in both runs. Offline compilation, contract tests, redacted acceptance-report generation/upload, and fail-closed gate passed.
+- This is a narrow credential-hygiene improvement; it does not alter the reusable workflow API or consumer pins. PR #40 remains Open/Draft/unmerged. The public consumer remains one passing independent pilot. The private consumer remains blocked before runner allocation by the previously recorded account billing/spending eligibility gate and is not accepted.
+- Owner approval of the bounded 0.x scope, complete consumer-specific safeguards/archive-path acceptance, exact release-candidate selection, and tag/release preflight remain outstanding. No consumer rerun/repin, merge, tag, release, deployment, billing, Actions-policy, permission, or visibility change occurred. This archive does not authorize release.
+
+---
+
 ## 2026-11-01 — Latest Harness and consumer recheck (pre-archive head c46b9e4afcc3b4171ea97c768e0703d9d3033247)
 
 - Re-read the current branch state and verified Harness PR #40 remains Open/Draft/unmerged at exact head `c46b9e4afcc3b4171ea97c768e0703d9d3033247`, based on `integration/pr24-pr33-pr32-20261030`; no reviewers are requested. Public consumer PR #2 and private consumer PR #1 also remain Open/Draft/unmerged at their previously recorded heads.
