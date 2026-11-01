@@ -977,6 +977,8 @@ class SemanticReviewValidationTests(unittest.TestCase):
             b"not-json",
             b"{}",
             b'{"choices":[]}',
+            b"[" * 10000 + b"0" + b"]" * 10000,
+            b'{"choices":[{"message":{"content":"' + b"[" * 10000 + b"0" + b"]" * 10000 + b'"}}]}',
             b'{"choices":[{"message":{"content":"not-json"}}]}',
             b'{"choices":[{"message":{"content":null}}]}',
             b'{"choices":[],"choices":[{"message":{"content":"{}"}}]}',
@@ -1243,6 +1245,36 @@ class SemanticReviewValidationTests(unittest.TestCase):
                 config[field] = bad
                 with self.assertRaises(ReviewError):
                     validate_model_config(config)
+
+
+    def test_deeply_nested_review_input_fails_without_traceback(self):
+        from contextlib import redirect_stderr
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "review.json"
+            nested = "[" * 10000 + "0" + "]" * 10000
+            raw = (
+                '{"task":"task","diff":"diff","changed_files":["file.txt"],'
+                '"global_rules":"rules","project_instructions":"instructions",'
+                '"extra":' + nested + '}'
+            )
+            stderr = StringIO()
+            with patch("sys.stdin", StringIO(raw)), patch(
+                "sys.argv", ["ai_semantic_review.py", "--input", "-", "--output", str(output)]
+            ), redirect_stderr(stderr):
+                self.assertEqual(main(), 2)
+            self.assertIn("AI semantic review blocked:", stderr.getvalue())
+            self.assertNotIn("Traceback", stderr.getvalue())
+            self.assertFalse(output.exists())
+
+    def test_json_write_failure_cleans_temporary_artifact(self):
+        from scripts.ai_semantic_review import _write_json_atomically
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "review.json"
+            with self.assertRaisesRegex(ReviewError, "Could not write semantic-review artifact"):
+                _write_json_atomically(output, {"summary": chr(0xD800)})
+            self.assertEqual(list(Path(directory).iterdir()), [])
 
 
 
