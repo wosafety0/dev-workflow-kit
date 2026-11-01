@@ -206,18 +206,19 @@ def _reject_ignored_python_sources(root: Path) -> None:
         raise HarnessRunnerError("Could not verify ignored Python source") from None
     if ignored.returncode != 0:
         raise HarnessRunnerError("Could not verify ignored Python source")
-    generated_or_environment_dirs = {
-        ".venv", "venv", "env", ".tox", "artifacts", "__pycache__",
-    }
+    root_environment_dirs = {".venv", "venv", "env", ".tox", "artifacts"}
     for raw_path in ignored.stdout.split(b"\0"):
         if not raw_path:
             continue
         ignored_path = Path(os.fsdecode(raw_path))
         if ignored_path.suffix != ".py":
             continue
-        if any(
-            part in generated_or_environment_dirs or part.startswith(".venv")
-            for part in ignored_path.parts[:-1]
+        parent_parts = ignored_path.parts[:-1]
+        # Only recognized repository-root environments/artifacts are excluded.
+        # A nested directory named "env" or ".venv-custom" may contain mutable
+        # project code and must not silently bypass the ignored-source guard.
+        if "__pycache__" in parent_parts or (
+            parent_parts and parent_parts[0] in root_environment_dirs
         ):
             continue
         raise HarnessRunnerError("ignored Python source must not be executed")
