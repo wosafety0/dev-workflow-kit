@@ -22,6 +22,10 @@ class CIWorkflowContractTests(unittest.TestCase):
                 msg=f"Action is not pinned to a full SHA: {action}",
             )
 
+    def test_workflow_permissions_are_read_only(self):
+        self.assertRegex(self.source, r"(?m)^permissions:\n  contents: read\\s*$")
+        self.assertNotRegex(self.source, r"(?m)^\\s+[a-zA-Z0-9_-]+:\\s*write\\b")
+
     def test_checkout_does_not_persist_credentials(self):
         self.assertRegex(
             self.source,
