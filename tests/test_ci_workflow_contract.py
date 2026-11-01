@@ -44,14 +44,13 @@ class CIWorkflowContractTests(unittest.TestCase):
 
 
     def test_ci_workflow_does_not_use_pull_request_target(self):
-        trigger_block = self.source.split("on:\\n", 1)[1].split("\\npermissions:", 1)[0]
+        trigger_block = self.source.split("on:\n", 1)[1].split("\npermissions:", 1)[0]
         self.assertNotIn("pull_request_target:", trigger_block)
 
     def test_ci_workflow_does_not_forward_or_reference_secrets(self):
-        self.assertNotRegex(self.source, r"(?m)^\\s+secrets:\\s*$")
-        self.assertNotRegex(self.source, r"\\$\\{\\{\\s*secrets\\.")
+        self.assertNotRegex(self.source, r"(?m)^\s+secrets:\s*$")
+        self.assertNotRegex(self.source, r"\$\{\{\s*secrets\.")
         self.assertNotIn("secrets: inherit", self.source)
-
 
 if __name__ == "__main__":
     unittest.main()
