@@ -1,3 +1,11 @@
+## 2026-11-01 — Semantic-review mixed-coordinate evidence guard
+
+- Targeted review found a deterministic validator gap: evidence spanning a deleted line and a context line in an ordinary modified file could combine old-file and resulting-file coordinates into a misleading line range (for example, old line 11 plus new line 21 accepted as range 11–21). The prior validator already rejected deleted+added evidence but did not reject deleted+context evidence.
+- Updated `scripts/ai_semantic_review.py` to classify all evidence-bearing diff lines by coordinate side and reject mixed old/new coordinates. Added `test_rejects_evidence_mixing_deleted_and_context_coordinates`; deleted-file context remains mapped to old-file coordinates. Existing deleted+added rejection and its error text remain compatible.
+- Preserve intermediate CI failures accurately: commits `2dad1a0` and `ee6819c` failed because the existing deleted+added regression test expected its prior error-message wording after the generalized guard. Commit `0686856` retained that existing message; the new regression assertion was aligned in `7f6d46449cedb6bac83da8ca4e06893550011b5b`. These were assertion/message compatibility failures, not failures of the coordinate fix.
+- Exact-head PR-context run [41276236039](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41276236039) passed all three jobs: `offline-tests`, reusable Python acceptance, and reusable Node/pnpm acceptance. Offline suite: **177 tests, OK**; report generation/upload and fail-closed gate passed.
+- This is a bounded validator correction, not proof of reasoning correctness or complete defect detection. PR #40 remains Draft/open/unmerged. No consumer changes, merge, tag, release, deployment, permission, secret, billing, visibility, or Actions-policy changes occurred.
+
 ## 2026-11-01 — Reusable entrypoint trigger regression guard
 
 - Added `test_reusable_workflow_is_not_directly_triggered` to the reusable workflow contract suite. It asserts the called workflow exposes `workflow_call` and does not acquire direct `push`, `pull_request`, `pull_request_target`, or `workflow_dispatch` triggers. This keeps the acceptance entry point reusable-only; consumer-specific PR trust policy remains the caller's responsibility.
