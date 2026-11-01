@@ -152,3 +152,11 @@ This is a bounded scope recommendation for owner review, not evidence that the r
 ## Safety and status
 
 No merge, tag, release, deployment, billing change, repository policy change, secret change, or consumer application behavior change was performed. The current PR remains Draft/open/unmerged. Revisit this decision only after the unchecked gates are resolved; do not infer release readiness from green CI alone.
+
+## Latest exact-head and release-gate recheck — 2026-11-01
+
+- Pre-archive Harness head `e2f7560235c20292539adec1dd2f53cacc9ad1be` passed exact-head Push [41256913332](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256913332) and PR-context [41256916534](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41256916534), with all three jobs successful in both runs. PR #40 remains Open/Draft/unmerged.
+- Current-head comparisons to both consumer pins show no change to `.github/workflows/reusable-acceptance.yml`: public consumer pin `c4cf3e1c...` is 42 commits behind the current branch; private consumer pin `37dc07c7...` is 63 commits behind. Neither consumer was repinned. This is source compatibility evidence only, not consumer execution.
+- Private consumer run [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) still has no runner or steps; annotation [124212281392](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) cites an account payment/spending eligibility gate without distinguishing its underlying billing condition. Private exact-head acceptance remains incomplete.
+- GitHub Releases inventory returned no releases. The tags-list endpoint was unavailable through the current connector, so tag namespace availability is not certified. No release candidate is selected; initial 0.x scope approval and consumer-specific acceptance remain outstanding.
+- No merge, tag, release, deployment, billing, permissions, visibility, or Actions-policy change was made. This is a pre-archive record; verify the resulting archive commit's CI independently.
