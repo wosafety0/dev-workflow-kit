@@ -753,10 +753,10 @@ class SemanticReviewValidationTests(unittest.TestCase):
     def test_rejects_rename_with_unsafe_source_path(self):
         payload = dict(self.payload)
         payload["diff"] = (
-            "diff --git a/../outside.txt b/safe.txt\\n"
-            "similarity index 100%\\n"
-            "rename from ../outside.txt\\n"
-            "rename to safe.txt\\n"
+            "diff --git a/../outside.txt b/safe.txt\n"
+            "similarity index 100%\n"
+            "rename from ../outside.txt\n"
+            "rename to safe.txt\n"
         )
         payload["changed_files"] = ["safe.txt"]
         with self.assertRaisesRegex(ReviewError, "Git diff contains an unsafe path"):
