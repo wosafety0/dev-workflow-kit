@@ -845,14 +845,26 @@ class HarnessRunnerTests(unittest.TestCase):
     def test_documented_script_entrypoint_supports_direct_execution(self):
         repo_root = Path(__file__).resolve().parents[1]
         result = subprocess.run(
-            [sys.executable, str(repo_root / "scripts" / "harness_runner.py"), "--help"],
+            [
+                sys.executable,
+                str(repo_root / "scripts" / "harness_runner.py"),
+                "--project-root", str(self.root),
+                "--config", "harness.json",
+                "--report-output", "artifacts/report.json",
+                "--timeout-seconds", "10",
+            ],
             cwd=repo_root,
             capture_output=True,
             text=True,
             check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Run reviewed Harness task IDs", result.stdout)
+        self.assertIn("Task python-unittest: passed", result.stdout)
+        report_path = self.root / "artifacts" / "report.json"
+        self.assertTrue(report_path.is_file())
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        self.assertEqual(report["status"], "passed")
+        self.assertEqual(report["tests"], {"python-unittest": "passed"})
 
 if __name__ == "__main__":
     unittest.main()
