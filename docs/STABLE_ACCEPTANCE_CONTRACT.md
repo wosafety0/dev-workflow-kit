@@ -52,6 +52,8 @@ The following conditions must never yield an accepted passing review:
 - Findings whose file, line range, rule quote, or evidence cannot be verified.
 - Missing required provider configuration, network/provider errors, or malformed provider responses.
 - Model-provider response bodies larger than 1 MiB; the client reads at most 1 MiB plus one sentinel byte before failing closed.
+- Excessively nested review input, provider envelopes, or model-produced JSON must fail closed through a controlled validation error rather than an uncaught recursion traceback.
+- If semantic-review artifact serialization fails, including on invalid Unicode, the temporary file must be cleaned up and no partial artifact may be published.
 
 The caller must treat validation/provider failures as failure or inconclusive outcomes, not as approval to merge or perform project actions.
 
