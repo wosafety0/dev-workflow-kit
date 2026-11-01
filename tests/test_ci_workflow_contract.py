@@ -22,6 +22,12 @@ class CIWorkflowContractTests(unittest.TestCase):
                 msg=f"Action is not pinned to a full SHA: {action}",
             )
 
+    def test_checkout_does_not_persist_credentials(self):
+        self.assertRegex(
+            self.source,
+            r"(?s)- name: Check out repository\\n\\s+uses: actions/checkout@[0-9a-f]{40} # v5\\n\\s+with:\\n\\s+persist-credentials: false",
+        )
+
     def test_artifact_upload_uses_node24_compatible_v7_pin(self):
         self.assertIn(
             "uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2",
