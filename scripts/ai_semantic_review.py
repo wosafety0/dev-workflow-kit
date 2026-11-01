@@ -591,7 +591,7 @@ def main() -> int:
         _write_json_atomically(output_path, artifact)
         print(f"AI semantic review result: {review['status']}")
         return 0 if review["status"] == "PASS" else 1
-    except (OSError, UnicodeError, json.JSONDecodeError, ReviewError) as exc:
+    except (OSError, UnicodeError, json.JSONDecodeError, ReviewError, RecursionError) as exc:
         print(f"AI semantic review blocked: {exc}", file=sys.stderr)
         return 2
 
