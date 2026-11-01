@@ -809,3 +809,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Updated `docs/HARNESS_RUNNER_V1.md` and `docs/STABLE_ACCEPTANCE_CONTRACT.md` to pin this behavior.
 - Implementation/test head `83e8ed9ffd82bbb4c270f39a8c2e914c4fd33be6` passed exact-head Push CI [41363034136](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41363034136) and PR-context CI [41363038052](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41363038052). All three jobs succeeded in both runs; the new submodule-config regression executed successfully and the offline suite reported **192 tests, OK**.
 - Documentation archive head `40ba011f6908fb57b3fe308cf1efc8892ffb58bc` passed exact-head Push CI [41363135580](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41363135580) and PR-context CI [41363140586](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41363140586). All three jobs succeeded in both runs; offline suite reported **192 tests, OK**.
+
+
+## 2026-11-02 — Isolate Git provenance checks from inherited environment
+- A targeted environment-integrity test showed that inherited `GIT_DIR` and `GIT_WORK_TREE` could redirect Runner-owned Git commands to a different repository while `git rev-parse --show-toplevel` still reported the requested project root and `git status` reported a clean worktree. A temporary reproduction confirmed the Runner could otherwise record the alternate repository's HEAD.
+- Added a shared Git subprocess environment builder that removes inherited `GIT_*` variables before all six Runner-owned Git call sites. This prevents caller-controlled repository, worktree, index, object-store, and Git-config environment overrides from changing provenance checks. It does not attest the Git executable or host environment.
+- Added `test_commit_provenance_ignores_git_repository_redirect_environment`, which clones the fixture, creates a different empty commit with the same tree, redirects ambient Git metadata to that clone, and verifies the Runner still reports the project's actual HEAD.
+- Implementation and regression test are committed; exact-head Push and PR-context CI verification is pending.
