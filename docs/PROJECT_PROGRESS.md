@@ -1,3 +1,10 @@
+## 2026-11-01 — Narrow ignored Python source exclusions
+
+- Review of `_reject_ignored_python_sources()` found that the previous exclusion matched directory names such as `env`, `.tox`, `artifacts`, and `.venv*` at any depth. An ignored Python helper under a nested project path such as `src/env/helper.py` could therefore bypass the mutable-source guard.
+- Restricted environment/artifact exemptions to recognized repository-root directories only; `__pycache__` remains excluded at any depth. Added `test_runner_rejects_ignored_python_source_in_nested_env_directory` to prove nested ignored helpers block execution before any task starts.
+- Exact implementation/test head `40eeaa098637d1439d593153f3a504881269a5a0` passed PR-context CI [41276915781](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41276915781): all three jobs succeeded; offline suite reported **180 tests, OK**.
+- This does not sandbox test code or attest dependencies installed inside the explicitly excluded root virtual environment; those remain documented trust boundaries.
+
 ## 2026-11-01 — Validate both paths in Git diff headers
 
 - Targeted path-boundary review found that `_diff_sections()` compared only the changed-file path (the rename destination) with `changed_files`. A crafted rename section could use an unsafe source such as `../outside.txt` while targeting a safe path and still pass the path-membership check.
