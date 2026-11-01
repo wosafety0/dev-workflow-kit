@@ -1,3 +1,9 @@
+## 2026-11-01 — Stable acceptance contract synchronized with verified gates
+
+- Updated `docs/STABLE_ACCEPTANCE_CONTRACT.md` to reflect the verified implementation and regression coverage: safe old/new paths in diff headers (including rename sources), binary metadata cannot receive `PASS`, explicit non-empty `limitations` are required, and added/context versus deleted-line coordinate mapping is documented.
+- Synchronized the runner exclusion rule: only recognized repository-root environment/artifact directories are exempt; `__pycache__` is exempt at any depth. Nested project directories named `env` or `.venv-custom` are not exempt.
+- This is a contract/documentation update, not a weakening of any gate. The runner computes the stable-contract SHA-256 at execution time; the updated contract therefore changes the recorded `rules_pin` automatically. Exact-head CI verification is pending.
+
 ## 2026-11-01 — Require explicit semantic-review limitations
 
 - Targeted false-confidence review found that `validate_review()` accepted an empty `limitations` list for `PASS` and `NEEDS_CHANGES`, even though the output contract asks the model to state limitations or uncertainty. An empty list could leave a structurally valid `PASS` without any visible scope boundary.
