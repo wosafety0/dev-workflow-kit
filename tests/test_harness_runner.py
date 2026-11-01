@@ -253,7 +253,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_stops_after_failure_and_marks_remaining_tasks_not_run(self):
         self.write_config(["python-unittest", "semantic-review"])
-        self.write_review_input(self.root / "artifacts" / "artifacts/review-input.json")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         with patch("scripts.harness_runner._git_commit_sha", return_value="f" * 40), patch(
             "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
         ), patch(
@@ -278,7 +278,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_semantic_review_must_be_last_configured_task(self):
         self.write_config(["semantic-review", "python-unittest"])
-        self.write_review_input(self.root / "artifacts" / "artifacts/review-input.json")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(
                 "--review-input", "artifacts/review-input.json",
@@ -291,7 +291,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_runs_configured_tasks_in_order_with_explicit_review_paths(self):
         self.write_config(["python-unittest", "semantic-review"])
-        self.write_review_input(self.root / "artifacts" / "artifacts/review-input.json")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         with patch("scripts.harness_runner._git_commit_sha", return_value="d" * 40), patch(
             "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
         ), patch(
@@ -321,7 +321,7 @@ class HarnessRunnerTests(unittest.TestCase):
             "--input", "-",
             "--output", str((self.root / "artifacts" / "review.json").resolve()),
         ])
-        self.assertEqual(run_task.call_args_list[1].args[3], (self.root / "artifacts" / "artifacts/review-input.json").read_bytes())
+        self.assertEqual(run_task.call_args_list[1].args[3], (self.root / "artifacts" / "review-input.json").read_bytes())
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["status"], "passed")
         self.assertEqual(
@@ -338,7 +338,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_semantic_review_rejects_unencodable_diff_before_task_execution(self):
         self.write_config(["semantic-review"])
-        review_path = self.root / "artifacts" / "artifacts/review-input.json"
+        review_path = self.root / "artifacts" / "review-input.json"
         payload = self.write_review_input(review_path)
         payload["diff"] = "\ud800"
         review_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -355,7 +355,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_semantic_review_rejects_diff_not_matching_git_source(self):
         self.write_config(["semantic-review"])
-        review_path = self.root / "artifacts" / "artifacts/review-input.json"
+        review_path = self.root / "artifacts" / "review-input.json"
         payload = self.write_review_input(review_path)
         payload["diff"] = "diff --git a/fake.py b/fake.py\\n"
         review_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -370,7 +370,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_semantic_review_requires_explicit_base_commit(self):
         self.write_config(["semantic-review"])
-        self.write_review_input(self.root / "artifacts" / "artifacts/review-input.json")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(
                 "--review-input", "artifacts/review-input.json",
@@ -403,7 +403,7 @@ class HarnessRunnerTests(unittest.TestCase):
             cwd=self.root, check=True, stdout=subprocess.PIPE,
         ).stdout.decode("utf-8")
         self.write_review_input(
-            self.root / "artifacts" / "artifacts/review-input.json",
+            self.root / "artifacts" / "review-input.json",
             diff=diff,
             changed_files=["src/feature.py"],
         )
@@ -427,7 +427,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_semantic_review_output_must_not_overwrite_source_files(self):
         self.write_config(["semantic-review"])
-        self.write_review_input(self.root / "artifacts" / "artifacts/review-input.json")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(
                 "--review-input", "artifacts/review-input.json",
@@ -440,7 +440,7 @@ class HarnessRunnerTests(unittest.TestCase):
         self.config_path = self.root / "artifacts" / "harness.json"
         self.write_config(["semantic-review"])
         original_config = self.config_path.read_bytes()
-        self.write_review_input(self.root / "artifacts" / "artifacts/review-input.json")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(
                 "--config", "artifacts/harness.json",
@@ -454,7 +454,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_runner_rejects_oversized_review_input_before_tasks(self):
         self.write_config(["semantic-review"])
-        review_input = self.root / "artifacts" / "artifacts/review-input.json"
+        review_input = self.root / "artifacts" / "review-input.json"
         review_input.write_bytes(b"x" * (harness_runner._MAX_REVIEW_INPUT_BYTES + 1))
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(
@@ -468,7 +468,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_runner_rejects_review_input_mutated_by_preceding_task(self):
         self.write_config(["python-unittest", "semantic-review"])
-        review_input = self.root / "artifacts" / "artifacts/review-input.json"
+        review_input = self.root / "artifacts" / "review-input.json"
         self.write_review_input(review_input)
 
         def mutate_review_input(argv, *_args):
@@ -497,7 +497,7 @@ class HarnessRunnerTests(unittest.TestCase):
         from scripts.ai_semantic_review import validate_model_config
 
         self.write_config(["python-unittest", "semantic-review"])
-        self.write_review_input(self.root / "artifacts" / "artifacts/review-input.json")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         endpoint, key, model = validate_model_config({
             "AI_REVIEW_API_BASE": "http://127.0.0.1:1235/v1",
             "AI_REVIEW_API_KEY": "fixture-key",
@@ -580,7 +580,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_blocked_post_task_integrity_removes_semantic_review_pass_artifact(self):
         self.write_config(["python-unittest", "semantic-review"])
-        review_input = self.root / "artifacts" / "artifacts/review-input.json"
+        review_input = self.root / "artifacts" / "review-input.json"
         self.write_review_input(review_input)
         review_output = self.root / "artifacts" / "review.json"
         tracked_source = self.root / "tests" / "test_example.py"
@@ -1013,7 +1013,7 @@ class HarnessRunnerTests(unittest.TestCase):
             script.write_text("# test fixture\\n", encoding="utf-8")
             self.skipTest("file symlink creation is unavailable")
         self.write_config(["semantic-review"])
-        self.write_review_input(self.root / "artifacts" / "artifacts/review-input.json")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(
                 "--review-input", "artifacts/review-input.json",
