@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import json
 import os
 import re
@@ -23,10 +24,6 @@ from typing import Any
 # Direct script execution places scripts/ rather than the repository root on sys.path.
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from scripts.acceptance_report import AcceptanceReportError, build_acceptance_report
-from scripts.harness_config import HarnessConfigError, validate_harness_config
-
 
 class HarnessRunnerError(ValueError):
     """Raised when runner inputs or local project metadata are unsafe or incomplete."""
@@ -224,6 +221,43 @@ def _reject_ignored_python_sources(root: Path) -> None:
         raise HarnessRunnerError("ignored Python source must not be executed")
 
 
+def _load_trusted_helpers(root: Path):
+    """Load project helper modules after source checks, bypassing repository pyc caches."""
+    helper_paths = (
+        ("scripts/harness_config.py", "Harness config module"),
+        ("scripts/acceptance_report.py", "acceptance report module"),
+    )
+    for relative, label in helper_paths:
+        source = _resolve_trusted_source(root, relative, label)
+        if not source.is_file():
+            raise HarnessRunnerError(f"{label} is missing")
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="harness-import-cache-") as cache_dir:
+            cache_path = Path(cache_dir).resolve()
+            try:
+                cache_path.relative_to(root.resolve())
+            except ValueError:
+                pass
+            else:
+                raise HarnessRunnerError("temporary Python import cache must be outside the project root")
+            old_prefix = sys.pycache_prefix
+            old_dont_write = sys.dont_write_bytecode
+            sys.pycache_prefix = str(cache_path)
+            sys.dont_write_bytecode = True
+            try:
+                config_module = importlib.import_module("scripts.harness_config")
+                report_module = importlib.import_module("scripts.acceptance_report")
+                config_module = importlib.reload(config_module)
+                report_module = importlib.reload(report_module)
+            finally:
+                sys.pycache_prefix = old_prefix
+                sys.dont_write_bytecode = old_dont_write
+    except (ImportError, OSError, RuntimeError):
+        raise HarnessRunnerError("Could not load trusted Harness helper modules") from None
+    return report_module.build_acceptance_report, config_module.validate_harness_config
+
+
 def _task_argv(
     task_id: str,
     root: Path,
@@ -368,7 +402,11 @@ def _verify_review_diff_provenance(
         )
 
 
-def _write_report(output_path: Path, metadata: dict[str, Any]) -> dict[str, Any]:
+def _write_report(
+    output_path: Path,
+    metadata: dict[str, Any],
+    build_acceptance_report: Any,
+) -> dict[str, Any]:
     report = build_acceptance_report(metadata)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path: Path | None = None
@@ -510,6 +548,10 @@ def main(argv: list[str] | None = None) -> int:
 
         _require_tracked_config(root, config_path)
 
+        # Verify source integrity before importing any project helper modules.
+        commit_sha = _git_commit_sha(root)
+        _reject_ignored_python_sources(root)
+        build_acceptance_report, validate_harness_config = _load_trusted_helpers(root)
 
         try:
             raw_config = json.loads(
@@ -551,16 +593,12 @@ def main(argv: list[str] | None = None) -> int:
         if review_output is not None:
             review_output.parent.mkdir(parents=True, exist_ok=True)
 
-        # Reject ignored project Python sources before planning or executing tasks.
-        _reject_ignored_python_sources(root)
-
         # Preflight every task before executing any of them, avoiding partial execution if
         # a configured task lacks its required arguments or implementation.
         planned_tasks = [
             (task_id, _task_argv(task_id, root, review_input, review_output))
             for task_id in config["commands"]
         ]
-        commit_sha = _git_commit_sha(root)
         if wants_review and review_input_bytes is not None:
             _verify_review_diff_provenance(root, review_input_bytes, args.review_base_commit)
             print(f"Semantic review diff provenance: verified against {args.review_base_commit.lower()}...HEAD")
@@ -588,9 +626,26 @@ def main(argv: list[str] | None = None) -> int:
             task_stdin = (
                 review_input_bytes if task_id == "semantic-review" else None
             )
-            status, exit_code = _run_task(
-                argv_for_task, root, args.timeout_seconds, task_stdin
-            )
+            # Give every child a fresh private bytecode-cache prefix so it cannot
+            # load ignored or poisoned .pyc files from project __pycache__ directories.
+            with tempfile.TemporaryDirectory(prefix="harness-task-pycache-") as task_cache:
+                task_cache_path = Path(task_cache).resolve()
+                try:
+                    task_cache_path.relative_to(root.resolve())
+                except ValueError:
+                    pass
+                else:
+                    raise HarnessRunnerError("temporary task bytecode cache must be outside the project root")
+                isolated_argv = [
+                    argv_for_task[0],
+                    "-B",
+                    "-X",
+                    f"pycache_prefix={task_cache_path}",
+                    *argv_for_task[1:],
+                ]
+                status, exit_code = _run_task(
+                    isolated_argv, root, args.timeout_seconds, task_stdin
+                )
             outcomes[task_id] = status
             suffix = " (timeout or launch failure)" if exit_code is None and status == "failed" else (
                 f" (exit {exit_code})" if exit_code not in (None, 0) else ""
@@ -619,11 +674,11 @@ def main(argv: list[str] | None = None) -> int:
             "tool_version": f"dev-workflow-kit/harness-runner@{commit_sha}",
             "tests": outcomes,
         }
-        report = _write_report(report_path, metadata)
+        report = _write_report(report_path, metadata, build_acceptance_report)
         print(f"Acceptance report written: {report_path.relative_to(root).as_posix()}")
         print(f"Acceptance status: {report['status']}")
         return 0 if report["status"] == "passed" else 1
-    except (HarnessRunnerError, HarnessConfigError, AcceptanceReportError) as exc:
+    except (HarnessRunnerError, ValueError) as exc:
         _invalidate_safe_outputs(root, safe_outputs, (args.config, args.review_input))
         print(f"Harness run blocked: {exc}", file=sys.stderr)
         return 2

@@ -1,5 +1,8 @@
+import importlib.util
 import json
+import marshal
 import os
+import py_compile
 import subprocess
 import sys
 import tempfile
@@ -27,6 +30,12 @@ class HarnessRunnerTests(unittest.TestCase):
         )
         (self.root / "scripts" / "ai_semantic_review.py").write_text(
             "# test fixture\n", encoding="utf-8"
+        )
+        (self.root / "tests" / "test_poisoned_cache.py").write_text(
+            "import unittest\n"
+            "class PoisonedCacheFixture(unittest.TestCase):\n"
+            "    def test_source_fixture_is_safe(self): self.assertTrue(True)\n",
+            encoding="utf-8",
         )
         (self.root / "tests" / "test_example.py").write_text(
             "import os\nimport sys\nimport unittest\n"
@@ -94,9 +103,12 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(stderr, "")
         self.assertIn("Task python-unittest: passed", stdout)
         argv = run_task.call_args.args[0]
+        self.assertEqual(argv[0], sys.executable)
+        self.assertEqual(argv[1:3], ["-B", "-X"])
+        self.assertTrue(argv[3].startswith("pycache_prefix="))
         self.assertEqual(
-            argv,
-            [sys.executable, "-I", "-S", "-m", "unittest", "discover", "-s", "tests", "-v"],
+            argv[4:],
+            ["-I", "-S", "-m", "unittest", "discover", "-s", "tests", "-v"],
         )
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["status"], "passed")
@@ -105,6 +117,57 @@ class HarnessRunnerTests(unittest.TestCase):
             set(report),
             {"schema_version", "commit_sha", "rules_pin", "tool_version", "tests", "status"},
         )
+
+    def test_runner_ignores_poisoned_project_pycache(self):
+        source = self.root / "tests" / "test_poisoned_cache.py"
+        cache_path = Path(importlib.util.cache_from_source(str(source)))
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        py_compile.compile(str(source), cfile=str(cache_path), doraise=True)
+        compiled = cache_path.read_bytes()
+        malicious = compile(
+            "raise RuntimeError('poisoned project bytecode executed')",
+            str(source),
+            "exec",
+        )
+        cache_path.write_bytes(compiled[:16] + marshal.dumps(malicious))
+        with patch("scripts.harness_runner._git_commit_sha", return_value=self.base_commit_sha), patch(
+            "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
+        ):
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 0, stderr)
+        self.assertEqual(stderr, "")
+
+    def test_trusted_helper_imports_bypass_poisoned_project_pycache(self):
+        import scripts.acceptance_report as report_module
+        import scripts.harness_config as config_module
+
+        root = Path(__file__).resolve().parents[1]
+        modules = (report_module, config_module)
+        cache_paths = [
+            Path(importlib.util.cache_from_source(module.__file__))
+            for module in modules
+        ]
+        originals = {path: path.read_bytes() if path.exists() else None for path in cache_paths}
+        try:
+            for path, module in zip(cache_paths, modules):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                py_compile.compile(module.__file__, cfile=str(path), doraise=True)
+                compiled = path.read_bytes()
+                malicious = compile(
+                    "raise RuntimeError('poisoned helper bytecode executed')",
+                    module.__file__,
+                    "exec",
+                )
+                path.write_bytes(compiled[:16] + marshal.dumps(malicious))
+            build_report, validate_config = harness_runner._load_trusted_helpers(root)
+            self.assertTrue(callable(build_report))
+            self.assertTrue(callable(validate_config))
+        finally:
+            for path, original in originals.items():
+                if original is None:
+                    path.unlink(missing_ok=True)
+                else:
+                    path.write_bytes(original)
 
     def test_runner_executes_fixed_task_end_to_end(self):
         with patch("scripts.harness_runner._git_commit_sha", return_value="c" * 40), patch(
@@ -210,13 +273,15 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("Task python-unittest: passed", stdout)
         self.assertIn("Task semantic-review: passed", stdout)
         calls = [call.args[0] for call in run_task.call_args_list]
-        self.assertEqual(calls[0], [
-            sys.executable, "-I", "-S", "-m", "unittest", "discover", "-s", "tests", "-v"
+        for call in calls:
+            self.assertEqual(call[0], sys.executable)
+            self.assertEqual(call[1:3], ["-B", "-X"])
+            self.assertTrue(call[3].startswith("pycache_prefix="))
+            self.assertEqual(call[4:6], ["-I", "-S"])
+        self.assertEqual(calls[0][6:], [
+            "-m", "unittest", "discover", "-s", "tests", "-v"
         ])
-        self.assertEqual(calls[1], [
-            sys.executable,
-            "-I",
-            "-S",
+        self.assertEqual(calls[1][6:], [
             str((self.root / "scripts" / "ai_semantic_review.py").resolve()),
             "--input", "-",
             "--output", str((self.root / "artifacts" / "review.json").resolve()),
@@ -428,7 +493,7 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(stderr, "")
         self.assertEqual(run_task.call_count, 2)
-        self.assertEqual(run_task.call_args_list[1].args[0][3], str(
+        self.assertEqual(run_task.call_args_list[1].args[0][6], str(
             (self.root / "scripts" / "ai_semantic_review.py").resolve()
         ))
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))

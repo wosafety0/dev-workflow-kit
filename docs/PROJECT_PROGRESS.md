@@ -1,3 +1,9 @@
+## 2026-11-01 — Prevent project-local Python bytecode cache injection
+
+- A deeper execution-environment audit found that `-I -S` does not prevent Python from reading cached bytecode under project `__pycache__` directories. Because the ignored-source scan intentionally exempts those directories, a timestamp/size-matched poisoned `.pyc` could execute while the corresponding tracked `.py` source remained unchanged.
+- Deferred imports of `scripts.harness_config` and `scripts.acceptance_report` until after clean-worktree and ignored-source checks. The runner reloads those helpers using a fresh temporary `sys.pycache_prefix` and disables bytecode writes. Each task subprocess now receives a separate fresh private `-X pycache_prefix` and `-B`, in addition to `-I -S`, so it cannot load project-local cached bytecode.
+- Added regressions that poison a valid `.pyc` while preserving its header and prove both the runner helper imports and actual unittest subprocess use source rather than the poisoned project cache. Implementation and docs are committed pending exact-head CI verification.
+
 ## 2026-11-01 — Bind semantic-review diffs to Git source commits
 
 - Targeted provenance audit confirmed that the previous input SHA-256 only protected caller-supplied JSON bytes against mutation between preflight and execution; it did not establish that the embedded diff came from the checked-out source.

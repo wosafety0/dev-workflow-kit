@@ -104,3 +104,11 @@ This document is a living 0.x contract. A change that weakens a fail-closed rule
 - The runner must regenerate the canonical three-dot Git diff from the declared base to `HEAD` with fixed options: binary/full-index output, no external diff or text conversion, no color, no rename detection, repository-root-relative paths, and the Myers algorithm. The UTF-8 bytes of the input `diff` must exactly equal the generated Git output before any task executes.
 - The declared base must resolve to an available commit and share a merge base with `HEAD`. CI checkouts must fetch enough history to contain the target base and common ancestor; shallow checkouts missing that history fail closed. A missing base, unavailable commit, malformed input, or byte mismatch blocks the run.
 - This binds the reviewed patch to the checked-out source and declared base; it does not prove that the caller selected the correct target branch/base policy. The standalone semantic-review CLI remains an explicit lower-level interface and does not claim runner-level Git provenance.
+
+
+## Python bytecode-cache isolation
+
+- The runner must not import repository helper modules before verifying the clean Git worktree and ignored-code inventory.
+- Trusted project helper modules must be loaded with a fresh temporary `sys.pycache_prefix` and bytecode writes disabled, so an ignored or poisoned `__pycache__` entry cannot replace the committed source.
+- Each Python task subprocess must use a fresh private `-X pycache_prefix` directory and `-B`, in addition to `-I -S`. The task must not read or write project-local bytecode caches.
+- This prevents project-local bytecode cache injection; it does not attest Python interpreter or standard-library bytecode installed outside the project.
