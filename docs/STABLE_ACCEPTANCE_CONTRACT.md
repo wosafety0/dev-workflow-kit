@@ -89,3 +89,10 @@ This document is a living 0.x contract. A change that weakens a fail-closed rule
 - Config, report, review-input, and review-output paths reject symlink components. Trusted test, semantic-review, and contract sources must resolve inside the project root, outside `artifacts/`, and contain no symlinked source paths.
 - The runner must preserve fail-fast task ordering and revalidate the full Git worktree (tracked changes and non-ignored untracked files outside `artifacts/`), HEAD commit SHA, ignored Python source inventory, and generated output paths after task execution before writing the final acceptance report. Task-created or task-modified source files must block report emission.
 - Before task execution and again after all tasks, the runner must reject ignored importable Python code files (`.py`, `.pyc`, `.so`, `.pyd`) from the project tree, excluding only repository-root generated artifacts and recognized repository-root virtual-environment directories (`.venv`, `venv`, `env`, `.tox`), plus `__pycache__` directories at any depth. Nested project directories with environment-like names are not exempt. This protects source-to-commit provenance but does not attest the installed dependency environment.
+
+
+## Python task interpreter isolation
+
+- Fixed Python task invocations in the Harness runner must use isolated mode (`-I`) and disable site initialization (`-S`). This prevents inherited `PYTHONPATH`, user-site packages, `sitecustomize`, and `.pth` startup hooks from altering task imports.
+- The current Harness task implementation must remain compatible with the Python standard library alone unless a separately reviewed dependency-installation contract is introduced.
+- This boundary does not attest the Python executable, standard library, host operating system, Git executable, or the underlying runner image; the Harness is not a sandbox.

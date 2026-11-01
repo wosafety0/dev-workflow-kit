@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -28,8 +29,12 @@ class HarnessRunnerTests(unittest.TestCase):
             "# test fixture\n", encoding="utf-8"
         )
         (self.root / "tests" / "test_example.py").write_text(
-            "import unittest\nclass Example(unittest.TestCase):\n"
-            "    def test_ok(self): self.assertTrue(True)\n",
+            "import os\nimport sys\nimport unittest\n"
+            "class Example(unittest.TestCase):\n"
+            "    def test_ok(self):\n"
+            "        self.assertEqual(sys.flags.isolated, 1)\n"
+            "        self.assertEqual(sys.flags.no_site, 1)\n"
+            "        self.assertIsNone(os.environ.get(\"HARNESS_SITE_CUSTOMIZED\"))\n",
             encoding="utf-8",
         )
         self.config_path = self.root / "harness.json"
@@ -74,7 +79,7 @@ class HarnessRunnerTests(unittest.TestCase):
         argv = run_task.call_args.args[0]
         self.assertEqual(
             argv,
-            [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
+            [sys.executable, "-I", "-S", "-m", "unittest", "discover", "-s", "tests", "-v"],
         )
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["status"], "passed")
@@ -96,6 +101,25 @@ class HarnessRunnerTests(unittest.TestCase):
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["status"], "passed")
         self.assertEqual(report["tests"], {"python-unittest": "passed"})
+
+    def test_python_task_ignores_pythonpath_and_sitecustomize(self):
+        injection = tempfile.TemporaryDirectory()
+        self.addCleanup(injection.cleanup)
+        injection_path = Path(injection.name)
+        (injection_path / "sitecustomize.py").write_text(
+            "import os\nos.environ[\"HARNESS_SITE_CUSTOMIZED\"] = \"1\"\n",
+            encoding="utf-8",
+        )
+        with patch.dict(
+            os.environ,
+            {"PYTHONPATH": injection.name, "HARNESS_SITE_CUSTOMIZED": ""},
+        ), patch("scripts.harness_runner._git_commit_sha", return_value="e" * 40), patch(
+            "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
+        ):
+            code, _, stderr = self.run_runner()
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
 
     def test_task_failure_writes_failed_report_and_returns_one(self):
         with patch("scripts.harness_runner._git_commit_sha", return_value="b" * 40), patch(
@@ -174,6 +198,8 @@ class HarnessRunnerTests(unittest.TestCase):
         ])
         self.assertEqual(calls[1], [
             sys.executable,
+            "-I",
+            "-S",
             str((self.root / "scripts" / "ai_semantic_review.py").resolve()),
             "--input", "-",
             "--output", str((self.root / "artifacts" / "review.json").resolve()),

@@ -234,7 +234,7 @@ def _task_argv(
         tests_dir = _resolve_trusted_source(root, "tests", "tests directory")
         if not tests_dir.is_dir():
             raise HarnessRunnerError("python-unittest task requires a tests/ directory")
-        return [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
+        return [sys.executable, "-I", "-S", "-m", "unittest", "discover", "-s", "tests", "-v"]
     if task_id == "semantic-review":
         if review_input is None or review_output is None:
             raise HarnessRunnerError(
@@ -245,6 +245,8 @@ def _task_argv(
             raise HarnessRunnerError("semantic-review task requires scripts/ai_semantic_review.py")
         return [
             sys.executable,
+            "-I",
+            "-S",
             str(script),
             "--input",
             "-",

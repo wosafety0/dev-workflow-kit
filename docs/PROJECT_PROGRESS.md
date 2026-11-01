@@ -1,3 +1,10 @@
+## 2026-11-01 — Isolate Python task subprocess imports
+
+- A targeted execution-environment audit confirmed that the runner inherited the caller's Python import environment. A repository task could therefore be influenced by `PYTHONPATH`, user-site packages, `sitecustomize`, or `.pth` startup hooks that were not represented by the clean Git worktree.
+- Updated both fixed Python task argv mappings to use `-I -S`: isolated mode ignores Python environment/user-site injection, and `-S` disables site initialization and its startup hooks. The current Harness tasks use only the Python standard library, so third-party site packages are not required.
+- Added a real subprocess regression fixture that asserts isolated/no-site flags and proves a malicious `sitecustomize.py` supplied through `PYTHONPATH` does not execute. This does not attest the selected interpreter binary, standard library, host OS, or Git executable, and it does not turn the runner into a sandbox.
+- Implementation and documentation are committed at the current branch head; exact-head Push and PR-context CI must pass before this is recorded as verified.
+
 ## 2026-11-01 — Reject ignored Python bytecode and extension modules
 
 - A deeper runner provenance audit found that `_reject_ignored_python_sources()` inspected only `.py` files. Ignored legacy `.pyc` modules and native Python extension modules (`.so`, `.pyd`) in project import paths could therefore be executed without being represented by the recorded Git commit.
