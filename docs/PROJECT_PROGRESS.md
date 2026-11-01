@@ -839,3 +839,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added regression coverage for deeply nested provider envelopes and model content, deeply nested review input without a traceback, and invalid-Unicode serialization cleanup.
 - Implementation/test head `46882828e7473c4fd40720a34cbfac3137ae958e` passed exact-head Push CI [41363842746](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41363842746) and PR-context CI [41363846353](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41363846353). All three jobs succeeded in both runs; both offline logs report **195 tests, OK**, including the deep-JSON and temporary-artifact cleanup regressions.
 - Documentation archive head `3e6c32743a9801f05f7b0771112e111ca72d282e` passed exact-head Push CI [41363876220](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41363876220) and PR-context CI [41363881335](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41363881335). All three jobs succeeded in both runs; offline suite reported **195 tests, OK**.
+
+
+## 2026-11-02 — Clean up failed acceptance-report temporary writes
+- Targeted filesystem-boundary review found the acceptance report writer recorded its temporary path only after JSON serialization and file writing completed. If serialization or a write failed after the temporary file was created (for example, a disk-write `OSError`), cleanup had no path to remove and left a partial `.tmp` artifact.
+- Moved temporary-path capture to immediately after `NamedTemporaryFile` creation, before serialization/write. Existing failure handling now reliably removes the temporary artifact before returning the controlled report-write error.
+- Added a regression that injects a write-time `OSError` after temporary-file creation and verifies neither the final report nor a `.tmp` file remains.
+- Implementation/test commit head: `6c1b5ddcb194c06bfd82189d2057635fb4f57cab`. Exact-head Push and PR-context CI verification pending.
