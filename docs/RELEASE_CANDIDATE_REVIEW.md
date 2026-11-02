@@ -1,3 +1,13 @@
+## 2026-11-02 — Canonical Git diff output bounded during provenance verification
+
+- A focused source review found that the caller-supplied semantic-review input was capped at 4 MiB, but the Runner's generated canonical Git diff was captured with an unbounded `subprocess.run` stdout buffer. A very large committed change could therefore consume excessive Runner memory before the input/diff mismatch was reported.
+- The Runner now streams canonical diff output and retains at most 4 MiB plus one byte. It terminates Git and blocks before task execution when the diff exceeds 4 MiB or generation exceeds 20 seconds. The failure is closed; no truncated diff is accepted.
+- Added a real-Git regression using a tracked file whose canonical diff exceeds 4 MiB; the Runner must return a blocked result and must not invoke configured tasks. Updated the Runner guide and stable acceptance contract.
+- Exact implementation/test head `2f3292a2e8af69f819f23774cc0a8facf7034d7a` passed exact-head Push CI [41441441604](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41441441604) and PR-context CI [41441449725](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41441449725). All four jobs succeeded in both runs; offline suite **204 tests, OK**; Windows Runner suite **64 tests, OK**; reusable Python and Node/pnpm acceptance selftests passed.
+- This bounds captured diff output, not Git's internal resource use, the Git executable, or the host environment. The Runner remains a trusted-worktree task lifecycle tool, not a sandbox. PR #40 remains Draft/open/unmerged; release decision remains unchanged and not ready to tag.
+
+---
+
 ## 2026-11-02 — Cross-platform task descendant lifecycle verified
 
 - POSIX task lifecycle control remains verified: each task runs in a dedicated session/process group; residual group members after normal exit or timeout are terminated, and a task with remaining descendants fails.
