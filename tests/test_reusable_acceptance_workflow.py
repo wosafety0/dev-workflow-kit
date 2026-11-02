@@ -367,7 +367,7 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
         )
         for marker in markers:
             start = source.index(marker)
-            next_step = source.find("\\n      - name: ", start + len(marker))
+            next_step = source.find("\n      - name: ", start + len(marker))
             block = source[start:] if next_step < 0 else source[start:next_step]
             with self.subTest(step=marker):
                 self.assertIn("BASH_ENV: /dev/null", block)
@@ -382,7 +382,7 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
     def test_artifact_action_clears_consumer_node_and_loader_options(self):
         source = WORKFLOW.read_text(encoding="utf-8")
         start = source.index("      - name: Upload consumer acceptance report")
-        next_step = source.find("\\n      - name: ", start + 1)
+        next_step = source.find("\n      - name: ", start + 1)
         block = source[start:] if next_step < 0 else source[start:next_step]
         self.assertIn('NODE_OPTIONS: ""', block)
         self.assertIn('NODE_PATH: ""', block)
@@ -400,7 +400,7 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
             marker = root / "bash-env-was-sourced"
             startup = root / "consumer-bash-env.sh"
             startup.write_text(
-                "open(" + repr(str(marker)) + ", 'w').write('injected')\\n",
+                "open(" + repr(str(marker)) + ", 'w').write('injected')\n",
                 encoding="utf-8",
             )
             env = os.environ.copy()
