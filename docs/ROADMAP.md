@@ -83,3 +83,14 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [x] Add regression coverage that executes the exact inline source from an isolated temporary directory containing same-named `json.py` and `os.py` shadow modules, and assert both workflow steps use the isolated absolute interpreter.
 - Initial exact-head PR CI for implementation/test head `fe00d1b6b6fc6bd19d6a68eb1936c95973e0bceb`: [41464429903](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41464429903) succeeded. The final docs/archive head still requires exact-head Push and PR CI.
 - This is an offline workflow hardening change. It does not make consumer test commands safe to run with secrets or write permissions; no consumer pin, permission, merge, tag, release, or deployment was changed.
+
+
+### Follow-up — neutralize GitHub Actions environment injection
+
+- [x] Override consumer-supplied `BASH_ENV` in every trusted post-test shell step.
+- [x] Clear `LD_PRELOAD` and `LD_AUDIT`; constrain `LD_LIBRARY_PATH` and `PATH` to runner/system-owned directories for trusted report, verification, artifact, and final-gate steps.
+- [x] Clear `NODE_OPTIONS` and `NODE_PATH` for the Node-based artifact upload action.
+- [x] Add per-step workflow contract tests and a Bash startup-file regression.
+- Implementation workflow commit: `3dc6a42b553141f8bb43649f3ba30c5105226ca0`; final regression-test commit: `eb3136645b7203d22dc774327aecd0cf4c4a7046`.
+- Exact-head PR CI [41465822425](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41465822425) passed **159 offline tests**, compilation, report generation/upload, report verification, and the final gate.
+- Push-triggered CI remains unverified for this exact head; do not mark full two-trigger acceptance until its result is independently read back.
