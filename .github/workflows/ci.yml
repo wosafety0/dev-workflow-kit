@@ -2,9 +2,9 @@ name: Harness CI
 
 on:
   push:
-    branches: [main, "feat/**", "fix/**", "docs/**", "test/**"]
+    branches: [main, "feat/**", "fix/**", "docs/**", "test/**", "integration/**"]
   pull_request:
-    branches: [main, "feat/**", "fix/**", "test/**"]
+    branches: [main, "feat/**", "fix/**", "test/**", "integration/**"]
   workflow_dispatch:
 
 permissions:
@@ -25,7 +25,11 @@ jobs:
         id: rules
         shell: bash
         run: |
-          echo "pin=sha256:$(sha256sum docs/STABLE_ACCEPTANCE_CONTRACT.md | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          test -f docs/STABLE_ACCEPTANCE_CONTRACT.md
+          digest="$(sha256sum docs/STABLE_ACCEPTANCE_CONTRACT.md | cut -d ' ' -f1)"
+          [[ "$digest" =~ ^[0-9a-f]{64}$ ]]
+          echo "pin=sha256:${digest}" >> "$GITHUB_OUTPUT"
       - name: Compile Python source
         run: python -m compileall -q scripts tests
       - name: Run all offline contract tests

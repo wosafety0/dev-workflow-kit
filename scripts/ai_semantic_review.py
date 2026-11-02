@@ -13,6 +13,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
@@ -23,6 +24,17 @@ STATUSES = {"PASS", "NEEDS_CHANGES", "INCONCLUSIVE"}
 SEVERITIES = {"critical", "high", "medium", "low", "info"}
 MAX_CHANGED_FILE_PATH_LENGTH = 4096
 MAX_DIFF_LINE_NUMBER = 2_147_483_647
+MAX_MODEL_RESPONSE_BYTES = 1024 * 1024  # 1 MiB; bounded provider response
+MAX_REVIEW_INPUT_BYTES = 4 * 1024 * 1024  # 4 MiB; bounded caller-supplied request
+
+
+def _reject_duplicate_json_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ReviewError("duplicate JSON object key")
+        result[key] = value
+    return result
 
 
 class ReviewError(ValueError):
@@ -180,6 +192,10 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
         cursor = offset + 1
     if not offsets:
         return set()
+    if len(offsets) != 1:
+        raise ReviewError(
+            "Evidence is ambiguous because the exact substring appears multiple times in the cited diff section"
+        )
 
     mapped_spans = []
     offset = 0
@@ -193,7 +209,10 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
         elif old_line is not None and new_line is not None and line:
             prefix = line[0]
             if prefix == " ":
-                mapped_spans.append((line_start, line_end, {old_line, new_line}, "context"))
+                # Findings cite the resulting file's coordinates. Deleted files have no
+                # resulting-side coordinates, so use the old-file line numbers there.
+                context_line = old_line if re.search(r"(?m)^\+\+\+ /dev/null$", section) else new_line
+                mapped_spans.append((line_start, line_end, {context_line}, "context"))
                 old_line += 1
                 new_line += 1
             elif prefix == "-":
@@ -245,7 +264,7 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
 
     changed_files = set(payload["changed_files"])
     sections = _validate_diff_integrity(payload)
-    rules = payload["global_rules"] + "\n" + payload["project_instructions"]
+    rule_sources = (payload["global_rules"], payload["project_instructions"])
     for finding in review["findings"]:
         if not isinstance(finding, dict) or set(finding) != {
             "severity", "title", "file", "line_start", "line_end",
@@ -265,7 +284,7 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
                 raise ReviewError(f"{key} must be a positive integer")
         if finding["line_end"] < finding["line_start"]:
             raise ReviewError("Finding line range is reversed")
-        if finding["rule_quote"] not in rules:
+        if not any(finding["rule_quote"] in source for source in rule_sources):
             raise ReviewError("Finding rule_quote is not an exact substring of supplied instructions")
 
         matching_sections = [
@@ -280,8 +299,15 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
         ))
         if not evidence_lines:
             raise ReviewError("Finding evidence could not be mapped to a source line in the diff")
-        if not all(finding["line_start"] <= line <= finding["line_end"] for line in evidence_lines):
+        expected_line_start = min(evidence_lines)
+        expected_line_end = max(evidence_lines)
+        if finding["line_start"] > expected_line_start or finding["line_end"] < expected_line_end:
             raise ReviewError("Finding line range does not cover the cited diff evidence")
+        if (
+            finding["line_start"] != expected_line_start
+            or finding["line_end"] != expected_line_end
+        ):
+            raise ReviewError("Finding line range is broader than the cited diff evidence")
 
     if review["status"] == "PASS" and review["findings"]:
         raise ReviewError("PASS is forbidden when findings are present")
@@ -412,16 +438,69 @@ def call_model(payload: dict[str, Any]) -> Any:
         else:
             response_context = urllib.request.build_opener(_NoRedirectHandler()).open(request, timeout=60)
         with response_context as response:
-            response_data = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raw_response = response.read(MAX_MODEL_RESPONSE_BYTES + 1)
+            if len(raw_response) > MAX_MODEL_RESPONSE_BYTES:
+                raise ReviewError("Model response exceeds size limit; review cannot pass")
+            response_data = json.loads(
+                raw_response.decode("utf-8"),
+                object_pairs_hook=_reject_duplicate_json_keys,
+            )
+    except ReviewError:
+        raise
+    except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, ValueError) as exc:
         raise ReviewError(f"Model request failed ({type(exc).__name__}); review cannot pass") from None
     try:
         content = response_data["choices"][0]["message"]["content"]
         if not isinstance(content, str):
             raise TypeError
-        return json.loads(content)
-    except (KeyError, IndexError, TypeError, json.JSONDecodeError):
+        return json.loads(content, object_pairs_hook=_reject_duplicate_json_keys)
+    except (KeyError, IndexError, TypeError, ValueError):
         raise ReviewError("Model response was not valid JSON in the expected chat-completions shape") from None
+
+
+def _reject_symlink_components(path: Path, field: str) -> Path:
+    """Reject symlinks in an input/output path without following the final component."""
+    absolute = Path(os.path.abspath(path))
+    current = Path(absolute.anchor)
+    for part in absolute.parts[1:]:
+        current = current / part
+        if current.is_symlink():
+            raise ReviewError(f"{field} must not use symlinked paths")
+    return absolute
+
+
+def _write_json_atomically(output_path: Path, artifact: dict[str, Any]) -> None:
+    """Write a complete artifact and atomically replace the destination entry."""
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=output_path.parent,
+            prefix=f".{output_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary:
+            json.dump(artifact, temporary, ensure_ascii=False, indent=2)
+            temporary.write("\n")
+            temporary_path = Path(temporary.name)
+        # Recheck the final path after the potentially long provider request.
+        _reject_symlink_components(output_path, "output")
+        os.replace(temporary_path, output_path)
+    except ReviewError:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink()
+            except OSError:
+                pass
+        raise
+    except OSError:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink()
+            except OSError:
+                pass
+        raise ReviewError("Could not write semantic-review artifact") from None
 
 
 def main() -> int:
@@ -430,23 +509,35 @@ def main() -> int:
     parser.add_argument("--output", required=True, help="JSON review artifact output path")
     args = parser.parse_args()
     try:
-        input_path = Path(args.input)
-        output_path = Path(args.output)
-        if input_path.resolve() == output_path.resolve():
+        input_path = (
+            None if args.input == "-"
+            else _reject_symlink_components(Path(args.input), "input")
+        )
+        output_path = _reject_symlink_components(Path(args.output), "output")
+        if input_path is not None and input_path.resolve() == output_path.resolve():
             raise ReviewError("Input and output paths must be different")
         try:
             output_path.unlink()
         except FileNotFoundError:
             pass
-        payload = json.loads(input_path.read_text(encoding="utf-8"))
+        if input_path is None:
+            raw_input = sys.stdin.read(MAX_REVIEW_INPUT_BYTES + 1).encode("utf-8")
+        else:
+            with input_path.open("rb") as source:
+                raw_input = source.read(MAX_REVIEW_INPUT_BYTES + 1)
+        if len(raw_input) > MAX_REVIEW_INPUT_BYTES:
+            raise ReviewError("Review input exceeds the 4 MiB input limit")
+        input_text = raw_input.decode("utf-8")
+        payload = json.loads(
+            input_text,
+            object_pairs_hook=_reject_duplicate_json_keys,
+        )
         if not isinstance(payload, dict):
             raise ReviewError("Input root must be a JSON object")
         validate_input(payload)
         review = validate_review(payload, call_model(payload))
         artifact = {"schema_version": "1.0", "status": review["status"], "review": review}
-        output_path.write_text(
-            json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
+        _write_json_atomically(output_path, artifact)
         print(f"AI semantic review result: {review['status']}")
         return 0 if review["status"] == "PASS" else 1
     except (OSError, UnicodeError, json.JSONDecodeError, ReviewError) as exc:

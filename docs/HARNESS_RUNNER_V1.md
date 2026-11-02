@@ -20,16 +20,16 @@ Run:
 python scripts/harness_runner.py --config examples/harness-config.json
 ```
 
-The runner writes `artifacts/acceptance-report.json`. It requires a Git worktree with a valid HEAD and the reviewed contract file at `docs/STABLE_ACCEPTANCE_CONTRACT.md`. For an opt-in live model test, see [SEMANTIC_REVIEW_SMOKE_TEST.md](SEMANTIC_REVIEW_SMOKE_TEST.md) and the semantic-review example config/input.
+The runner writes `artifacts/acceptance-report.json`. It requires the project root to be the Git repository root with a valid HEAD and a clean worktree outside generated `artifacts/`. The `--config` file must be tracked by the current HEAD and must not resolve under `artifacts/`; prior passing artifacts are invalidated before config validation. Duplicate JSON object keys at every nesting level are rejected. For an opt-in live model test, see [SEMANTIC_REVIEW_SMOKE_TEST.md](SEMANTIC_REVIEW_SMOKE_TEST.md) and the semantic-review example config/input.
 
 ## Task mapping
 
 Configuration supplies only task IDs. The runner maps them to fixed argument vectors and never invokes a shell:
 
 - `python-unittest`: `python -m unittest discover -s tests -v` using the current Python interpreter.
-- `semantic-review`: `python scripts/ai_semantic_review.py --input <path> --output <path>`; both paths must be supplied explicitly with `--review-input` and `--review-output`.
+- `semantic-review`: the runner invokes `python scripts/ai_semantic_review.py --input - --output <path>` and supplies the preflighted review-input byte snapshot over standard input; callers still supply the source and artifact paths with `--review-input` and `--review-output`. The standalone CLI also accepts a file path for direct use.
 
-If `semantic-review` is configured, a caller must pass both review paths. Review input must already exist. Review output and the acceptance report must be files under `artifacts/`. Output paths may not overwrite the config, review input, or one another. All configured tasks are preflighted before any task runs.
+If `semantic-review` is configured, a caller must pass both review paths. Review input must already exist and fit within the 4 MiB input limit. Its bytes and SHA-256 fingerprint are captured before task execution and the source path is rechecked immediately before semantic review. The exact preflight bytes are passed to the review subprocess over standard input, so a concurrent path replacement after the recheck cannot change the payload the model receives; if a preceding task changes the source file, the run is blocked. Review output and the acceptance report must be files under `artifacts/`. Output paths may not overwrite the config, review input, or one another. All configured tasks are preflighted before any task runs.
 
 ## Execution and exit behavior
 
@@ -44,12 +44,20 @@ If `semantic-review` is configured, a caller must pass both review paths. Review
 
 The runner reuses `scripts/acceptance_report.py` and emits only the current commit SHA, SHA-256 pin of the stable acceptance contract, runner version label, per-task status, and overall status. It never copies task output, environment variables, API keys, or raw logs into the report.
 
-A passing runner result establishes only that the configured fixed tasks exited successfully on the recorded commit. It is not proof that semantic review detects every defect and is not authorization to merge, deploy, or perform project actions.
+A passing runner result establishes only that the configured fixed tasks exited successfully on the recorded commit. The semantic-review input is caller-supplied: its SHA-256 fingerprint guarantees only that the payload is unchanged between preflight and review, not that its diff corresponds to the current Git `HEAD`. The report's `commit_sha` identifies the runner worktree, not the reviewed diff's target commit unless the caller separately establishes that linkage. It is not proof that semantic review detects every defect and is not authorization to merge, deploy, or perform project actions.
 
 ## Security boundaries
 
 - Unknown task IDs fail closed in `scripts/harness_config.py`.
 - The runner never evaluates configuration text as shell code and does not accept executable paths or arbitrary arguments from config.
+- Trusted source inputs (`tests/`, the semantic-review script, and the stable acceptance contract) must resolve inside the project root, outside `artifacts/`, and contain no symlinked source paths. Caller-supplied config/report/review paths reject symlink components before reads or writes.
+- The semantic-review output must not alias the Harness config, even when both paths are inside `artifacts/`; generated report/review outputs are revalidated immediately before report emission.
+- Each semantic-review finding's `rule_quote` must be an exact substring of either `global_rules` or `project_instructions` individually; a quote assembled across the boundary between those fields is rejected.
+- Each finding's `line_start`/`line_end` must exactly match the minimum/maximum source lines mapped from its cited diff evidence; merely providing a broad range that happens to include the evidence is rejected. Context-line evidence uses resulting-file line numbers; a deleted file uses old-file coordinates because it has no resulting file. Exact evidence substrings must also be unique within the cited file's diff section; repeated evidence is rejected as ambiguous rather than widened into a multi-location range.
+- Caller-supplied semantic-review input is capped at 4 MiB by both runner and standalone CLI. It is read into a byte snapshot and fingerprinted before task execution, then the source path is rechecked immediately before the semantic-review task. The snapshot bytes are passed to the child over standard input, avoiding a check/use race where a concurrent replacement could otherwise change the bytes actually reviewed. If a preceding task changes or replaces the source input, the run is blocked.
+- The standalone semantic-review CLI rejects symlink components in both input and output paths and writes the final review artifact through a same-directory temporary file plus atomic replacement. This reduces partial-artifact exposure and prevents the final output entry from redirecting a write through a symlink; it is not a general filesystem sandbox against hostile concurrent parent-directory replacement. The artifact is valid JSON with a real trailing newline.
+- After all tasks, the runner rechecks the full Git worktree (tracked changes and non-ignored untracked files outside `artifacts/`) as well as HEAD and ignored Python sources. Task-created or task-modified source files must block report emission. On any blocked run after output paths are safely established, stale report/review artifacts are best-effort removed; cleanup preserves any output path that resolves to a config or review-input path.
+- Before task execution and again after all tasks, the runner rejects ignored Python source files anywhere in the repository that could be imported as project code. It excludes generated `artifacts/`, common virtual-environment directories (`.venv`, `venv`, `env`, `.tox`), and `__pycache__`; the dependency/runtime environment itself is not attested by the source commit.
 - The runner is not a sandbox: test suites are repository code and may have side effects. Run it only against a trusted worktree and review project tests before enabling the runner in CI.
 - All input/output paths must remain within the project root; output files are restricted to `artifacts/`.
 - The semantic-review task may make a provider request only when explicitly configured in the task list and when the required provider environment variables are present. Provider/configuration errors fail closed.

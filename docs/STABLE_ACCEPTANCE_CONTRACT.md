@@ -6,7 +6,7 @@ Status: initial contract for the current semantic-review core. This is not a sta
 
 This contract defines the minimum acceptance behavior for the provider-agnostic semantic-review module in this repository. It is intended to be reusable by unrelated projects without replacing their project-specific instructions, tests, safety constraints, or archive requirements.
 
-The current contract covers input validation, diff integrity, evidence-grounded review output, fail-closed behavior, and CI evidence. It does not define the future orchestration/configuration schema.
+The current contract covers input validation, diff integrity, evidence-grounded review output, fail-closed behavior, and CI evidence. It does not define the future orchestration/configuration schema. JSON parsing for review inputs, provider response envelopes, and model-produced review content must reject duplicate object keys; accepting last-key-wins JSON can make the validated meaning differ from the submitted representation.
 
 ## 2. Required inputs
 
@@ -48,6 +48,7 @@ The following conditions must never yield an accepted passing review:
 - Invalid output schema or unsupported status/severity.
 - Findings whose file, line range, rule quote, or evidence cannot be verified.
 - Missing required provider configuration, network/provider errors, or malformed provider responses.
+- Model-provider response bodies larger than 1 MiB; the client reads at most 1 MiB plus one sentinel byte before failing closed.
 
 The caller must treat validation/provider failures as failure or inconclusive outcomes, not as approval to merge or perform project actions.
 
@@ -76,3 +77,12 @@ Remote GitHub changes are not considered synchronized to a local worktree withou
 Consumers should pin the toolkit to a reviewed immutable commit SHA until a versioned distribution mechanism exists. Each consumer must retain its own project instructions, allowlists, safety checks, acceptance tests, and required progress/archive paths. Do not copy this contract as a substitute for project-specific rules.
 
 This document is a living 0.x contract. A change that weakens a fail-closed rule requires explicit rationale, corresponding tests, and review of the resulting risk; it must not happen implicitly as a side effect of refactoring.
+
+
+## Runner configuration integrity
+
+- Harness configuration must reject duplicate JSON object keys at every nesting level.
+- The config must be tracked by the current Git HEAD and must not resolve under generated `artifacts/`; a blocked run must invalidate stale passing report/review artifacts before configuration validation.
+- Config, report, review-input, and review-output paths reject symlink components. Trusted test, semantic-review, and contract sources must resolve inside the project root, outside `artifacts/`, and contain no symlinked source paths.
+- The runner must preserve fail-fast task ordering and revalidate the full Git worktree (tracked changes and non-ignored untracked files outside `artifacts/`), HEAD commit SHA, ignored Python source inventory, and generated output paths after task execution before writing the final acceptance report. Task-created or task-modified source files must block report emission.
+- Before task execution and again after all tasks, the runner must reject ignored Python source files that could be imported from the project tree, excluding generated artifacts, common virtual-environment directories, and Python cache directories. This protects source-to-commit provenance but does not attest the installed dependency environment.
