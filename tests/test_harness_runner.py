@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
@@ -1280,6 +1281,42 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(report["status"], "passed")
         self.assertEqual(report["tests"], {"python-unittest": "passed"})
 
+
+    @unittest.skipUnless(os.name == "posix", "POSIX process-group behavior")
+    def test_run_task_stops_descendant_after_successful_parent_exit(self):
+        marker = self.root / "late-descendant-write.txt"
+        child_code = (
+            "import pathlib,time; time.sleep(0.4); "
+            f"pathlib.Path({str(marker)!r}).write_text('late mutation')"
+        )
+        task_code = (
+            "import subprocess,sys; "
+            "subprocess.Popen([sys.executable, '-c', sys.argv[1]])"
+        )
+        status, exit_code = harness_runner._run_task(
+            [sys.executable, "-c", task_code, child_code], self.root, 5
+        )
+        self.assertEqual((status, exit_code), ("failed", None))
+        time.sleep(0.6)
+        self.assertFalse(marker.exists())
+
+    @unittest.skipUnless(os.name == "posix", "POSIX process-group behavior")
+    def test_run_task_timeout_stops_descendant_processes(self):
+        marker = self.root / "timed-out-descendant-write.txt"
+        child_code = (
+            "import pathlib,time; time.sleep(0.6); "
+            f"pathlib.Path({str(marker)!r}).write_text('late mutation')"
+        )
+        task_code = (
+            "import subprocess,sys,time; "
+            "subprocess.Popen([sys.executable, '-c', sys.argv[1]]); time.sleep(30)"
+        )
+        status, exit_code = harness_runner._run_task(
+            [sys.executable, "-c", task_code, child_code], self.root, 0.2
+        )
+        self.assertEqual((status, exit_code), ("failed", None))
+        time.sleep(0.8)
+        self.assertFalse(marker.exists())
 
     def test_report_write_failure_cleans_temporary_artifact(self):
         output = self.root / "artifacts" / "report.json"
