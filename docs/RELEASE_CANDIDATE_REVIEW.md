@@ -1,3 +1,13 @@
+## 2026-11-02 — Stacked PR synchronization and current blockers
+
+- PR #1 was reconciled with current main at `74445f42a161b98e25eeb690d3609c366f69379e`. PR #23/#24/#37/#40 now form a clean synchronized stack at `94db1daaea5d2111205e4d92c4ad9fbac0837ddf`, `c8836d419850a6c7fc94fd03c98b141d5da5dc25`, `a6839563ebff0e53642a03fa531551aa6abd8463`, and `6a2900ef34ac23ea1da2da60b8c129b32aadae05` respectively. All are Open and mergeable/clean; none has been merged.
+- Exact-head Push and PR-context CI passed for each synchronized head; evidence is recorded in `docs/PROJECT_PROGRESS.md`. No force-push, branch deletion, main update, tag, release, or deployment occurred.
+- Harness code/test head remains `22d113f618583eab731d637531110b2e2e9fd316`; immutable independent-consumer pin remains `3df51ca949872fdc75d18feb902220b95957ec37`.
+- Private consumer remains unaccepted. Run [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) stopped before runner allocation; annotation [124212281392](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) reports failed recent payments or a spending-limit increase requirement. Its `npm test` runs eight static checks plus JavaScript syntax, not browser E2E; `TESTING.md` leaves browser E2E unchecked. No billing/account/policy setting changed.
+- Release remains not ready: owner approval of 0.x scope, private exact-head acceptance, browser E2E, consumer safeguards/archive-path acceptance, exact candidate selection, and release preflight remain outstanding.
+
+---
+
 ## 2026-11-02 — Two independent consumers passed the current Harness candidate
 
 - Both independent pilot consumers now pin immutable Harness candidate `3df51ca949872fdc75d18feb902220b95957ec37`.
