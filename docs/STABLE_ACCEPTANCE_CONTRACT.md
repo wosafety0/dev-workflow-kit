@@ -94,6 +94,12 @@ This document is a living 0.x contract. A change that weakens a fail-closed rule
 - Before task execution and again after all tasks, the runner must reject ignored importable Python code files (`.py`, `.pyc`, `.so`, `.pyd`) from the project tree, excluding only repository-root generated artifacts and recognized repository-root virtual-environment directories (`.venv`, `venv`, `env`, `.tox`), plus `__pycache__` directories at any depth. Nested project directories with environment-like names are not exempt. This protects source-to-commit provenance but does not attest the installed dependency environment.
 
 
+## Task process lifecycle
+
+- On POSIX, each fixed task must run in a dedicated process session. After the direct task exits, the runner must terminate any remaining processes in that session before performing post-task source-integrity checks; a task that leaves descendants running must fail. The same process-group cleanup must occur on timeout.
+- On non-POSIX systems, the current runner terminates only the direct task process on timeout; descendant cleanup is not guaranteed. Consumers requiring process-tree cleanup must use a POSIX runner until equivalent platform-specific lifecycle control is implemented and verified.
+- Process-group cleanup is not a sandbox. A task can deliberately escape its process group or otherwise affect the host. The runner is intended for trusted worktrees and trusted task code.
+
 ## Python task interpreter isolation
 
 - Fixed Python task invocations in the Harness runner must use isolated mode (`-I`) and disable site initialization (`-S`). This prevents inherited `PYTHONPATH`, user-site packages, `sitecustomize`, and `.pth` startup hooks from altering task imports.
