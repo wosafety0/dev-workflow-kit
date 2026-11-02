@@ -1,3 +1,12 @@
+## 2026-11-03 — Post-archive exact-head verification
+
+- PR #40 is Open/Draft/unmerged at `c393b92a06fd3900d1c3b36c7085156efc895973`, based on PR #37 integration head `a6839563ebff0e53642a03fa531551aa6abd8463`; GitHub reports mergeable/clean.
+- Exact-head Push [41502194116](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41502194116) and PR-context [41502200621](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41502200621) passed all four jobs: 205 offline tests (5 optional skips), 65 Windows Runner tests (2 optional skips), reusable Python and Node/pnpm acceptance, acceptance report upload, and final gate.
+- The Python and Node/pnpm consumers remain pinned to `3df51ca949872fdc75d18feb902220b95957ec37`. Current PR #40 is 16 commits ahead/0 behind that pin; only progress, roadmap, and release-review documents differ. The reusable workflow and semantic-review client blobs are unchanged.
+- PR #31 report-verifier work remains a separate Draft/open stack. Private consumer runtime acceptance, browser E2E, consumer archive-path acceptance, bounded 0.x scope approval, candidate selection, and release preflight remain unresolved. No merge, tag, release, deployment, consumer repin, or policy/permission change occurred.
+
+---
+
 ## 2026-11-02 — Consumer pin code-equivalence verification
 
 - Public Node/pnpm PR #2 and Python PR #5 both pin `3df51ca949872fdc75d18feb902220b95957ec37`. Current candidate/archive head `bc805c5398935b4b95a07e56a63937e8e4a6f500` is 14 commits ahead, 0 behind, and the entire diff is limited to the three progress/release-review documents.

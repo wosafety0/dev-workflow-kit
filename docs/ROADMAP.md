@@ -1,3 +1,15 @@
+# Current status — 2026-11-03 (post-archive exact-head verification)
+
+This section supersedes the 2026-11-02 current-status snapshot below. Historical results remain tied to their named commits.
+
+- **PR #40:** Draft/open/unmerged at `c393b92a06fd3900d1c3b36c7085156efc895973`, based on integration PR #37 head `a6839563ebff0e53642a03fa531551aa6abd8463`; GitHub reports mergeable.
+- **Exact-head CI:** Push [41502194116](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41502194116) and PR-context [41502200621](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41502200621) both passed all four jobs. Offline suite: 205 tests (5 optional skips); Windows Runner suite: 65 tests (2 optional skips); reusable Python and Node/pnpm selftests, acceptance-report upload, and final fail-closed gate passed.
+- **Consumer pin:** Python and Node/pnpm consumers remain on immutable pin `3df51ca949872fdc75d18feb902220b95957ec37`. The current PR #40 head is 16 commits ahead/0 behind that pin, and the intervening diff is limited to three progress/review documents; reusable workflow and semantic-review client blobs are unchanged. No repin is needed.
+- **Independent report-verifier stack:** PR #31 remains separate and Draft/open; it is not included in PR #40. Private consumer exact-head execution, browser E2E, consumer-specific archive-path acceptance, bounded 0.x scope approval, candidate selection, and release preflight remain open.
+- No merge, tag, release, deployment, consumer repin, billing, permission, visibility, secret, or Actions-policy change occurred.
+
+---
+
 # Current status — 2026-11-02
 
 This section supersedes older “current/latest” snapshots below where their branch heads, CI counts, or consumer-pilot count differ. Historical evidence remains valid for the exact commits named.
