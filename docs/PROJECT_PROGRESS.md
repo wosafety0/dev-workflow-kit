@@ -500,3 +500,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The initial test revisions exposed two test/implementation issues before acceptance: the extracted report-builder test initially emitted literal `\\n` in its generated source, then the workflow writer itself emitted a literal backslash-n after JSON. These were corrected; the earlier failed runs are retained as failed evidence and are not counted as validation.
 - Final workflow commit `fe6e77a3c22a0cdccf81c9bd96bbf610f044d5a2` passed exact-head Push CI [40862243915](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40862243915) and PR-context CI [40862251636](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40862251636). The 152-test suite passed, including both report-output redirection regressions; source compilation, report generation/upload, standalone report verification, and the final gate all passed.
 - This is offline workflow/source validation only. It does not claim a new external consumer integration or change any consumer's immutable pin. PR #31 remains Draft/unmerged.
+
+
+## 2026-11-02 — Main CI checkout credential persistence hardening
+
+- Source review of the separate PR #25–#31 consumer-report-verifier stack found that its main `.github/workflows/ci.yml` checkout relied on the default credential-persistence behavior while repository tests and report-building code execute. The reusable consumer workflow already set `persist-credentials: false`; that part was not changed.
+- Added `persist-credentials: false` to the main CI checkout and added `tests/test_ci_workflow_contract.py` to require every checkout step in that workflow to disable credential persistence.
+- This change limits unnecessary persistence of the read-only Actions token in local Git configuration. It does not change token permissions or the consumer workflow's execution trust boundary. Pending exact-head CI.
+

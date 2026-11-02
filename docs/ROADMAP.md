@@ -56,3 +56,12 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - No automatic PR merge or project business actions.
 - Remote GitHub changes must not be described as synced to a local worktree unless independently verified.
 - Documentation conflicts must be resolved under `docs/DOCUMENT_PRECEDENCE.md`; obsolete current-facing descriptions must be updated.
+
+
+## 2026-11-02 — Main CI checkout credential persistence
+
+- [x] Harden the report-verifier feature stack's main CI checkout with `persist-credentials: false`.
+- [x] Add a contract regression test covering every checkout step in `.github/workflows/ci.yml`.
+- [ ] Await exact-head Push and PR CI before marking this security fix verified.
+- The reusable consumer workflow already had credential persistence disabled; it was left unchanged.
+
