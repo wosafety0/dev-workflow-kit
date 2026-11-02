@@ -1321,6 +1321,32 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertFalse(marker.exists())
 
     @unittest.skipUnless(os.name == "nt", "Windows Job Object behavior")
+    def test_windows_job_object_reports_no_descendants_after_task_exit(self):
+        process = subprocess.Popen(
+            [sys.executable, "-c", "pass"],
+            cwd=self.root,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_SUSPENDED,
+        )
+        job_state = None
+        try:
+            job_state = harness_runner._create_windows_job(process)
+            process.communicate(timeout=5)
+            self.assertEqual(process.returncode, 0)
+            descendants = harness_runner._windows_job_has_descendants(
+                job_state, process.pid
+            )
+            self.assertIs(descendants, False, f"unexpected Job Object query result: {descendants!r}")
+        finally:
+            if job_state is not None:
+                harness_runner._close_windows_job(job_state)
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+
+    @unittest.skipUnless(os.name == "nt", "Windows Job Object behavior")
     def test_run_task_executes_and_passes_without_descendants_windows(self):
         marker = self.root / "windows-task-ran.txt"
         task_code = (
