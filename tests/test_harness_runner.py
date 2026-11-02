@@ -1328,7 +1328,7 @@ class HarnessRunnerTests(unittest.TestCase):
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            creationflags=subprocess.CREATE_SUSPENDED,
+            creationflags=0x00000004,  # Win32 CREATE_SUSPENDED
         )
         job_state = None
         try:
