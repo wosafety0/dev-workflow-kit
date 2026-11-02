@@ -861,3 +861,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 ## Release-review documentation synchronization — 2026-11-02
 - Updated the release-candidate review's leading status section with the POSIX descendant-process finding, verified implementation evidence, and non-POSIX limitation. The 0.x release decision and outstanding consumer/owner gates are unchanged.
 - Documentation archive head `91b96808cf63da7b42039bce428423c430158e04` passed exact-head Push CI [41365245949](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41365245949) and PR-context CI [41365252280](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41365252280). All three jobs succeeded in both runs; offline suite reported **198 tests, OK**.
+
+
+## Windows Job Object descendant cleanup — 2026-11-02 (verification pending)
+- Added a Windows task-launch path that creates the process suspended, assigns it to a Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, and resumes only after successful assignment. After normal parent exit, active Job Object process accounting detects residual descendants; timeout and error paths close the Job Object. Setup/accounting failures fail closed.
+- Added Windows-only delayed-descendant regressions for normal parent exit and timeout, plus a `windows-latest` CI job that compiles the project and runs `tests/test_harness_runner.py`.
+- Updated the Runner guide, stable acceptance contract, and release-candidate review to define the Windows lifecycle contract and Job Object limitations.
+- Source/test/workflow commits: implementation `f9ca4165ca62a7a93ae18331519c78bafdc7c75e`, Windows regressions `afe668ba86e20316dcff38c9954f26488e5576c0`, Windows CI job `56f72b540030ee3dcb0a2e05b2b5e186120dacbd`, fail-closed exception handling `77e0fae033c8b68b4b615e2ed19d7a9d2bfc0b09`.
+- Status: **IMPLEMENTED; Windows execution pending**. POSIX evidence remains independently verified; do not claim Windows or cross-platform verification until the exact-head Windows CI job succeeds.
