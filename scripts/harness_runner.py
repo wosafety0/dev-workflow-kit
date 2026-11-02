@@ -14,9 +14,11 @@ import json
 import types
 import os
 import re
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -327,28 +329,80 @@ def _task_argv(
     raise HarnessRunnerError(f"No reviewed runner implementation for task ID: {task_id}")
 
 
+def _terminate_process_group(process_group_id: int, grace_seconds: float = 0.5) -> bool:
+    """Stop remaining POSIX task descendants; return whether the group still existed."""
+    try:
+        os.killpg(process_group_id, signal.SIGTERM)
+    except ProcessLookupError:
+        return False
+    except OSError:
+        return True
+
+    deadline = time.monotonic() + grace_seconds
+    while time.monotonic() < deadline:
+        try:
+            os.killpg(process_group_id, 0)
+        except ProcessLookupError:
+            return True
+        except OSError:
+            break
+        time.sleep(0.05)
+
+    try:
+        os.killpg(process_group_id, signal.SIGKILL)
+    except OSError:
+        pass
+    return True
+
+
 def _run_task(
     argv: list[str],
     root: Path,
     timeout_seconds: int,
     stdin_data: bytes | None = None,
 ) -> tuple[str, int | None]:
+    process: subprocess.Popen[bytes] | None = None
+    posix_process_group = os.name == "posix"
     try:
-        run_options: dict[str, Any] = {
-            "cwd": root,
-            "stdout": subprocess.DEVNULL,
-            "stderr": subprocess.DEVNULL,
-            "timeout": timeout_seconds,
-            "check": False,
-        }
-        if stdin_data is not None:
-            run_options["input"] = stdin_data
-        result = subprocess.run(argv, **run_options)
-    except subprocess.TimeoutExpired:
-        return "failed", None
+        process = subprocess.Popen(
+            argv,
+            cwd=root,
+            stdin=subprocess.PIPE if stdin_data is not None else subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=posix_process_group,
+        )
+        try:
+            process.communicate(input=stdin_data, timeout=timeout_seconds)
+        except subprocess.TimeoutExpired:
+            if posix_process_group:
+                _terminate_process_group(process.pid)
+            else:
+                process.kill()
+            process.wait()
+            return "failed", None
+        except OSError:
+            if posix_process_group:
+                _terminate_process_group(process.pid)
+            else:
+                process.kill()
+            process.wait()
+            return "failed", None
+
+        # A task is not complete while a child it launched is still running.
+        # POSIX tasks get a private session so ordinary descendants can be reaped
+        # after both normal exit and timeout, before source-integrity checks run.
+        if posix_process_group and _terminate_process_group(process.pid):
+            return "failed", None
+        return ("passed", process.returncode) if process.returncode == 0 else ("failed", process.returncode)
     except OSError:
+        if process is not None and process.poll() is None:
+            if posix_process_group:
+                _terminate_process_group(process.pid)
+            else:
+                process.kill()
+            process.wait()
         return "failed", None
-    return ("passed", result.returncode) if result.returncode == 0 else ("failed", result.returncode)
 
 
 def _read_review_input(path: Path, field: str) -> bytes:
@@ -684,7 +738,7 @@ def main(argv: list[str] | None = None) -> int:
                     isolated_argv, root, args.timeout_seconds, task_stdin
                 )
             outcomes[task_id] = status
-            suffix = " (timeout or launch failure)" if exit_code is None and status == "failed" else (
+            suffix = " (timeout, launch, or descendant-cleanup failure)" if exit_code is None and status == "failed" else (
                 f" (exit {exit_code})" if exit_code not in (None, 0) else ""
             )
             print(f"Task {task_id}: {status}{suffix}")
