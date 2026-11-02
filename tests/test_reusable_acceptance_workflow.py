@@ -358,6 +358,7 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
 
 
 
+
     def test_trusted_shell_steps_clear_consumer_startup_and_loader_variables(self):
         source = WORKFLOW.read_text(encoding="utf-8")
         markers = (
@@ -373,7 +374,10 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
                 self.assertIn("BASH_ENV: /dev/null", block)
                 self.assertIn('LD_PRELOAD: ""', block)
                 self.assertIn('LD_AUDIT: ""', block)
-        self.assertIn("LD_LIBRARY_PATH: /usr/lib:/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu", block)
+                self.assertIn(
+                    "LD_LIBRARY_PATH: /usr/lib:/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu",
+                    block,
+                )
                 self.assertIn(
                     "PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
                     block,
@@ -388,7 +392,10 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
         self.assertIn('NODE_PATH: ""', block)
         self.assertIn('LD_PRELOAD: ""', block)
         self.assertIn('LD_AUDIT: ""', block)
-        self.assertIn("LD_LIBRARY_PATH: /usr/lib:/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu", block)
+        self.assertIn(
+            "LD_LIBRARY_PATH: /usr/lib:/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu",
+            block,
+        )
         self.assertIn(
             "PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
             block,
@@ -413,7 +420,6 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse(marker.exists())
-
 
 
 if __name__ == "__main__":
