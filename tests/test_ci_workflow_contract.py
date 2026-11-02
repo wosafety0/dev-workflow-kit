@@ -27,6 +27,11 @@ class CIWorkflowContractTests(unittest.TestCase):
                     r"(?m)^\s+persist-credentials:\s*false\s*$",
                 )
 
+    def test_upload_artifact_uses_node24_compatible_v7_pin(self):
+        expected = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2"
+        self.assertEqual(self.source.count("uses: actions/upload-artifact@"), 1)
+        self.assertEqual(self.source.count("uses: " + expected), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

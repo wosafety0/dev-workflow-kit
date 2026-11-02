@@ -508,3 +508,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added `persist-credentials: false` to the main CI checkout and added `tests/test_ci_workflow_contract.py` to require every checkout step in that workflow to disable credential persistence.
 - This change limits unnecessary persistence of the read-only Actions token in local Git configuration. It does not change token permissions or the consumer workflow's execution trust boundary. Exact-head implementation/test commit `c873e1567f4688a0e8623ee9af5e38effc1dec76` passed Push [41459437408](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459437408) and PR [41459446214](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459446214), each with **153 tests**. The subsequent documentation archive head `064013ce3a09fc5778343e9ffd37fde0b56f349f` also passed Push [41459685402](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459685402) and PR [41459694362](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459694362), each with **153 tests**.
 
+
+
+## 2026-11-02 — Upload Artifact Node 24 compatibility
+
+- Both workflows in this report-verifier feature stack still pinned `actions/upload-artifact@v4.6.2`, whose official `action.yml` declares `runs.using: node20`. GitHub's runner changelog states Node 20 was removed on 2026-09-23. Updated both CI and reusable consumer workflow pins to `v7.0.2` (`cf430e030ddbb5b0abf93d22962f4752f3646cd9`); the official `v7.0.2/action.yml` declares `runs.using: node24`.
+- Added regression assertions in the CI and reusable-workflow contract suites to require the Node 24-compatible immutable pin and exactly one upload action per workflow.
+- Evidence: [GitHub Node 20 removal notice](https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/) (removal 2026-09-23); [upload-artifact v7.0.2 release](https://github.com/actions/upload-artifact/releases/tag/v7.0.2). Pending exact-head CI.
+

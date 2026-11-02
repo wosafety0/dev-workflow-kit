@@ -338,5 +338,12 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
         self.assertNotIn("python3 scripts/verify_consumer_acceptance_report.py", source)
 
 
+    def test_upload_artifact_uses_node24_compatible_v7_pin(self):
+        source = WORKFLOW.read_text(encoding="utf-8")
+        expected = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2"
+        self.assertEqual(source.count("uses: actions/upload-artifact@"), 1)
+        self.assertEqual(source.count("uses: " + expected), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

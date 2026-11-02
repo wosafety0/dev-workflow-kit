@@ -65,3 +65,12 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [x] Exact-head implementation/test commit `c873e1567f4688a0e8623ee9af5e38effc1dec76` passed Push [41459437408](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459437408) and PR [41459446214](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459446214), each with **153 tests**. Documentation archive head `064013ce3a09fc5778343e9ffd37fde0b56f349f` also passed Push [41459685402](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459685402) and PR [41459694362](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459694362), each with **153 tests**.
 - The reusable consumer workflow already had credential persistence disabled; it was left unchanged.
 
+
+
+## 2026-11-02 — Upload Artifact Node 24 compatibility
+
+- [x] Replace the Node 20 `actions/upload-artifact@v4.6.2` pin in both workflows with immutable `v7.0.2` commit `cf430e030ddbb5b0abf93d22962f4752f3646cd9`.
+- [x] Add CI and reusable-workflow regression assertions for the Node 24-compatible pin.
+- [ ] Await exact-head Push and PR CI.
+- GitHub's official v4.6.2 action metadata declares Node 20; v7.0.2 declares Node 24. GitHub removed the Node 20 runner runtime on 2026-09-23.
+
