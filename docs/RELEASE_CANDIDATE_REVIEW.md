@@ -1,3 +1,12 @@
+## 2026-11-02 — Separate report-verifier and optional Git-bound-review stacks
+
+- PRs #25–#31 form a clean report-verifier stack, but it is not part of PR #40. The current reusable workflow does not generate or verify a consumer acceptance report. Exact PR #31 head `10c5036e2889a9a28e05c3494b964dbb0023b088` passed Push [40862336044](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40862336044) and PR [40862345454](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40862345454).
+- PR #38 is a clean optional Git-bound-review candidate, but its `--review-base`/`--review-head` API and schema v2/v3 differ from PR #40's mandatory `--review-base-commit` contract. Exact head `98edf6412d9866f4d6fe17d4c3029b4a14864945` passed Push [41020283705](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41020283705) and PR [41020289268](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41020289268). Do not merge as-is.
+- PR #39 is documentation-only and its hosted artifact-failure evidence is already in the current roadmap. Original #32/#33 are dirty; reconstructed #34/#35 and unified #37 carry their intended changes; #36 is superseded by #37.
+- Recommendation: keep report-verifier and optional provenance enhancements out of the current candidate until the repository owner approves the bounded 0.x scope. They can be evaluated as a separate follow-up release. No PR was closed or merged.
+
+---
+
 ## 2026-11-02 — Stacked PR synchronization and current blockers
 
 - PR #1 was reconciled with current main at `74445f42a161b98e25eeb690d3609c366f69379e`. PR #23/#24/#37/#40 now form a clean synchronized stack at `94db1daaea5d2111205e4d92c4ad9fbac0837ddf`, `c8836d419850a6c7fc94fd03c98b141d5da5dc25`, `a6839563ebff0e53642a03fa531551aa6abd8463`, and `6a2900ef34ac23ea1da2da60b8c129b32aadae05` respectively. All are Open and mergeable/clean; none has been merged.
