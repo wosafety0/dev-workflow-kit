@@ -970,3 +970,11 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The current reusable workflow checks out consumer code and executes the declared command; it does not generate or upload consumer artifacts or write into consumer archive paths. The command remains executable consumer code, not a sandbox. This source/diff audit confirms no application/native-workflow replacement in the three pilots, but does not prove private runtime behavior or browser/archive-path E2E.
 - Stage 4 is partially verified for the public and Python consumers. Private exact-head runtime acceptance, Tampermonkey/ChatGPT browser E2E, and complete consumer-specific archive-path acceptance remain open. No consumer code, secrets, deployment, permissions, billing, visibility, or Actions policy changed.
 
+
+
+## 2026-11-02 — Final preservation-audit head verification
+
+- Pre-archive PR #40 head `340f7eeab5d760fe6c1f6a1fe71c4116c6e54a31` is Open/Draft, mergeable/clean, based on PR #37 head `a6839563ebff0e53642a03fa531551aa6abd8463`.
+- Exact-head Push [41448474168](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41448474168) and PR-context [41448482676](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41448482676) both passed all four jobs: **205 offline tests**, **65 Windows Runner tests**, and Python/Node-pnpm reusable acceptance selftests.
+- Consumer diff preservation audit and deferred-stack boundaries are recorded above and in the current roadmap/release review. No PR merge, tag, release, deployment, consumer code change, account setting, or Actions-policy change occurred.
+
