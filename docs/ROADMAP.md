@@ -74,3 +74,12 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [x] Exact-head implementation/test commit `a55d8bf2ca5cfa133bd6536f3714226181157b03` passed Push [41460735695](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41460735695) and PR [41460744746](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41460744746), each with **155 tests**. Both upload-artifact pin regressions and checkout credential-persistence regression passed.
 - GitHub's official v4.6.2 action metadata declares Node 20; v7.0.2 declares Node 24. GitHub removed the Node 20 runner runtime on 2026-09-23.
 
+
+
+## 2026-11-02 — isolate trusted consumer report steps
+
+- [x] Prevent consumer-controlled `GITHUB_PATH` changes and workspace module shadowing from affecting the report producer or inline verifier.
+- [x] Run both trusted inline Python steps from `$RUNNER_TEMP` using the absolute `/usr/bin/python3 -I` interpreter; resolve the report under `GITHUB_WORKSPACE`.
+- [x] Add regression coverage that executes the exact inline source from an isolated temporary directory containing same-named `json.py` and `os.py` shadow modules, and assert both workflow steps use the isolated absolute interpreter.
+- Initial exact-head PR CI for implementation/test head `fe00d1b6b6fc6bd19d6a68eb1936c95973e0bceb`: [41464429903](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41464429903) succeeded. The final docs/archive head still requires exact-head Push and PR CI.
+- This is an offline workflow hardening change. It does not make consumer test commands safe to run with secrets or write permissions; no consumer pin, permission, merge, tag, release, or deployment was changed.
