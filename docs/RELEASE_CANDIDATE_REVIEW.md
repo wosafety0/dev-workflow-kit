@@ -1,3 +1,11 @@
+## 2026-11-02 — Consumer pin code-equivalence verification
+
+- Public Node/pnpm PR #2 and Python PR #5 both pin `3df51ca949872fdc75d18feb902220b95957ec37`. Current candidate/archive head `bc805c5398935b4b95a07e56a63937e8e4a6f500` is 14 commits ahead, 0 behind, and the entire diff is limited to the three progress/release-review documents.
+- The reusable workflow blob is identical at both refs (`a5fccae44358222a0d453c33afbe90f95d29f191`); the semantic-review client blob is also identical (`49c342490b9732df03a4f56e1b393ddcaf133839`). Existing public/Python consumer acceptance therefore covers the current candidate code; no rerun or repin is necessary.
+- Private PR #1 remains pinned to `37dc07c7d7055a740c754ab543eeecc9e01d9db0` and has no successful runtime acceptance. Private execution, browser E2E, and archive-path acceptance remain open.
+
+---
+
 ## 2026-11-02 — Final preservation-audit CI verification
 
 - Pre-archive PR #40 head `340f7eeab5d760fe6c1f6a1fe71c4116c6e54a31` passed exact-head Push [41448474168](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41448474168) and PR-context [41448482676](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41448482676). All four jobs passed: **205 offline tests**, **65 Windows Runner tests**, and reusable Python/Node-pnpm selftests.

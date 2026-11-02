@@ -978,3 +978,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Exact-head Push [41448474168](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41448474168) and PR-context [41448482676](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41448482676) both passed all four jobs: **205 offline tests**, **65 Windows Runner tests**, and Python/Node-pnpm reusable acceptance selftests.
 - Consumer diff preservation audit and deferred-stack boundaries are recorded above and in the current roadmap/release review. No PR merge, tag, release, deployment, consumer code change, account setting, or Actions-policy change occurred.
 
+
+
+## 2026-11-02 — Consumer pin code-equivalence verification
+
+- Compared consumer pin `3df51ca949872fdc75d18feb902220b95957ec37` with current candidate/archive head `bc805c5398935b4b95a07e56a63937e8e4a6f500`: Git reports exactly **14 commits ahead, 0 behind**, and all changed paths are the three progress/release-review documents. No source, tests, or workflow files changed after the consumer pin.
+- Independently read both revisions: `.github/workflows/reusable-acceptance.yml` has identical blob SHA `a5fccae44358222a0d453c33afbe90f95d29f191`; `scripts/ai_semantic_review.py` has identical blob SHA `49c342490b9732df03a4f56e1b393ddcaf133839`. The public Node/pnpm PR #2 and Python PR #5 both pin `3df51ca...`; their existing acceptance evidence therefore covers the current candidate code, while the intervening commits only improve documentation. No consumer rerun or repin is needed.
+- Private consumer PR #1 still pins `37dc07c7d7055a740c754ab543eeecc9e01d9db0`; its Actions execution remains blocked before runner allocation. This parity check does not close private runtime, browser E2E, or consumer archive-path gates.
