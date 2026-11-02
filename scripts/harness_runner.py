@@ -421,6 +421,8 @@ def _create_windows_job(process: subprocess.Popen[bytes]):
         ctypes.POINTER(wintypes.DWORD),
     ]
     kernel32.QueryInformationJobObject.restype = wintypes.BOOL
+    kernel32.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel32.TerminateJobObject.restype = wintypes.BOOL
     kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
     kernel32.CloseHandle.restype = wintypes.BOOL
 
@@ -470,6 +472,10 @@ def _windows_job_has_active_processes(job_state) -> bool | None:
 def _close_windows_job(job_state) -> bool:
     """Close the last Job Object handle; KILL_ON_JOB_CLOSE stops all remaining members."""
     kernel32, job, _ = job_state
+    if kernel32.CloseHandle(job):
+        return True
+    # A failed close must not leave a live task tree behind.
+    kernel32.TerminateJobObject(job, 1)
     return bool(kernel32.CloseHandle(job))
 
 
