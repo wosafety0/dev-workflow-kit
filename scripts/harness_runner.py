@@ -393,17 +393,7 @@ def _create_windows_job(process: subprocess.Popen[bytes]):
             ("PeakJobMemoryUsed", ctypes.c_size_t),
         ]
 
-    class BasicAccountingInformation(ctypes.Structure):
-        _fields_ = [
-            ("TotalUserTime", ctypes.c_longlong),
-            ("TotalKernelTime", ctypes.c_longlong),
-            ("ThisPeriodTotalUserTime", ctypes.c_longlong),
-            ("ThisPeriodTotalKernelTime", ctypes.c_longlong),
-            ("TotalPageFaultCount", wintypes.DWORD),
-            ("TotalProcesses", wintypes.DWORD),
-            ("ActiveProcesses", wintypes.DWORD),
-            ("TotalTerminatedProcesses", wintypes.DWORD),
-        ]
+
 
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
@@ -449,24 +439,44 @@ def _create_windows_job(process: subprocess.Popen[bytes]):
             raise OSError("Popen primary thread handle is unavailable")
         if kernel32.ResumeThread(wintypes.HANDLE(int(thread_handle))) == 0xFFFFFFFF:
             raise OSError(ctypes.get_last_error(), "ResumeThread failed")
-        return kernel32, job, BasicAccountingInformation
+        return kernel32, job
     except Exception:
         kernel32.CloseHandle(job)
         raise
 
 
-def _windows_job_has_active_processes(job_state) -> bool | None:
-    """Return whether descendants remain, or None when Job Object accounting fails."""
+def _windows_job_has_descendants(job_state, root_pid: int) -> bool | None:
+    """Return whether a Job Object contains any process other than its task root."""
     import ctypes
     from ctypes import wintypes
 
-    kernel32, job, accounting_type = job_state
-    accounting = accounting_type()
-    if not kernel32.QueryInformationJobObject(
-        job, 1, ctypes.byref(accounting), ctypes.sizeof(accounting), None
-    ):
-        return None
-    return accounting.ActiveProcesses > 0
+    kernel32, job = job_state
+    pointer_size = ctypes.sizeof(ctypes.c_size_t)
+    header_size = ctypes.sizeof(wintypes.DWORD) * 2
+    buffer_size = header_size + pointer_size * 16
+    while buffer_size <= 1024 * 1024:
+        buffer = ctypes.create_string_buffer(buffer_size)
+        returned = wintypes.DWORD()
+        if kernel32.QueryInformationJobObject(
+            job, 3, buffer, buffer_size, ctypes.byref(returned)
+        ):
+            count = wintypes.DWORD.from_buffer(buffer, ctypes.sizeof(wintypes.DWORD)).value
+            capacity = (buffer_size - header_size) // pointer_size
+            if count > capacity:
+                return None
+            for index in range(count):
+                offset = header_size + index * pointer_size
+                pid = int.from_bytes(
+                    buffer.raw[offset:offset + pointer_size], byteorder=sys.byteorder
+                )
+                if pid != root_pid:
+                    return True
+            return False
+        error = ctypes.get_last_error()
+        if error != 234 or returned.value <= buffer_size:
+            return None
+        buffer_size = returned.value
+    return None
 
 
 def _close_windows_job(job_state) -> bool:
@@ -519,7 +529,7 @@ def _run_task(
         if posix_process_group and _terminate_process_group(process.pid):
             return "failed", None
         if windows_job is not None:
-            descendants_remain = _windows_job_has_active_processes(windows_job)
+            descendants_remain = _windows_job_has_descendants(windows_job, process.pid)
             closed = _close_windows_job(windows_job)
             windows_job = None
             if descendants_remain is None or descendants_remain or not closed:
