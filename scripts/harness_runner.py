@@ -521,8 +521,13 @@ def _windows_job_has_descendants(job_state, root_pid: int) -> bool | None:
         if kernel32.QueryInformationJobObject(
             job, 3, buffer, buffer_size, ctypes.byref(returned)
         ):
+            assigned = wintypes.DWORD.from_buffer(buffer, 0).value
             count = wintypes.DWORD.from_buffer(buffer, ctypes.sizeof(wintypes.DWORD)).value
             capacity = (buffer_size - header_size) // pointer_size
+            if count < assigned:
+                required_size = header_size + pointer_size * assigned
+                buffer_size = max(required_size, buffer_size * 2)
+                continue
             if count > capacity:
                 return None
             for index in range(count):
