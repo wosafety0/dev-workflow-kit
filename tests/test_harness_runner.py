@@ -1320,6 +1320,42 @@ class HarnessRunnerTests(unittest.TestCase):
         time.sleep(0.8)
         self.assertFalse(marker.exists())
 
+    @unittest.skipUnless(os.name == "nt", "Windows Job Object behavior")
+    def test_run_task_stops_descendant_after_successful_parent_exit_windows(self):
+        marker = self.root / "late-windows-descendant-write.txt"
+        child_code = (
+            "import pathlib,time; time.sleep(0.6); "
+            f"pathlib.Path({str(marker)!r}).write_text('late mutation')"
+        )
+        task_code = (
+            "import subprocess,sys; "
+            "subprocess.Popen([sys.executable, '-c', sys.argv[1]])"
+        )
+        status, exit_code = harness_runner._run_task(
+            [sys.executable, "-c", task_code, child_code], self.root, 5
+        )
+        self.assertEqual((status, exit_code), ("failed", None))
+        time.sleep(0.8)
+        self.assertFalse(marker.exists())
+
+    @unittest.skipUnless(os.name == "nt", "Windows Job Object behavior")
+    def test_run_task_timeout_stops_descendant_processes_windows(self):
+        marker = self.root / "timed-out-windows-descendant-write.txt"
+        child_code = (
+            "import pathlib,time; time.sleep(0.8); "
+            f"pathlib.Path({str(marker)!r}).write_text('late mutation')"
+        )
+        task_code = (
+            "import subprocess,sys,time; "
+            "subprocess.Popen([sys.executable, '-c', sys.argv[1]]); time.sleep(30)"
+        )
+        status, exit_code = harness_runner._run_task(
+            [sys.executable, "-c", task_code, child_code], self.root, 0.2
+        )
+        self.assertEqual((status, exit_code), ("failed", None))
+        time.sleep(1.0)
+        self.assertFalse(marker.exists())
+
     def test_report_write_failure_cleans_temporary_artifact(self):
         output = self.root / "artifacts" / "report.json"
         with patch(
