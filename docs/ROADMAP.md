@@ -71,6 +71,6 @@ When current-facing documents conflict, follow the latest applicable, verified p
 
 - [x] Replace the Node 20 `actions/upload-artifact@v4.6.2` pin in both workflows with immutable `v7.0.2` commit `cf430e030ddbb5b0abf93d22962f4752f3646cd9`.
 - [x] Add CI and reusable-workflow regression assertions for the Node 24-compatible pin.
-- [ ] Await exact-head Push and PR CI.
+- [x] Exact-head implementation/test commit `a55d8bf2ca5cfa133bd6536f3714226181157b03` passed Push [41460735695](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41460735695) and PR [41460744746](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41460744746), each with **155 tests**. Both upload-artifact pin regressions and checkout credential-persistence regression passed.
 - GitHub's official v4.6.2 action metadata declares Node 20; v7.0.2 declares Node 24. GitHub removed the Node 20 runner runtime on 2026-09-23.
 
