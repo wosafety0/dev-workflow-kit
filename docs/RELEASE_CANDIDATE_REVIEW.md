@@ -1,3 +1,12 @@
+## 2026-11-02 — Consumer source and workflow preservation audit
+
+- Public `AI-Worker-Proxy` PR #2 adds only its Harness pilot workflow; application source, native CI, and deployment workflow are unchanged. Its frozen-lockfile/lint/type-check/Prettier command passed on the recorded exact head.
+- Python `quirrellrevess-Research` PR #5 adds only the pilot workflow and a project progress-doc entry; application source is unchanged. Its repository-owned 19-module command passed **144 tests**, and native CI passed.
+- Private `chatgpt-auto-send-assistant` PR #1 adds only its pilot workflow; source and `TESTING.md` are unchanged. Its eight static checks plus JavaScript syntax do not cover browser behavior; the recorded Actions run is blocked before runner allocation by the billing/spending eligibility annotation.
+- The current reusable workflow does not write consumer artifacts or archive paths. This confirms source/workflow preservation by diff, not private runtime or browser/archive-path E2E. Stage 4 remains partial; no consumer code, secrets, deployment, billing, permissions, visibility, or Actions-policy setting changed.
+
+---
+
 ## 2026-11-02 — Separate report-verifier and optional Git-bound-review stacks
 
 - PRs #25–#31 form a clean report-verifier stack, but it is not part of PR #40. The current reusable workflow does not generate or verify a consumer acceptance report. Exact PR #31 head `10c5036e2889a9a28e05c3494b964dbb0023b088` passed Push [40862336044](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40862336044) and PR [40862345454](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40862345454).
