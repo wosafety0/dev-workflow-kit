@@ -1,3 +1,11 @@
+## 2026-11-02 — Runner task descendant lifecycle audit
+
+- A targeted reproduction showed that a task could spawn a background child, exit successfully, and leave that child running beyond the Runner's post-task source-integrity check. The child could mutate the worktree after the check had already passed.
+- The POSIX Runner now creates a dedicated session/process group per task, terminates residual group members after normal parent exit and on timeout, and marks tasks with remaining descendants as failed. Regression tests cover both normal exit and timeout with delayed-writing descendants.
+- Exact implementation/test head `7699d138a98420bd5cc1fce7a769cd678884246d` passed Push CI [41365075114](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41365075114) and PR-context CI [41365080354](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41365080354). All three jobs passed in both runs; offline suite reported **198 tests, OK**.
+- The documented guarantee is POSIX-specific. Non-POSIX runs currently terminate only the direct task process; descendant cleanup is not guaranteed. Process-group cleanup is not a sandbox and cannot stop tasks that deliberately escape the group.
+- Release decision remains **not ready to tag or release**. Owner approval of the bounded 0.x scope, complete consumer-specific acceptance, private consumer runtime acceptance, browser E2E, and exact release-candidate selection remain outstanding. PR #40 remains Draft/open/unmerged; no merge, tag, release, or deployment occurred.
+
 ## 2026-11-01 — Reusable entrypoint trigger regression guard
 
 - Added `test_reusable_workflow_is_not_directly_triggered` to the reusable workflow contract suite. It asserts the called workflow exposes `workflow_call` and does not acquire direct `push`, `pull_request`, `pull_request_target`, or `workflow_dispatch` triggers. This keeps the acceptance entry point reusable-only; consumer-specific PR trust policy remains the caller's responsibility.
