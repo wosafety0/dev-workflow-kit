@@ -35,6 +35,7 @@ class HarnessRunnerError(ValueError):
 _SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 _MAX_TIMEOUT_SECONDS = 3600
 _MAX_REVIEW_INPUT_BYTES = 4 * 1024 * 1024
+_GIT_DIFF_GENERATION_TIMEOUT_SECONDS = 20
 
 
 def _git_environment() -> dict[str, str]:
@@ -660,7 +661,7 @@ def _run_bounded_git_output(root: Path, args: list[str]) -> bytes:
 
     reader = threading.Thread(target=read_output, daemon=True)
     reader.start()
-    reader.join(timeout=20)
+    reader.join(timeout=_GIT_DIFF_GENERATION_TIMEOUT_SECONDS)
     if reader.is_alive() or len(output) > _MAX_REVIEW_INPUT_BYTES:
         try:
             process.kill()

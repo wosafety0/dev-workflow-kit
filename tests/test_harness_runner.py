@@ -418,6 +418,39 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("Semantic review diff provenance: verified", stdout)
         run_task.assert_called_once()
 
+    def test_semantic_review_rejects_git_diff_generation_timeout_before_task_execution(self):
+        self.write_config(["semantic-review"])
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
+        real_popen = subprocess.Popen
+        processes = []
+
+        def slow_git_diff(args, *popen_args, **popen_kwargs):
+            if args[:2] == ["git", "diff"]:
+                process = real_popen(
+                    [sys.executable, "-c", "import time; time.sleep(30)"],
+                    *popen_args,
+                    **popen_kwargs,
+                )
+                processes.append(process)
+                return process
+            return real_popen(args, *popen_args, **popen_kwargs)
+
+        with patch(
+            "scripts.harness_runner._GIT_DIFF_GENERATION_TIMEOUT_SECONDS", 0.05
+        ), patch(
+            "scripts.harness_runner.subprocess.Popen", side_effect=slow_git_diff
+        ), patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+
+        self.assertEqual(code, 2)
+        self.assertIn("Could not verify semantic-review diff provenance", stderr)
+        self.assertEqual(len(processes), 1)
+        self.assertIsNotNone(processes[0].poll(), "timed-out Git process must be terminated")
+        run_task.assert_not_called()
+
     def test_semantic_review_rejects_canonical_git_diff_over_4_mib_before_task_execution(self):
         self.write_config(["semantic-review"])
         large_source = self.root / "src" / "large.txt"
