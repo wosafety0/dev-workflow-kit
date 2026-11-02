@@ -19,6 +19,12 @@ The workflow writes `artifacts/consumer-acceptance-report.json` with exactly the
 
 The report contains no raw test output, environment dump, credentials, or logs. The producer rejects a symlinked `artifacts/` directory and writes to a temporary file followed by atomic replacement, so a consumer-created symlink or hard link at the report filename cannot redirect the report write. The workflow verifies the report against trusted GitHub context values for both the caller and the actual reusable workflow definition. The `job.workflow_ref` and `job.workflow_sha` values identify the called workflow, while `github.workflow_ref` and `github.workflow_sha` identify the caller. It rejects missing or malformed reports, unknown fields, duplicate JSON object keys, identity mismatches, and any non-passing test status. The final gate separately requires runtime validation, the consumer command, report generation, artifact upload, and report verification to succeed.
 
+## Trusted post-test execution
+
+The consumer-owned command runs before report generation and may write GitHub Actions command files such as `GITHUB_PATH`, or leave Python modules in the checked-out workspace. Therefore the trusted report producer and inline verifier must not resolve Python through the consumer-modifiable `PATH` or import from the consumer workspace. Both steps change directory to the runner's `RUNNER_TEMP`, invoke the runner-provided interpreter by absolute path (`/usr/bin/python3 -I`), and resolve the report only through the runner-provided `GITHUB_WORKSPACE`. Isolated mode prevents Python from honoring consumer-controlled Python path settings or importing same-named modules from the working directory. Regression tests execute the exact inline source in an isolated temporary working directory containing shadow modules and assert the workflow command contract.
+
+This narrows the post-test trust boundary; it does not make an arbitrary consumer test command safe to run with secrets or write-capable permissions. The reusable job remains read-only and checkout credential persistence remains disabled.
+
 ## Consumer responsibility
 
 - Pin the reusable workflow to a reviewed immutable commit SHA rather than a moving branch or tag.
