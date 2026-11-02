@@ -1321,6 +1321,24 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertFalse(marker.exists())
 
     @unittest.skipUnless(os.name == "nt", "Windows Job Object behavior")
+    def test_run_task_fails_closed_when_windows_job_setup_fails(self):
+        marker = self.root / "windows-job-setup-failure-executed.txt"
+        task_code = (
+            "import pathlib,time; time.sleep(0.2); "
+            f"pathlib.Path({str(marker)!r}).write_text('must not execute')"
+        )
+        with patch(
+            "scripts.harness_runner._create_windows_job",
+            side_effect=OSError("simulated Job Object setup failure"),
+        ):
+            status, exit_code = harness_runner._run_task(
+                [sys.executable, "-c", task_code], self.root, 5
+            )
+        self.assertEqual((status, exit_code), ("failed", None))
+        time.sleep(0.4)
+        self.assertFalse(marker.exists())
+
+    @unittest.skipUnless(os.name == "nt", "Windows Job Object behavior")
     def test_windows_job_object_reports_no_descendants_after_task_exit(self):
         process = subprocess.Popen(
             [sys.executable, "-c", "pass"],
