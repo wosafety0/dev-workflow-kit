@@ -26,11 +26,37 @@ class AcceptanceReportVerifierTests(unittest.TestCase):
     def test_accepts_matching_pass_report(self):
         self.assertTrue(verify_report(valid(), SHA, PIN))
 
+    def test_ci_report_tool_identity_matches_verifier_contract(self):
+        workflow = (
+            Path(__file__).resolve().parents[1]
+            / ".github"
+            / "workflows"
+            / "ci.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "TOOL_VERSION: dev-workflow-kit/harness-runner@" + "$" + "{{ github.sha }}",
+            workflow,
+        )
+
     def test_rejects_stale_commit(self):
         self.assertFalse(verify_report(valid(), "c" * 40, PIN))
 
     def test_rejects_wrong_contract_pin(self):
         self.assertFalse(verify_report(valid(), SHA, "sha256:" + "c" * 64))
+
+    def test_rejects_tool_version_not_bound_to_expected_commit(self):
+        for version in ("other", " ", "dev-workflow-kit@" + "c" * 40):
+            with self.subTest(version=version):
+                report = valid()
+                report["tool_version"] = version
+                self.assertFalse(verify_report(report, SHA, PIN))
+
+    def test_rejects_blank_or_untrimmed_test_names(self):
+        for name in ("", " ", " unit", "unit "):
+            with self.subTest(name=name):
+                report = valid()
+                report["tests"] = {name: "passed"}
+                self.assertFalse(verify_report(report, SHA, PIN))
 
     def test_rejects_failed_or_skipped_task(self):
         for status in ("failed", "not_run", "skipped"):
@@ -64,6 +90,34 @@ class AcceptanceReportVerifierTests(unittest.TestCase):
             failed = subprocess.run(command, capture_output=True, text=True)
             self.assertEqual(failed.returncode, 1)
             self.assertNotIn("Traceback", failed.stderr)
+
+    def test_cli_rejects_duplicate_json_object_keys(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "duplicate.json"
+            command = [sys.executable, "scripts/verify_acceptance_report.py",
+                       "--report", str(path), "--expected-sha", SHA,
+                       "--expected-rules-pin", PIN]
+            valid_prefix = (
+                '{"schema_version":1,"commit_sha":"' + SHA
+                + '","rules_pin":"' + PIN
+                + '","tool_version":"dev-workflow-kit/harness-runner@' + SHA
+                + '","tests":{"unit":"passed"}'
+            )
+            raw_reports = (
+                valid_prefix + ',"status":"failed","status":"passed"}',
+                '{"schema_version":1,"commit_sha":"' + SHA
+                + '","rules_pin":"' + PIN
+                + '","tool_version":"dev-workflow-kit/harness-runner@' + SHA
+                + '","tests":{"unit":"failed","unit":"passed"},"status":"passed"}',
+            )
+            for raw in raw_reports:
+
+                with self.subTest(raw=raw):
+                    path.write_text(raw, encoding="utf-8")
+                    result = subprocess.run(command, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn("verification failed", result.stdout)
+                    self.assertNotIn("Traceback", result.stderr)
 
     def test_cli_fails_closed_for_missing_or_corrupt_report(self):
         with tempfile.TemporaryDirectory() as tmp:

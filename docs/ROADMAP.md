@@ -56,3 +56,41 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - No automatic PR merge or project business actions.
 - Remote GitHub changes must not be described as synced to a local worktree unless independently verified.
 - Documentation conflicts must be resolved under `docs/DOCUMENT_PRECEDENCE.md`; obsolete current-facing descriptions must be updated.
+
+
+## 2026-11-02 — Main CI checkout credential persistence
+
+- [x] Harden the report-verifier feature stack's main CI checkout with `persist-credentials: false`.
+- [x] Add a contract regression test covering every checkout step in `.github/workflows/ci.yml`.
+- [x] Exact-head implementation/test commit `c873e1567f4688a0e8623ee9af5e38effc1dec76` passed Push [41459437408](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459437408) and PR [41459446214](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459446214), each with **153 tests**. Documentation archive head `064013ce3a09fc5778343e9ffd37fde0b56f349f` also passed Push [41459685402](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459685402) and PR [41459694362](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459694362), each with **153 tests**.
+- The reusable consumer workflow already had credential persistence disabled; it was left unchanged.
+
+
+
+## 2026-11-02 — Upload Artifact Node 24 compatibility
+
+- [x] Replace the Node 20 `actions/upload-artifact@v4.6.2` pin in both workflows with immutable `v7.0.2` commit `cf430e030ddbb5b0abf93d22962f4752f3646cd9`.
+- [x] Add CI and reusable-workflow regression assertions for the Node 24-compatible pin.
+- [x] Exact-head implementation/test commit `a55d8bf2ca5cfa133bd6536f3714226181157b03` passed Push [41460735695](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41460735695) and PR [41460744746](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41460744746), each with **155 tests**. Both upload-artifact pin regressions and checkout credential-persistence regression passed.
+- GitHub's official v4.6.2 action metadata declares Node 20; v7.0.2 declares Node 24. GitHub removed the Node 20 runner runtime on 2026-09-23.
+
+
+
+## 2026-11-02 — isolate trusted consumer report steps
+
+- [x] Prevent consumer-controlled `GITHUB_PATH` changes and workspace module shadowing from affecting the report producer or inline verifier.
+- [x] Run both trusted inline Python steps from `$RUNNER_TEMP` using the absolute `/usr/bin/python3 -I` interpreter; resolve the report under `GITHUB_WORKSPACE`.
+- [x] Add regression coverage that executes the exact inline source from an isolated temporary directory containing same-named `json.py` and `os.py` shadow modules, and assert both workflow steps use the isolated absolute interpreter.
+- Initial exact-head PR CI for implementation/test head `fe00d1b6b6fc6bd19d6a68eb1936c95973e0bceb`: [41464429903](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41464429903) succeeded. The final docs/archive head still requires exact-head Push and PR CI.
+- This is an offline workflow hardening change. It does not make consumer test commands safe to run with secrets or write permissions; no consumer pin, permission, merge, tag, release, or deployment was changed.
+
+
+### Follow-up — neutralize GitHub Actions environment injection
+
+- [x] Override consumer-supplied `BASH_ENV` in every trusted post-test shell step.
+- [x] Clear `LD_PRELOAD` and `LD_AUDIT`; constrain `LD_LIBRARY_PATH` and `PATH` to runner/system-owned directories for trusted report, verification, artifact, and final-gate steps.
+- [x] Clear `NODE_OPTIONS` and `NODE_PATH` for the Node-based artifact upload action.
+- [x] Add per-step workflow contract tests and a Bash startup-file regression.
+- Implementation workflow commit: `3dc6a42b553141f8bb43649f3ba30c5105226ca0`; final regression-test commit: `eb3136645b7203d22dc774327aecd0cf4c4a7046`.
+- Exact-head PR CI [41465822425](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41465822425) passed **159 offline tests**, compilation, report generation/upload, report verification, and the final gate.
+- Push-triggered CI remains unverified for this exact head; do not mark full two-trigger acceptance until its result is independently read back.
