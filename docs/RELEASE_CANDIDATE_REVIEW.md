@@ -1,9 +1,10 @@
-## 2026-11-02 — Runner task descendant lifecycle audit
+## 2026-11-02 — Cross-platform task descendant lifecycle update
 
-- A targeted reproduction showed that a task could spawn a background child, exit successfully, and leave that child running beyond the Runner's post-task source-integrity check. The child could mutate the worktree after the check had already passed.
-- The POSIX Runner now creates a dedicated session/process group per task, terminates residual group members after normal parent exit and on timeout, and marks tasks with remaining descendants as failed. Regression tests cover both normal exit and timeout with delayed-writing descendants.
-- Exact implementation/test head `7699d138a98420bd5cc1fce7a769cd678884246d` passed Push CI [41365075114](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41365075114) and PR-context CI [41365080354](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41365080354). All three jobs passed in both runs; offline suite reported **198 tests, OK**.
-- The documented guarantee is POSIX-specific. Non-POSIX runs currently terminate only the direct task process; descendant cleanup is not guaranteed. Process-group cleanup is not a sandbox and cannot stop tasks that deliberately escape the group.
+- POSIX process-session cleanup remains implemented and verified by the exact POSIX regression suite (198 tests at implementation head `7699d138a98420bd5cc1fce7a769cd678884246d`).
+- Added Windows Job Object lifecycle control: launch the task suspended, assign it to a Job Object configured with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, then resume. The runner checks active processes after normal parent exit and closes the Job Object on normal, timeout, and error paths; setup/accounting failures fail closed.
+- Added Windows-only regressions for a parent that exits while a delayed-writing child remains and for timeout with a delayed-writing child. Added a `windows-latest` CI job that compiles the source and runs the Harness Runner test module.
+- Windows implementation and tests are **IMPLEMENTED, pending actual Windows CI execution**. They are not yet VERIFIED. The current source does not claim a completed cross-platform guarantee until the Windows job passes.
+- Job Objects are lifecycle controls, not a sandbox. Assignment can fail under restrictive enclosing-job policies and must fail closed; tasks can still cause work through external brokers/services or other host facilities.
 - Release decision remains **not ready to tag or release**. Owner approval of the bounded 0.x scope, complete consumer-specific acceptance, private consumer runtime acceptance, browser E2E, and exact release-candidate selection remain outstanding. PR #40 remains Draft/open/unmerged; no merge, tag, release, or deployment occurred.
 
 ## 2026-11-01 — Reusable entrypoint trigger regression guard
