@@ -1,0 +1,90 @@
+name: Harness CI
+
+on:
+  push:
+    branches: [main, "feat/**", "fix/**", "docs/**", "test/**"]
+  pull_request:
+    branches: [main, "feat/**", "test/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Pin acceptance rules by content hash
+        id: rules
+        shell: bash
+        run: |
+          echo "pin=sha256:$(sha256sum docs/STABLE_ACCEPTANCE_CONTRACT.md | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Compile Python source
+        run: python -m compileall -q scripts tests
+      - name: Run all offline contract tests
+        id: tests
+        continue-on-error: true
+        run: python -m unittest discover -s tests -v
+      - name: Build redacted acceptance report
+        id: report
+        if: always()
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+          RULES_PIN: ${{ steps.rules.outputs.pin }}
+          TOOL_VERSION: dev-workflow-kit@${{ github.sha }}
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from scripts.acceptance_report import build_acceptance_report
+
+          outcome = os.environ.get("TEST_OUTCOME", "skipped")
+          status = {
+              "success": "passed",
+              "failure": "failed",
+              "cancelled": "not_run",
+              "skipped": "not_run",
+          }.get(outcome, "not_run")
+          metadata = {
+              "commit_sha": os.environ["COMMIT_SHA"],
+              "rules_pin": os.environ["RULES_PIN"],
+              "tool_version": os.environ["TOOL_VERSION"],
+              "tests": {"offline-contract-tests": status},
+          }
+          report = build_acceptance_report(metadata)
+          output = Path("artifacts/acceptance-report.json")
+          output.parent.mkdir(parents=True, exist_ok=True)
+          output.write_text(
+              json.dumps(report, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print("Acceptance report written: artifacts/acceptance-report.json")
+          print("Acceptance status: " + report["status"])
+          PY
+      - name: Upload acceptance report
+        id: artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: acceptance-report
+          path: artifacts/acceptance-report.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Fail job unless all required stages succeeded
+        if: always()
+        env:
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+          REPORT_OUTCOME: ${{ steps.report.outcome }}
+          ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
+        run: >-
+          python scripts/ci_gate.py
+          "$TEST_OUTCOME" "$REPORT_OUTCOME" "$ARTIFACT_OUTCOME"
