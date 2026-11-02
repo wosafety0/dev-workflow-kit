@@ -525,3 +525,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Implementation commits: workflow `2ae59623e06d72273746d7bd967316da654cefb1`; regression tests `fe00d1b6b6fc6bd19d6a68eb1936c95973e0bceb`; contract `8f29a64b63154d7c41f74e3337c5afbc379a7ddf`; roadmap `39d8dd992abed808895ba2d6122f34a4e1199fd6`.
 - Initial exact-head PR CI for code/test head `fe00d1b6b6fc6bd19d6a68eb1936c95973e0bceb` passed: [41464429903](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41464429903). The final documentation/archive head still requires exact-head Push and PR CI before this work is marked fully validated.
 - Scope: offline workflow hardening only. No consumer pin, token permission, branch topology, merge, tag, release, deployment, live model request, or game action changed. PR #31 remains Draft/open/unmerged.
+
+## 2026-11-02 — neutralize post-test GitHub Actions environment injection
+
+- Follow-up threat review found that consumer code can also write `GITHUB_ENV` values that affect later steps. In addition to `GITHUB_PATH`, variables such as `BASH_ENV`, `LD_PRELOAD`, `LD_AUDIT`, and `LD_LIBRARY_PATH` can affect trusted shell/interpreter startup; `NODE_OPTIONS` and `NODE_PATH` can affect the Node-based artifact action.
+- Hardened trusted report-generation, verification, and final-gate steps with step-level overrides for `BASH_ENV`, loader variables, and a fixed system-owned `PATH`. `LD_LIBRARY_PATH` is constrained to system library directories rather than an empty path. The artifact action separately clears Node startup/module options and uses the same trusted search paths.
+- Added regressions asserting the exact environment for each trusted step and exercising a hostile Bash startup file against the trusted `BASH_ENV=/dev/null` override.
+- Workflow hardening commit: `3dc6a42b553141f8bb43649f3ba30c5105226ca0`; final regression-test commit: `eb3136645b7203d22dc774327aecd0cf4c4a7046`; contract: `edcf20283daf794b2cd559a1e30124b184b1d956`; roadmap: `5a8fe8fa27b59c26002199043c3a7ef9809d2191`.
+- Exact-head PR CI [41465822425](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41465822425) passed **159 offline tests**, Python compilation, report generation, artifact upload, report verification, and the final orchestration gate.
+- Push-triggered CI for this exact code/test head has not been independently verified. No consumer pin, token permission, branch topology, merge, tag, release, deployment, live model request, or game action changed. PR #31 remains Draft/open/unmerged.
