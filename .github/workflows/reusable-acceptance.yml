@@ -84,6 +84,7 @@ jobs:
           LD_PRELOAD: ""
           LD_AUDIT: ""
           LD_LIBRARY_PATH: ""
+          PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         run: |
           # Do not inherit a consumer-controlled PATH or Python import search path.
           # The consumer command can write GITHUB_PATH and leave modules in the checkout.
@@ -153,6 +154,7 @@ jobs:
           LD_PRELOAD: ""
           LD_AUDIT: ""
           LD_LIBRARY_PATH: ""
+          PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
           if-no-files-found: error
           retention-days: 14
       - name: Verify consumer report identity and passing status
@@ -168,6 +170,7 @@ jobs:
           LD_PRELOAD: ""
           LD_AUDIT: ""
           LD_LIBRARY_PATH: ""
+          PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         shell: bash
         run: |
           # Run from a trusted directory with isolated Python; consumer code can
@@ -253,6 +256,7 @@ jobs:
           LD_PRELOAD: ""
           LD_AUDIT: ""
           LD_LIBRARY_PATH: ""
+          PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         run: |
           failed=()
           [[ "$RUNTIME_OUTCOME" == "success" ]] || failed+=("runtime")
