@@ -1,3 +1,12 @@
+## 2026-11-02 — Canonical Git diff timeout regression and consumer pin freshness
+
+- Promoted the existing 20-second canonical Git diff generation timeout to a named constant and added a regression with a stalled child process. The test proves timeout termination, controlled fail-closed rejection, and no configured task execution.
+- Code/test head `22d113f618583eab731d637531110b2e2e9fd316` passed Push [41443102520](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41443102520) and PR-context [41443112694](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41443112694); all four jobs succeeded in both runs. Offline tests: **205 OK**; Windows Runner tests: **65 OK**; reusable Python and Node/pnpm selftests passed. The timeout regression passed on Linux and Windows.
+- Consumer recheck: public Node/pnpm PR #2 remains accepted only for its historical consumer head and Harness pin `c4cf3e1c11deec098c6a7a6e3837bbe983dcece5` (240 commits behind this code/test head). The Python pilot's 144-test run used pin `c44f77d6f2b0aae07689e6127b203e1df4e3d77b` (75 commits behind). Neither is current-head consumer acceptance. Private consumer PR #1 remains unaccepted; its recorded run failed before runner allocation with no job steps, and browser E2E is absent. The specific pre-run cause was not independently revalidated.
+- PR #40 base SHA `d035dea4426e2dbbb39b22770fc206a5671bfc68` matches PR #37 head. Both PRs remain Draft/open/unmerged. No consumer was modified or repinned. No merge, tag, release, deployment, billing, permissions, visibility, or Actions-policy change occurred.
+
+---
+
 ## 2026-11-02 — Canonical Git diff output bounded during provenance verification
 
 - A focused source review found that the caller-supplied semantic-review input was capped at 4 MiB, but the Runner's generated canonical Git diff was captured with an unbounded `subprocess.run` stdout buffer. A very large committed change could therefore consume excessive Runner memory before the input/diff mismatch was reported.
