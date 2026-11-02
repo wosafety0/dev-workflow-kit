@@ -1779,3 +1779,14 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Updated the consumer PR #2 description with the exact candidate pin and evidence; the PR remains Draft/open/unmerged. The Python consumer's 144-test pilot remains historical at pin `c44f77d6f2b0aae07689e6127b203e1df4e3d77b`; private consumer PR #1 remains unaccepted with no runtime/browser E2E evidence.
 - Harness PR #40 remains Draft/open/unmerged; no merge, tag, release, or deployment was performed.
 
+
+
+## 2026-11-02 — Independent Python consumer accepted on the current Harness candidate
+
+- Updated only the existing Python pilot workflow in `quirrellrevess-code/quirrellrevess-Research` to pin the reusable workflow to immutable Harness candidate `3df51ca949872fdc75d18feb902220b95957ec37`. No application/game automation source, credentials, deployment, or project runtime settings changed.
+- Exact consumer head `a3db027b03f72e7504c4a0d31bae1d1027a0b0dd` passed reusable Python acceptance [41444151275](https://github.com/quirrellrevess-code/quirrellrevess-Research/actions/runs/41444151275): Python 3.12 executed the repository-owned 19-module command; logs report **144 tests, OK**.
+- The same consumer head passed native Auto-training CI [41444150768](https://github.com/quirrellrevess-code/quirrellrevess-Research/actions/runs/41444150768): offline Python tests, AIRedirector patch validation, and .NET 10 passive sink smoke all succeeded.
+- Combined with the Node.js/pnpm consumer exact-head acceptance [41443804502](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41443804502) on consumer head `493e561eab8484975c55360916ae15ea2c8320d9`, the current candidate has now passed two independent consumer runtime paths using the same immutable Harness pin `3df51ca949872fdc75d18feb902220b95957ec37`.
+- Both consumer PRs remain Draft/open/unmerged. The private `chatgpt-auto-send-assistant` consumer remains unaccepted; its last recorded run failed before runner allocation and no browser E2E is available. This does not establish universal compatibility, production readiness, or release approval.
+- Harness PR #40 remains Draft/open/unmerged. No merge, tag, release, deployment, billing, permission, visibility, or Actions-policy change occurred.
+

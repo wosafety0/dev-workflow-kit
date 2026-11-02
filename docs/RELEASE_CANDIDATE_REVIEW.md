@@ -1,3 +1,13 @@
+## 2026-11-02 — Two independent consumers passed the current Harness candidate
+
+- Both independent pilot consumers now pin immutable Harness candidate `3df51ca949872fdc75d18feb902220b95957ec37`.
+- Node.js 26/pnpm consumer `wosafety0/AI-Worker-Proxy`, exact consumer head `493e561eab8484975c55360916ae15ea2c8320d9`, passed reusable acceptance [41443804502](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41443804502), native PR lint/type-check [41443804014](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41443804014), and push lint/type-check [41443797503](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41443797503).
+- Python consumer `quirrellrevess-code/quirrellrevess-Research`, exact consumer head `a3db027b03f72e7504c4a0d31bae1d1027a0b0dd`, passed reusable acceptance [41444151275](https://github.com/quirrellrevess-code/quirrellrevess-Research/actions/runs/41444151275) with **144 tests, OK**, plus native CI [41444150768](https://github.com/quirrellrevess-code/quirrellrevess-Research/actions/runs/41444150768) including offline tests, AIRedirector patch validation, and .NET 10 passive sink smoke.
+- This is current-candidate consumer acceptance for both supported runtime paths, not browser E2E, production deployment, or universal compatibility. The separate private `chatgpt-auto-send-assistant` consumer remains unaccepted with no runner allocation/browser E2E evidence.
+- Both consumer PRs remain Draft/open/unmerged; Harness PR #40 remains Draft/open/unmerged. No merge, tag, release, deployment, application/game action, billing, permission, visibility, or Actions-policy change occurred.
+
+---
+
 ## 2026-11-02 — Independent Node.js consumer passed the current candidate pin
 
 - Updated only the existing public `AI-Worker-Proxy` Draft pilot workflow pin to Harness candidate `3df51ca949872fdc75d18feb902220b95957ec37`; application source, deployment workflow, secrets, permissions, and runtime configuration were unchanged.
