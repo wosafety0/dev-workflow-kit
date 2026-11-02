@@ -21,14 +21,13 @@ HARNESS_WORKFLOW_REF = (
 )
 
 
-def extract_inline_report_builder():
+def _extract_inline_python(marker):
     lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
-    marker = "      - name: Build redacted consumer acceptance report"
     start = lines.index(marker)
     run_index = next(i for i in range(start, len(lines)) if lines[i] == "        run: |")
     heredoc_index = next(
         i for i in range(run_index + 1, len(lines))
-        if lines[i] == "          python3 - <<'PY'"
+        if lines[i] == "          /usr/bin/python3 -I - <<'PY'"
     )
     code = []
     for line in lines[heredoc_index + 1:]:
@@ -38,35 +37,48 @@ def extract_inline_report_builder():
             code.append("")
             continue
         if not line.startswith("          "):
-            raise AssertionError("Unexpected YAML indentation in report builder")
+            raise AssertionError("Unexpected YAML indentation in inline Python")
         code.append(line[10:])
     else:
-        raise AssertionError("Report builder heredoc terminator not found")
+        raise AssertionError("Inline Python heredoc terminator not found")
     return "\n".join(code) + "\n"
+
+
+def extract_inline_report_builder():
+    return _extract_inline_python(
+        "      - name: Build redacted consumer acceptance report"
+    )
 
 
 def extract_inline_verifier():
-    lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
-    marker = "      - name: Verify consumer report identity and passing status"
-    start = lines.index(marker)
-    run_index = next(i for i in range(start, len(lines)) if lines[i] == "        run: |")
-    heredoc_index = next(
-        i for i in range(run_index + 1, len(lines))
-        if lines[i] == "          python3 - <<'PY'"
+    return _extract_inline_python(
+        "      - name: Verify consumer report identity and passing status"
     )
-    code = []
-    for line in lines[heredoc_index + 1:]:
-        if line == "          PY":
-            break
-        if not line.strip():
-            code.append("")
-            continue
-        if not line.startswith("          "):
-            raise AssertionError("Unexpected YAML indentation in inline verifier")
-        code.append(line[10:])
-    else:
-        raise AssertionError("Inline verifier heredoc terminator not found")
-    return "\n".join(code) + "\n"
+
+
+def run_isolated_inline(code, workspace, env):
+    with tempfile.TemporaryDirectory() as runner_temp:
+        runner_root = Path(runner_temp)
+        poison_bin = runner_root / "poison-bin"
+        poison_bin.mkdir()
+        (runner_root / "json.py").write_text(
+            "raise RuntimeError('consumer-controlled json module was imported')\n",
+            encoding="utf-8",
+        )
+        (runner_root / "os.py").write_text(
+            "raise RuntimeError('consumer-controlled os module was imported')\n",
+            encoding="utf-8",
+        )
+        env = env.copy()
+        env.update({
+            "GITHUB_WORKSPACE": str(workspace),
+            "RUNNER_TEMP": str(runner_root),
+            "PATH": str(poison_bin) + os.pathsep + env.get("PATH", ""),
+        })
+        return subprocess.run(
+            [sys.executable, "-I", "-c", code],
+            cwd=runner_root, env=env, capture_output=True, text=True, check=False,
+        )
 
 
 class ReusableAcceptanceWorkflowTests(unittest.TestCase):
@@ -80,6 +92,22 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
         checkout_block = lines[checkout_index:next_step]
         self.assertIn("          persist-credentials: false", checkout_block)
 
+    def test_report_steps_use_absolute_isolated_python_outside_consumer_checkout(self):
+        source = WORKFLOW.read_text(encoding="utf-8")
+        for marker in (
+            "      - name: Build redacted consumer acceptance report",
+            "      - name: Verify consumer report identity and passing status",
+        ):
+            start = source.index(marker)
+            next_step = source.find("\n      - name: ", start + len(marker))
+            block = source[start:] if next_step < 0 else source[start:next_step]
+            self.assertIn('cd "$RUNNER_TEMP"', block)
+            self.assertIn("/usr/bin/python3 -I - <<'PY'", block)
+            self.assertNotIn("python3 - <<'PY'", block.replace(
+                "/usr/bin/python3 -I - <<'PY'", ""
+            ))
+            self.assertIn('Path(os.environ["GITHUB_WORKSPACE"])', block)
+
     def run_inline_report_builder(self, root):
         env = os.environ.copy()
         env.update({
@@ -91,10 +119,7 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
             "RUNTIME_OUTCOME": "success",
             "TEST_OUTCOME": "success",
         })
-        return subprocess.run(
-            [sys.executable, "-c", extract_inline_report_builder()],
-            cwd=root, env=env, capture_output=True, text=True, check=False,
-        )
+        return run_isolated_inline(extract_inline_report_builder(), root, env)
 
     def test_report_builder_rejects_symlinked_artifacts_directory(self):
         with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
@@ -141,10 +166,7 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
                 "EXPECTED_HARNESS_WORKFLOW_REF": expected_harness_ref,
                 "EXPECTED_HARNESS_WORKFLOW_SHA": expected_harness_sha,
             })
-            return subprocess.run(
-                [sys.executable, "-c", extract_inline_verifier()],
-                cwd=root, env=env, capture_output=True, text=True, check=False,
-            )
+            return run_isolated_inline(extract_inline_verifier(), root, env)
 
     def run_inline_verifier(self, report, **kwargs):
         return self.run_inline_verifier_payload(json.dumps(report), **kwargs)
@@ -181,7 +203,6 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
         failed = self.run_inline_verifier(report)
         self.assertEqual(failed.returncode, 1)
         self.assertNotIn("Traceback", failed.stderr)
-
 
     def test_actual_inline_verifier_rejects_workflow_identity_mismatches(self):
         report = {
@@ -223,24 +244,17 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
             "status": "passed",
         }
         cases = []
-        empty_tests = dict(base, tests={})
-        cases.append(empty_tests)
-        missing_required_stage = dict(base, tests={"runtime-validation": "passed"})
-        cases.append(missing_required_stage)
-        unknown_stage = dict(base, tests={
+        cases.append(dict(base, tests={}))
+        cases.append(dict(base, tests={"runtime-validation": "passed"}))
+        cases.append(dict(base, tests={
             "runtime-validation": "passed",
             "consumer-acceptance-command": "passed",
             "unrecognized-stage": "passed",
-        })
-        cases.append(unknown_stage)
-        extra_key = dict(base, unexpected="not allowed")
-        cases.append(extra_key)
-        boolean_version = dict(base, schema_version=True)
-        cases.append(boolean_version)
-        blank_test_name = dict(base, tests={"   ": "passed"})
-        cases.append(blank_test_name)
-        unknown_test_status = dict(base, tests={"runtime-validation": "skipped"})
-        cases.append(unknown_test_status)
+        }))
+        cases.append(dict(base, unexpected="not allowed"))
+        cases.append(dict(base, schema_version=True))
+        cases.append(dict(base, tests={"   ": "passed"}))
+        cases.append(dict(base, tests={"runtime-validation": "skipped"}))
         for report in cases:
             with self.subTest(report=report):
                 result = self.run_inline_verifier(report)
@@ -286,9 +300,8 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
                     HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA,
                 )
                 inline = self.run_inline_verifier(report)
-                inline_valid = inline.returncode == 0
                 self.assertEqual(
-                    inline_valid, standalone_valid,
+                    inline.returncode == 0, standalone_valid,
                     "inline and standalone verifier contract drifted: "
                     + inline.stdout + inline.stderr,
                 )
@@ -334,9 +347,8 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
         verifier_source = source[source.index(
             "      - name: Verify consumer report identity and passing status"
         ):]
-        self.assertIn("python3 - <<'PY'", verifier_source)
+        self.assertIn("/usr/bin/python3 -I - <<'PY'", verifier_source)
         self.assertNotIn("python3 scripts/verify_consumer_acceptance_report.py", source)
-
 
     def test_upload_artifact_uses_node24_compatible_v7_pin(self):
         source = WORKFLOW.read_text(encoding="utf-8")
