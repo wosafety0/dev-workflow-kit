@@ -21,7 +21,8 @@ When current-facing documents conflict, follow the latest applicable, verified p
 
 ## Stage 2 — project contract and deterministic orchestration
 
-- [x] Define a versioned project configuration schema (`docs/HARNESS_CONFIG_V1.md`; validation-only, no runner).
+- [x] Define a versioned project configuration schema (`docs/HARNESS_CONFIG_V1.md`) with an explicit task-ID allowlist.
+- [x] Validate the fixed-behavior task runner (`scripts/harness_runner.py`) on exact PR head `e96c35484bd199e36cc84e4f673a17169c328f5b`: argv arrays only (no shell), repository-root path boundaries, `artifacts/`-only outputs, redacted report, fail-closed task status, end-to-end execution/mapping tests for both allowlisted task IDs, and a validated checked-in example config. Evidence: [CI run 40717650992](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40717650992); 100 offline tests passed.
 - [x] Validate model-provider configuration without requiring a model API.
 - [x] Define a safe, explicit task-ID allowlist; unknown IDs fail closed and configuration does not execute commands.
 - [x] Build a deterministic, strict-allowlist acceptance report with commit SHA, rules pin, tool version, and test status (`docs/ACCEPTANCE_REPORT_V1.md`).

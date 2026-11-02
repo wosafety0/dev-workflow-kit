@@ -1,4 +1,6 @@
+import json
 import unittest
+from pathlib import Path
 
 from scripts.harness_config import (
     ALLOWED_COMMAND_IDS,
@@ -14,6 +16,16 @@ class HarnessConfigValidationTests(unittest.TestCase):
             "project": "example-project",
             "commands": ["python-unittest", "semantic-review"],
         }
+
+    def test_checked_in_example_configs_are_valid(self):
+        examples = Path(__file__).resolve().parents[1] / "examples"
+        for filename, expected_commands in (
+            ("harness-config.json", ["python-unittest"]),
+            ("harness-config-semantic-review.json", ["semantic-review"]),
+        ):
+            with self.subTest(filename=filename):
+                config = json.loads((examples / filename).read_text(encoding="utf-8"))
+                self.assertEqual(validate_harness_config(config)["commands"], expected_commands)
 
     def test_accepts_known_task_ids_offline(self):
         config = self.valid_config()
