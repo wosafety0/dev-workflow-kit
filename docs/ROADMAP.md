@@ -1,3 +1,18 @@
+# Current status — 2026-11-02
+
+This section supersedes older “current/latest” snapshots below where their branch heads, CI counts, or consumer-pilot count differ. Historical evidence remains valid for the exact commits named.
+
+- **Harness candidate:** PR #40 remains Draft/open/unmerged on branch `feat/reusable-node-runtime-20261030`, exact source head `c0292b9a70e6ae756ee335a51b595e5732b53598`, based on `integration/pr24-pr33-pr32-20261030`.
+- **Exact-head CI:** Push [41379809002](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41379809002) and PR-context [41379815675](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41379815675) both succeeded for the exact source head. All four jobs passed: offline tests, Windows Runner tests, reusable Python acceptance, and reusable Node/pnpm acceptance. Logs report **203 offline tests** and **63 Windows Runner tests**.
+- **Independent pilots:** Node.js 26/pnpm consumer [AI-Worker-Proxy PR #2](https://github.com/wosafety0/AI-Worker-Proxy/pull/2) has a recorded passing exact-head acceptance run. A separate Python consumer, `quirrellrevess-code/quirrellrevess-Research`, passed its reusable acceptance run [41363620693](https://github.com/quirrellrevess-code/quirrellrevess-Research/actions/runs/41363620693) with **144 tests** on consumer commit `024f906d0836dbbde4407018159104ce60f10c4c`, pinned to Harness SHA `c44f77d6f2b0aae07689e6127b203e1df4e3d77b`. These demonstrate two distinct consumer runtime paths, not universal compatibility.
+- **Remaining consumer gates:** The separate `chatgpt-auto-send-assistant` consumer remains unaccepted; no successful exact-head runtime or real browser E2E evidence is recorded. A historical check-run annotation cited account payment/spending eligibility, but the current state has not been freshly verified. Do not repeatedly rerun or change billing, visibility, permissions, or Actions policy as a workaround. Consumer-specific safety and archive-path preservation remains open.
+- **Cross-platform runner lifecycle:** POSIX process-group cleanup and Windows Job Object descendant cleanup are implemented and CI-verified. These are task lifecycle controls, not a sandbox; external brokers/services and host facilities remain outside the boundary.
+- **Release decision:** Not ready to tag/release. Repository-owner approval of the bounded 0.x scope, remaining consumer-specific acceptance, exact release-candidate SHA selection, and tag/release preflight remain outstanding. Green CI does not authorize merge or release.
+
+**Next work:** Continue bounded source/security review and keep the current branch's implementation, tests, progress archive, and roadmap synchronized. Do not merge PR #40, create a tag/release, deploy, or change consumer/account settings without the corresponding explicit decision.
+
+---
+
 ## 2026-11-01 — Reusable entrypoint trigger regression guard
 
 - Added `test_reusable_workflow_is_not_directly_triggered` to the reusable workflow contract suite. It asserts the called workflow exposes `workflow_call` and does not acquire direct `push`, `pull_request`, `pull_request_target`, or `workflow_dispatch` triggers. This keeps the acceptance entry point reusable-only; consumer-specific PR trust policy remains the caller's responsibility.
