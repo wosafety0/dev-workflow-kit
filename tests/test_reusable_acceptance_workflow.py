@@ -357,5 +357,64 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
         self.assertEqual(source.count("uses: " + expected), 1)
 
 
+
+    def test_trusted_shell_steps_clear_consumer_startup_and_loader_variables(self):
+        source = WORKFLOW.read_text(encoding="utf-8")
+        markers = (
+            "      - name: Build redacted consumer acceptance report",
+            "      - name: Verify consumer report identity and passing status",
+            "      - name: Fail job unless all required stages succeeded",
+        )
+        for marker in markers:
+            start = source.index(marker)
+            next_step = source.find("\\n      - name: ", start + len(marker))
+            block = source[start:] if next_step < 0 else source[start:next_step]
+            with self.subTest(step=marker):
+                self.assertIn("BASH_ENV: /dev/null", block)
+                self.assertIn('LD_PRELOAD: ""', block)
+                self.assertIn('LD_AUDIT: ""', block)
+                self.assertIn('LD_LIBRARY_PATH: ""', block)
+                self.assertIn(
+                    "PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                    block,
+                )
+
+    def test_artifact_action_clears_consumer_node_and_loader_options(self):
+        source = WORKFLOW.read_text(encoding="utf-8")
+        start = source.index("      - name: Upload consumer acceptance report")
+        next_step = source.find("\\n      - name: ", start + 1)
+        block = source[start:] if next_step < 0 else source[start:next_step]
+        self.assertIn('NODE_OPTIONS: ""', block)
+        self.assertIn('NODE_PATH: ""', block)
+        self.assertIn('LD_PRELOAD: ""', block)
+        self.assertIn('LD_AUDIT: ""', block)
+        self.assertIn('LD_LIBRARY_PATH: ""', block)
+        self.assertIn(
+            "PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            block,
+        )
+
+    def test_step_level_bash_env_override_blocks_consumer_startup_script(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            marker = root / "bash-env-was-sourced"
+            startup = root / "consumer-bash-env.sh"
+            startup.write_text(
+                "open(" + repr(str(marker)) + ", 'w').write('injected')\\n",
+                encoding="utf-8",
+            )
+            env = os.environ.copy()
+            env["BASH_ENV"] = str(startup)
+            # The trusted step-level value overrides the consumer GITHUB_ENV value.
+            env["BASH_ENV"] = "/dev/null"
+            result = subprocess.run(
+                ["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", "echo trusted"],
+                env=env, capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(marker.exists())
+
+
+
 if __name__ == "__main__":
     unittest.main()
