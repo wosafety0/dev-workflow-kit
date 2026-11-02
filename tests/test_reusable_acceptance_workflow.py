@@ -373,7 +373,7 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
                 self.assertIn("BASH_ENV: /dev/null", block)
                 self.assertIn('LD_PRELOAD: ""', block)
                 self.assertIn('LD_AUDIT: ""', block)
-                self.assertIn('LD_LIBRARY_PATH: ""', block)
+                self.assertIn("LD_LIBRARY_PATH: /usr/lib:/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu", block)
                 self.assertIn(
                     "PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
                     block,
@@ -388,7 +388,7 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
         self.assertIn('NODE_PATH: ""', block)
         self.assertIn('LD_PRELOAD: ""', block)
         self.assertIn('LD_AUDIT: ""', block)
-        self.assertIn('LD_LIBRARY_PATH: ""', block)
+                self.assertIn("LD_LIBRARY_PATH: /usr/lib:/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu", block)
         self.assertIn(
             "PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
             block,
@@ -400,7 +400,7 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
             marker = root / "bash-env-was-sourced"
             startup = root / "consumer-bash-env.sh"
             startup.write_text(
-                "open(" + repr(str(marker)) + ", 'w').write('injected')\n",
+                "touch " + repr(str(marker)) + "\\n",
                 encoding="utf-8",
             )
             env = os.environ.copy()
