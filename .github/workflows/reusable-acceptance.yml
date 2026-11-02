@@ -80,6 +80,10 @@ jobs:
           HARNESS_WORKFLOW_SHA: ${{ job.workflow_sha }}
           RUNTIME_OUTCOME: ${{ steps.runtime.outcome }}
           TEST_OUTCOME: ${{ steps.tests.outcome }}
+          BASH_ENV: /dev/null
+          LD_PRELOAD: ""
+          LD_AUDIT: ""
+          LD_LIBRARY_PATH: ""
         run: |
           # Do not inherit a consumer-controlled PATH or Python import search path.
           # The consumer command can write GITHUB_PATH and leave modules in the checkout.
@@ -143,6 +147,12 @@ jobs:
         with:
           name: consumer-acceptance-report
           path: artifacts/consumer-acceptance-report.json
+        env:
+          NODE_OPTIONS: ""
+          NODE_PATH: ""
+          LD_PRELOAD: ""
+          LD_AUDIT: ""
+          LD_LIBRARY_PATH: ""
           if-no-files-found: error
           retention-days: 14
       - name: Verify consumer report identity and passing status
@@ -154,6 +164,10 @@ jobs:
           EXPECTED_WORKFLOW_SHA: ${{ github.workflow_sha }}
           EXPECTED_HARNESS_WORKFLOW_REF: ${{ job.workflow_ref }}
           EXPECTED_HARNESS_WORKFLOW_SHA: ${{ job.workflow_sha }}
+          BASH_ENV: /dev/null
+          LD_PRELOAD: ""
+          LD_AUDIT: ""
+          LD_LIBRARY_PATH: ""
         shell: bash
         run: |
           # Run from a trusted directory with isolated Python; consumer code can
@@ -235,6 +249,10 @@ jobs:
           REPORT_OUTCOME: ${{ steps.report.outcome }}
           ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
           VERIFICATION_OUTCOME: ${{ steps.verification.outcome }}
+          BASH_ENV: /dev/null
+          LD_PRELOAD: ""
+          LD_AUDIT: ""
+          LD_LIBRARY_PATH: ""
         run: |
           failed=()
           [[ "$RUNTIME_OUTCOME" == "success" ]] || failed+=("runtime")
