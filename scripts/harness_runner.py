@@ -355,6 +355,124 @@ def _terminate_process_group(process_group_id: int, grace_seconds: float = 0.5) 
     return True
 
 
+def _create_windows_job(process: subprocess.Popen[bytes]):
+    """Assign a suspended task to a kill-on-close Windows Job Object, then resume it."""
+    import ctypes
+    from ctypes import wintypes
+
+    class BasicLimitInformation(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", ctypes.c_longlong),
+            ("PerJobUserTimeLimit", ctypes.c_longlong),
+            ("LimitFlags", wintypes.DWORD),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", wintypes.DWORD),
+            ("Affinity", ctypes.c_size_t),
+            ("PriorityClass", wintypes.DWORD),
+            ("SchedulingClass", wintypes.DWORD),
+        ]
+
+    class IoCounters(ctypes.Structure):
+        _fields_ = [
+            ("ReadOperationCount", ctypes.c_ulonglong),
+            ("WriteOperationCount", ctypes.c_ulonglong),
+            ("OtherOperationCount", ctypes.c_ulonglong),
+            ("ReadTransferCount", ctypes.c_ulonglong),
+            ("WriteTransferCount", ctypes.c_ulonglong),
+            ("OtherTransferCount", ctypes.c_ulonglong),
+        ]
+
+    class ExtendedLimitInformation(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", BasicLimitInformation),
+            ("IoInfo", IoCounters),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+    class BasicAccountingInformation(ctypes.Structure):
+        _fields_ = [
+            ("TotalUserTime", ctypes.c_longlong),
+            ("TotalKernelTime", ctypes.c_longlong),
+            ("ThisPeriodTotalUserTime", ctypes.c_longlong),
+            ("ThisPeriodTotalKernelTime", ctypes.c_longlong),
+            ("TotalPageFaultCount", wintypes.DWORD),
+            ("TotalProcesses", wintypes.DWORD),
+            ("ActiveProcesses", wintypes.DWORD),
+            ("TotalTerminatedProcesses", wintypes.DWORD),
+        ]
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel32.SetInformationJobObject.argtypes = [
+        wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD
+    ]
+    kernel32.SetInformationJobObject.restype = wintypes.BOOL
+    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+    kernel32.ResumeThread.argtypes = [wintypes.HANDLE]
+    kernel32.ResumeThread.restype = wintypes.DWORD
+    kernel32.QueryInformationJobObject.argtypes = [
+        wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+    ]
+    kernel32.QueryInformationJobObject.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    job = kernel32.CreateJobObjectW(None, None)
+    if not job:
+        raise OSError(ctypes.get_last_error(), "CreateJobObjectW failed")
+    try:
+        limits = ExtendedLimitInformation()
+        # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        limits.BasicLimitInformation.LimitFlags = 0x00002000
+        if not kernel32.SetInformationJobObject(
+            job, 9, ctypes.byref(limits), ctypes.sizeof(limits)
+        ):
+            raise OSError(ctypes.get_last_error(), "SetInformationJobObject failed")
+
+        process_handle = wintypes.HANDLE(int(process._handle))
+        if not kernel32.AssignProcessToJobObject(job, process_handle):
+            raise OSError(ctypes.get_last_error(), "AssignProcessToJobObject failed")
+
+        # Popen exposes the primary thread handle as _thread on CPython/Windows.
+        # The child remains suspended until it is safely inside the Job Object.
+        thread_handle = getattr(process, "_thread", None)
+        if thread_handle is None:
+            raise OSError("Popen primary thread handle is unavailable")
+        if kernel32.ResumeThread(wintypes.HANDLE(int(thread_handle))) == 0xFFFFFFFF:
+            raise OSError(ctypes.get_last_error(), "ResumeThread failed")
+        return kernel32, job, BasicAccountingInformation
+    except Exception:
+        kernel32.CloseHandle(job)
+        raise
+
+
+def _windows_job_has_active_processes(job_state) -> bool | None:
+    """Return whether descendants remain, or None when Job Object accounting fails."""
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32, job, accounting_type = job_state
+    accounting = accounting_type()
+    if not kernel32.QueryInformationJobObject(
+        job, 1, ctypes.byref(accounting), ctypes.sizeof(accounting), None
+    ):
+        return None
+    return accounting.ActiveProcesses > 0
+
+
+def _close_windows_job(job_state) -> bool:
+    """Close the last Job Object handle; KILL_ON_JOB_CLOSE stops all remaining members."""
+    kernel32, job, _ = job_state
+    return bool(kernel32.CloseHandle(job))
+
+
 def _run_task(
     argv: list[str],
     root: Path,
@@ -363,6 +481,7 @@ def _run_task(
 ) -> tuple[str, int | None]:
     process: subprocess.Popen[bytes] | None = None
     posix_process_group = os.name == "posix"
+    windows_job = None
     try:
         process = subprocess.Popen(
             argv,
@@ -371,18 +490,17 @@ def _run_task(
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=posix_process_group,
+            creationflags=subprocess.CREATE_SUSPENDED if os.name == "nt" else 0,
         )
+        if os.name == "nt":
+            windows_job = _create_windows_job(process)
         try:
             process.communicate(input=stdin_data, timeout=timeout_seconds)
-        except subprocess.TimeoutExpired:
-            if posix_process_group:
-                _terminate_process_group(process.pid)
-            else:
-                process.kill()
-            process.wait()
-            return "failed", None
-        except OSError:
-            if posix_process_group:
+        except (subprocess.TimeoutExpired, OSError):
+            if windows_job is not None:
+                _close_windows_job(windows_job)
+                windows_job = None
+            elif posix_process_group:
                 _terminate_process_group(process.pid)
             else:
                 process.kill()
@@ -390,12 +508,20 @@ def _run_task(
             return "failed", None
 
         # A task is not complete while a child it launched is still running.
-        # POSIX tasks get a private session so ordinary descendants can be reaped
-        # after both normal exit and timeout, before source-integrity checks run.
+        # POSIX sessions and Windows Job Objects stop ordinary descendants before
+        # source-integrity checks; Windows assignment happens before the task resumes.
         if posix_process_group and _terminate_process_group(process.pid):
             return "failed", None
+        if windows_job is not None:
+            descendants_remain = _windows_job_has_active_processes(windows_job)
+            closed = _close_windows_job(windows_job)
+            windows_job = None
+            if descendants_remain is None or descendants_remain or not closed:
+                return "failed", None
         return ("passed", process.returncode) if process.returncode == 0 else ("failed", process.returncode)
-    except OSError:
+    except (OSError, AttributeError, ValueError):
+        if windows_job is not None:
+            _close_windows_job(windows_job)
         if process is not None and process.poll() is None:
             if posix_process_group:
                 _terminate_process_group(process.pid)
