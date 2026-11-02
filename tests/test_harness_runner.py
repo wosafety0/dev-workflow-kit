@@ -1321,6 +1321,19 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertFalse(marker.exists())
 
     @unittest.skipUnless(os.name == "nt", "Windows Job Object behavior")
+    def test_run_task_executes_and_passes_without_descendants_windows(self):
+        marker = self.root / "windows-task-ran.txt"
+        task_code = (
+            "import pathlib,sys; "
+            f"pathlib.Path({str(marker)!r}).write_text('executed')"
+        )
+        status, exit_code = harness_runner._run_task(
+            [sys.executable, "-c", task_code], self.root, 5
+        )
+        self.assertEqual((status, exit_code), ("passed", 0))
+        self.assertEqual(marker.read_text(encoding="utf-8"), "executed")
+
+    @unittest.skipUnless(os.name == "nt", "Windows Job Object behavior")
     def test_run_task_stops_descendant_after_successful_parent_exit_windows(self):
         marker = self.root / "late-windows-descendant-write.txt"
         child_code = (
