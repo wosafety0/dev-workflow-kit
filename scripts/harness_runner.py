@@ -519,7 +519,7 @@ def _run_task(
             if descendants_remain is None or descendants_remain or not closed:
                 return "failed", None
         return ("passed", process.returncode) if process.returncode == 0 else ("failed", process.returncode)
-    except (OSError, AttributeError, ValueError):
+    except Exception:
         if windows_job is not None:
             _close_windows_job(windows_job)
         if process is not None and process.poll() is None:
