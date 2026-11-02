@@ -95,6 +95,23 @@ jobs:
           python scripts/ci_gate.py
           "$TEST_OUTCOME" "$REPORT_OUTCOME" "$ARTIFACT_OUTCOME"
 
+  windows-runner-tests:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Compile Python source
+        run: python -m compileall -q scripts tests
+      - name: Run Harness Runner tests on Windows
+        run: python -m unittest discover -s tests -p test_harness_runner.py -v
+
   reusable-python-selftest:
     # Exercise the actual workflow_call boundary, not only its parsed Bash snippets.
     # A local reusable-workflow reference resolves from this same commit.
