@@ -163,21 +163,6 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Verification boundary: this proves the redirect rejection behavior with local offline tests and the repo's CI. No real model provider request was made; no PR was merged and no release or deployment occurred.
 - Follow-up exact-head verification: commit `9586439a74cc8c7a25dbdac89308111ff7f32865` passed push CI [40803733451](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40803733451) and PR-context CI [40803740841](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40803740841); both succeeded with **106 offline tests passed**, report generation, artifact upload, and final gate. These runs include the updated contract and the progress archive as committed on that head.
 
-
-## 2026-10-29 — enable PR-context CI for stacked fix PRs (PR #22 base)
-
-- PR #33 is stacked on PR #22's `fix/semantic-review-no-redirect-20261029` branch. Inspection of the actual base commit workflow showed `pull_request.branches` included `main`, `feat/**`, and `test/**`, but not `fix/**`. Changing only the downstream PR head cannot make GitHub evaluate a new filter from the base branch.
-- Updated this branch's `.github/workflows/ci.yml` to include `fix/**`, so downstream PR #33 can receive PR-context CI. This follows the same trigger correction needed for other stacked fix branches.
-- Workflow commit: `f6bb3db6cf1c93a18a98bd844cd253a043fae38a`.
-- Validation boundary: the downstream PR-context run must be independently observed after the base-branch workflow update. PR #22 remains Draft/unmerged; no rebase, retarget, merge, or consumer pin update occurred.
-
-
-## 2026-10-29 — PR-context CI validates stacked-fix trigger correction
-
-- PR #22 head `46587adaf9160c4e0b8503dfe49dc779cd976a33` received a successful PR-context Harness CI run: [run 40859961406](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40859961406).
-- The run tested merge commit `e41cc9887e65ebd8f110761853261e0cadd02cf6`, ran **106 offline tests**, generated/uploaded acceptance-report artifact `12891346305`, and passed the final orchestration gate.
-- This verifies the CI workflow correction against PR #22's current merge context. It does not validate PR #33's duplicate-key implementation; PR #33 still needs its own exact-head PR-context CI run.
-
 ## 2026-10-29 — enable PR-context CI for stacked fix PRs (PR #22 base)
 
 - PR #33 is stacked on PR #22's `fix/semantic-review-no-redirect-20261029` branch. Inspection of the actual base commit workflow showed `pull_request.branches` included `main`, `feat/**`, and `test/**`, but not `fix/**`. Changing only the downstream PR head cannot make GitHub evaluate a new filter from the base branch.
