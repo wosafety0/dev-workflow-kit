@@ -34,7 +34,7 @@ If `semantic-review` is configured, a caller must pass both review paths. Review
 ## Execution and exit behavior
 
 - Each task has a timeout; default is 600 seconds, maximum is 3600 seconds.
-- Tasks run in the order declared by the config. A failed task does not suppress later configured tasks; each task status is recorded.
+- Tasks run in the order declared by the config. If `semantic-review` is configured, it must be the final task so local tests/validation run first. Execution stops at the first failed task; remaining tasks are recorded as `not_run`, and the overall report fails. This avoids unnecessary model requests when an earlier check already failed.
 - Task stdout/stderr are suppressed by default to reduce accidental credential or private-payload disclosure in logs.
 - Exit code `0`: all configured tasks passed and the report status is `passed`.
 - Exit code `1`: at least one task failed; a redacted report is still written with overall status `failed`.

@@ -216,6 +216,10 @@ def main(argv: list[str] | None = None) -> int:
         config = validate_harness_config(raw_config)
 
         wants_review = "semantic-review" in config["commands"]
+        if wants_review and config["commands"][-1] != "semantic-review":
+            raise HarnessRunnerError(
+                "semantic-review must be the final configured task"
+            )
         if wants_review and (review_input is None or review_output is None):
             raise HarnessRunnerError(
                 "semantic-review requires both --review-input and --review-output"
@@ -241,13 +245,19 @@ def main(argv: list[str] | None = None) -> int:
         commit_sha = _git_commit_sha(root)
         rules_pin = _rules_pin(root)
         outcomes: dict[str, str] = {}
+        failed = False
         for task_id, argv_for_task in planned_tasks:
+            if failed:
+                outcomes[task_id] = "not_run"
+                print(f"Task {task_id}: not_run (an earlier task failed)")
+                continue
             status, exit_code = _run_task(argv_for_task, root, args.timeout_seconds)
             outcomes[task_id] = status
             suffix = " (timeout or launch failure)" if exit_code is None and status == "failed" else (
                 f" (exit {exit_code})" if exit_code not in (None, 0) else ""
             )
             print(f"Task {task_id}: {status}{suffix}")
+            failed = status != "passed"
 
         metadata = {
             "commit_sha": commit_sha,

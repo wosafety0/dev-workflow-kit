@@ -163,7 +163,6 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Verification boundary: this proves the redirect rejection behavior with local offline tests and the repo's CI. No real model provider request was made; no PR was merged and no release or deployment occurred.
 - Follow-up exact-head verification: commit `9586439a74cc8c7a25dbdac89308111ff7f32865` passed push CI [40803733451](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40803733451) and PR-context CI [40803740841](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40803740841); both succeeded with **106 offline tests passed**, report generation, artifact upload, and final gate. These runs include the updated contract and the progress archive as committed on that head.
 
-
 ## 2026-10-29 — enable PR-context CI for stacked fix PRs (PR #22 base)
 
 - PR #33 is stacked on PR #22's `fix/semantic-review-no-redirect-20261029` branch. Inspection of the actual base commit workflow showed `pull_request.branches` included `main`, `feat/**`, and `test/**`, but not `fix/**`. Changing only the downstream PR head cannot make GitHub evaluate a new filter from the base branch.
@@ -177,3 +176,14 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - PR #22 head `46587adaf9160c4e0b8503dfe49dc779cd976a33` received a successful PR-context Harness CI run: [run 40859961406](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40859961406).
 - The run tested merge commit `e41cc9887e65ebd8f110761853261e0cadd02cf6`, ran **106 offline tests**, generated/uploaded acceptance-report artifact `12891346305`, and passed the final orchestration gate.
 - This verifies the CI workflow correction against PR #22's current merge context. It does not validate PR #33's duplicate-key implementation; PR #33 still needs its own exact-head PR-context CI run.
+
+
+### Runner fail-fast and semantic-review ordering (2026-10-29)
+
+- Follow-up static review found that the runner continued to later tasks after a failure. With `python-unittest` followed by `semantic-review`, this could make a model request even after the earlier local checks had failed.
+- The runner now requires `semantic-review` to be the final configured task and stops after the first failed task. Remaining tasks are recorded as `not_run`; the report remains failed. All task arguments are still preflighted before any task executes.
+- Added regression tests for both fail-fast behavior and rejection of a configuration that places semantic review before local tests. Updated `docs/HARNESS_RUNNER_V1.md` to match the behavior.
+- Work is isolated on branch `fix/runner-stop-after-failure-20261029`, based on redirect-security candidate head `f71025d2303737dafe18ae823f93cad9cdd1249d`, and is tracked in Draft PR #23: https://github.com/wosafety0/dev-workflow-kit/pull/23. Exact tested code head before the CI-trigger adjustment `570738181f9224274bed3269c41ec4575524d690` passed push CI [run 40804237438](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40804237438): Python compilation, **108 offline tests**, report generation, artifact upload, and final gate all succeeded.
+- Safety boundary: this change reduces unnecessary model calls after a failing prerequisite; it does not itself call a provider, execute game actions, merge, release, or deploy.
+- Exact-head verification for `875d78882c499419a5bf32104393bf28408e5306`: push CI [40804336760](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40804336760) and PR-context CI [40804344244](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40804344244) both succeeded; each passed Python compilation, **108 offline tests**, report generation, artifact upload, and the final gate.
+- CI trigger review found that `pull_request` events did not include base branches matching `fix/**`, so PRs targeting fix branches could miss PR-context checks. Added `fix/**` to `.github/workflows/ci.yml`; the workflow change is under exact-head push CI validation. The current PR's base branch predates this trigger change, so no PR-context run is claimed from that change alone.
