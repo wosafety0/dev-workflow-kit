@@ -1,6 +1,6 @@
 # Project Progress Log
 
-Last updated: 2026-10-28
+Last updated: 2026-11-02
 
 ## Current repository state
 
@@ -516,3 +516,12 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Added regression assertions in the CI and reusable-workflow contract suites to require the Node 24-compatible immutable pin and exactly one upload action per workflow.
 - Evidence: [GitHub Node 20 removal notice](https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/) (removal 2026-09-23); [upload-artifact v7.0.2 release](https://github.com/actions/upload-artifact/releases/tag/v7.0.2). Exact-head implementation/test commit `a55d8bf2ca5cfa133bd6536f3714226181157b03` passed Push [41460735695](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41460735695) and PR [41460744746](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41460744746), each with **155 tests**. Both upload-artifact pin regression tests and the checkout credential-persistence regression passed.
 
+
+## 2026-11-02 — isolate trusted consumer report steps from consumer-controlled execution state
+
+- Security review found that the consumer-owned acceptance command executes before the reusable workflow's report producer and verifier. That command can modify GitHub Actions command files such as `GITHUB_PATH` and leave same-named Python modules in the checked-out workspace; subsequent `python3` invocations from the workspace could therefore resolve a consumer-controlled interpreter or import consumer-controlled modules.
+- Updated both trusted inline Python steps to change directory to `$RUNNER_TEMP`, invoke the runner interpreter by absolute path as `/usr/bin/python3 -I`, and resolve the report beneath the runner-provided `GITHUB_WORKSPACE`. This avoids consumer-modified PATH lookup and Python module/path injection for report generation and verification.
+- Added regression coverage that executes the exact inline report producer and verifier in isolated temporary working directories containing shadow `json.py` and `os.py` modules, while simulating a consumer-modified PATH. Added workflow contract assertions for both absolute isolated interpreter invocations and trusted report paths.
+- Implementation commits: workflow `2ae59623e06d72273746d7bd967316da654cefb1`; regression tests `fe00d1b6b6fc6bd19d6a68eb1936c95973e0bceb`; contract `8f29a64b63154d7c41f74e3337c5afbc379a7ddf`; roadmap `39d8dd992abed808895ba2d6122f34a4e1199fd6`.
+- Initial exact-head PR CI for code/test head `fe00d1b6b6fc6bd19d6a68eb1936c95973e0bceb` passed: [41464429903](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41464429903). The final documentation/archive head still requires exact-head Push and PR CI before this work is marked fully validated.
+- Scope: offline workflow hardening only. No consumer pin, token permission, branch topology, merge, tag, release, deployment, live model request, or game action changed. PR #31 remains Draft/open/unmerged.
