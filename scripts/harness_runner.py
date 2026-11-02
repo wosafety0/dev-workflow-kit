@@ -506,7 +506,7 @@ def _run_task(
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=posix_process_group,
-            creationflags=subprocess.CREATE_SUSPENDED if os.name == "nt" else 0,
+            creationflags=0x00000004 if os.name == "nt" else 0,  # CREATE_SUSPENDED
         )
         if os.name == "nt":
             windows_job = _create_windows_job(process)
