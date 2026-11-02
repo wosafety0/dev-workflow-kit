@@ -1765,3 +1765,17 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - Private `wosafety0/chatgpt-auto-send-assistant` PR #1 remains Draft/open/unmerged at `0d64bf825cc5a76f3d8603f2e0fb431613715b56`. Its recorded acceptance run [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) failed before runner allocation and exposes no job steps; no runtime acceptance or browser E2E is available. The specific pre-run cause was not independently revalidated in this check. No consumer pin, billing, permissions, Actions policy, or repository visibility was changed.
 - PR #40 remains Draft/open/unmerged. Its base SHA `d035dea4426e2dbbb39b22770fc206a5671bfc68` matches PR #37's current head; no base drift was observed. This does not authorize merging either PR. Release gates remain open.
 
+
+
+## 2026-11-02 — Independent Node.js consumer accepted on the current Harness candidate
+
+- Rechecked the public Node.js/pnpm pilot repository `wosafety0/AI-Worker-Proxy`. Its existing Draft PR #2 was still based on a dedicated acceptance-only workflow; root `AGENTS.md` is absent and `CONTRIBUTING.md` confirms Node 26, pnpm, lint, type-check, and formatting as project conventions.
+- Updated only `.github/workflows/harness-acceptance-pilot.yml` to pin the reusable workflow to the immutable Harness candidate `3df51ca949872fdc75d18feb902220b95957ec37`. No application source, deployment workflow, secrets, permissions, or runtime configuration changed.
+- The resulting exact consumer head `493e561eab8484975c55360916ae15ea2c8320d9` passed:
+  - Harness reusable acceptance [41443804502](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41443804502).
+  - Native PR lint/type-check [41443804014](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41443804014).
+  - Native push lint/type-check [41443797503](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41443797503).
+- The reusable job validated the inputs, set up Node.js 26 and pnpm 11.4.0, then successfully ran frozen dependency installation, ESLint, TypeScript type-check, and Prettier. All three exact-head runs concluded success. This is current-candidate independent Node.js consumer acceptance, not browser E2E or production deployment.
+- Updated the consumer PR #2 description with the exact candidate pin and evidence; the PR remains Draft/open/unmerged. The Python consumer's 144-test pilot remains historical at pin `c44f77d6f2b0aae07689e6127b203e1df4e3d77b`; private consumer PR #1 remains unaccepted with no runtime/browser E2E evidence.
+- Harness PR #40 remains Draft/open/unmerged; no merge, tag, release, or deployment was performed.
+

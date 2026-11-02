@@ -1,3 +1,13 @@
+## 2026-11-02 — Independent Node.js consumer passed the current candidate pin
+
+- Updated only the existing public `AI-Worker-Proxy` Draft pilot workflow pin to Harness candidate `3df51ca949872fdc75d18feb902220b95957ec37`; application source, deployment workflow, secrets, permissions, and runtime configuration were unchanged.
+- Exact consumer head `493e561eab8484975c55360916ae15ea2c8320d9` passed reusable acceptance [41443804502](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41443804502), native PR lint/type-check [41443804014](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41443804014), and push lint/type-check [41443797503](https://github.com/wosafety0/AI-Worker-Proxy/actions/runs/41443797503).
+- The reusable workflow executed Node.js 26/pnpm 11.4.0, frozen dependency installation, ESLint, TypeScript type-check, and Prettier. All exact-head checks succeeded. This verifies an independent Node.js consumer on the current candidate; it is not browser E2E, production validation, or release approval.
+- Consumer PR #2 remains Draft/open/unmerged. Private consumer PR #1 remains unaccepted; no runner allocation or browser E2E evidence is available. The Python 144-test pilot remains tied to its historical Harness pin.
+- Harness PR #40 remains Draft/open/unmerged. No merge, tag, release, deployment, consumer application change, secret, permission, billing, visibility, or Actions-policy change occurred.
+
+---
+
 ## 2026-11-02 — Canonical Git diff timeout regression and consumer pin freshness
 
 - Promoted the existing 20-second canonical Git diff generation timeout to a named constant and added a regression with a stalled child process. The test proves timeout termination, controlled fail-closed rejection, and no configured task execution.
