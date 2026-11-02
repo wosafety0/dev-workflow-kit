@@ -62,6 +62,6 @@ When current-facing documents conflict, follow the latest applicable, verified p
 
 - [x] Harden the report-verifier feature stack's main CI checkout with `persist-credentials: false`.
 - [x] Add a contract regression test covering every checkout step in `.github/workflows/ci.yml`.
-- [x] Exact-head Push [41459437408](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459437408) and PR [41459446214](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459446214) both passed (**153 tests** each, including the new regression).
+- [x] Exact-head implementation/test commit `c873e1567f4688a0e8623ee9af5e38effc1dec76` passed Push [41459437408](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459437408) and PR [41459446214](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459446214), each with **153 tests**. Documentation archive head `064013ce3a09fc5778343e9ffd37fde0b56f349f` also passed Push [41459685402](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459685402) and PR [41459694362](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41459694362), each with **153 tests**.
 - The reusable consumer workflow already had credential persistence disabled; it was left unchanged.
 
