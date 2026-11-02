@@ -41,6 +41,18 @@ class ReviewError(ValueError):
     """Raised when model output is malformed or not evidence-grounded."""
 
 
+def _is_safe_relative_path(path: str) -> bool:
+    """Return whether a diff/config path is a normalized repository-relative path."""
+    parts = path.split("/")
+    return not (
+        path.startswith("/")
+        or "\\" in path
+        or re.match(r"^[A-Za-z]:", path)
+        or any(part in {"", ".", ".."} for part in parts)
+        or any(ord(char) < 32 or ord(char) == 127 for char in path)
+    )
+
+
 def validate_input(payload: dict[str, Any]) -> None:
     required = ("task", "diff", "changed_files", "global_rules", "project_instructions")
     for key in required:
@@ -57,14 +69,7 @@ def validate_input(payload: dict[str, Any]) -> None:
     for path in payload["changed_files"]:
         if len(path) > MAX_CHANGED_FILE_PATH_LENGTH:
             raise ReviewError("changed_files path is too long")
-        parts = path.split("/")
-        if (
-            path.startswith("/")
-            or "\\" in path
-            or re.match(r"^[A-Za-z]:", path)
-            or any(part in {"", ".", ".."} for part in parts)
-            or any(ord(char) < 32 or ord(char) == 127 for char in path)
-        ):
+        if not _is_safe_relative_path(path):
             raise ReviewError("changed_files contains an unsafe path")
     if len(set(payload["changed_files"])) != len(payload["changed_files"]):
         raise ReviewError("changed_files must not contain duplicate paths")
@@ -143,6 +148,8 @@ def _diff_sections(diff: str) -> list[tuple[str, str]]:
         if not parsed:
             raise ReviewError("Unsupported or malformed Git diff path header")
         old_path, new_path = parsed.groups()
+        if not _is_safe_relative_path(old_path) or not _is_safe_relative_path(new_path):
+            raise ReviewError("Git diff contains an unsafe path")
         section = diff[header.start():end]
         _validate_hunk_integrity(section)
         old_header = re.search(r"(?m)^--- (.+)$", section)
@@ -200,6 +207,7 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
     mapped_spans = []
     offset = 0
     old_line = new_line = None
+    deleted_file = bool(re.search(r"(?m)^\+\+\+ /dev/null$", section))
     for line in section.splitlines(keepends=True):
         line_start = offset
         line_end = offset + len(line)
@@ -209,9 +217,9 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
         elif old_line is not None and new_line is not None and line:
             prefix = line[0]
             if prefix == " ":
-                # Findings cite the resulting file's coordinates. Deleted files have no
-                # resulting-side coordinates, so use the old-file line numbers there.
-                context_line = old_line if re.search(r"(?m)^\+\+\+ /dev/null$", section) else new_line
+                # Findings cite resulting-file coordinates. A deleted file has no
+                # resulting side, so its context lines retain old-file coordinates.
+                context_line = old_line if deleted_file else new_line
                 mapped_spans.append((line_start, line_end, {context_line}, "context"))
                 old_line += 1
                 new_line += 1
@@ -233,11 +241,43 @@ def _evidence_line_numbers(section: str, evidence: str) -> set[int]:
         for line_start, line_end, source_lines, kind in mapped_spans:
             if evidence_start < line_end and evidence_end > line_start:
                 numbers.update(source_lines)
-                if kind in {"deleted", "added"}:
-                    evidence_kinds.add(kind)
-        if evidence_kinds == {"deleted", "added"}:
-            raise ReviewError("Evidence mixes deleted and added lines with different source coordinates")
+                evidence_kinds.add(kind)
+        uses_old_coordinates = "deleted" in evidence_kinds or (
+            deleted_file and "context" in evidence_kinds
+        )
+        uses_new_coordinates = "added" in evidence_kinds or (
+            not deleted_file and "context" in evidence_kinds
+        )
+        if uses_old_coordinates and uses_new_coordinates:
+            if "deleted" in evidence_kinds and "added" in evidence_kinds:
+                raise ReviewError(
+                    "Evidence mixes deleted and added lines with different source coordinates"
+                )
+            raise ReviewError(
+                "Evidence mixes deleted and context lines with different source coordinates"
+            )
     return {number for number in numbers if number >= 1}
+
+
+def _contains_unreviewable_payload(sections: list[tuple[str, str]]) -> bool:
+    """Detect binary, Git submodule, and Git LFS changes whose payload is not reviewable."""
+    for _, section in sections:
+        if re.search(r"(?m)^(?:GIT binary patch|Binary files .+ differ)\s*$", section):
+            return True
+        # Git records submodules as mode 160000 gitlinks. The parent diff contains
+        # only the referenced commit IDs, not the submodule source being reviewed.
+        if re.search(r"(?m)^index [0-9a-f]{7,64}\.\.[0-9a-f]{7,64} 160000$", section):
+            return True
+        # Git LFS stores a small pointer in the Git tree, not the referenced object.
+        # Detect the canonical v1 pointer even when oid/size lines are additions,
+        # deletions, or context lines in a modified pointer.
+        if (
+            re.search(r"(?m)^[ +-]version https://git-lfs\.github\.com/spec/v1$", section)
+            and re.search(r"(?m)^[ +-]oid sha256:[0-9a-f]{64}$", section)
+            and re.search(r"(?m)^[ +-]size [0-9]+$", section)
+        ):
+            return True
+    return False
 
 
 def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
@@ -259,11 +299,18 @@ def validate_review(payload: dict[str, Any], review: Any) -> dict[str, Any]:
         isinstance(item, str) and item.strip() for item in review["checked_scope"]
     ):
         raise ReviewError("checked_scope must identify at least one reviewed area")
-    if not all(isinstance(item, str) and item.strip() for item in review["limitations"]):
-        raise ReviewError("limitations entries must be non-empty strings")
+    if not review["limitations"] or not all(
+        isinstance(item, str) and item.strip() for item in review["limitations"]
+    ):
+        raise ReviewError("limitations must identify at least one review boundary")
 
     changed_files = set(payload["changed_files"])
     sections = _validate_diff_integrity(payload)
+    has_unreviewable_payload = _contains_unreviewable_payload(sections)
+    if review["status"] == "PASS" and has_unreviewable_payload:
+        raise ReviewError(
+            "PASS is forbidden when binary changes or external payloads are present; use INCONCLUSIVE unless evidence-backed findings require NEEDS_CHANGES"
+        )
     rule_sources = (payload["global_rules"], payload["project_instructions"])
     for finding in review["findings"]:
         if not isinstance(finding, dict) or set(finding) != {
@@ -325,7 +372,11 @@ def build_messages(payload: dict[str, Any]) -> list[dict[str, str]]:
         "rule_quote. The file and line range must identify the exact file and source line(s) "
         "containing that evidence. If evidence is insufficient, use INCONCLUSIVE. PASS means no "
         "actionable rule or correctness issue was found in the reviewed scope; it is not proof "
-        "of total compliance. Return JSON only, matching the requested schema exactly."
+        "of total compliance. If the diff contains binary patch metadata, Git submodule "
+        "gitlinks (mode 160000), or Git LFS pointer files, do not return PASS because the "
+        "underlying payload is not reviewable from the parent repository diff; use INCONCLUSIVE "
+        "unless evidence-backed findings require NEEDS_CHANGES. Return JSON only, matching "
+        "the requested schema exactly."
     )
     user = {
         "task": payload["task"],
@@ -447,14 +498,14 @@ def call_model(payload: dict[str, Any]) -> Any:
             )
     except ReviewError:
         raise
-    except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, ValueError) as exc:
+    except (urllib.error.URLError, TimeoutError, OSError, UnicodeError, ValueError, RecursionError) as exc:
         raise ReviewError(f"Model request failed ({type(exc).__name__}); review cannot pass") from None
     try:
         content = response_data["choices"][0]["message"]["content"]
         if not isinstance(content, str):
             raise TypeError
         return json.loads(content, object_pairs_hook=_reject_duplicate_json_keys)
-    except (KeyError, IndexError, TypeError, ValueError):
+    except (KeyError, IndexError, TypeError, ValueError, RecursionError):
         raise ReviewError("Model response was not valid JSON in the expected chat-completions shape") from None
 
 
@@ -481,9 +532,9 @@ def _write_json_atomically(output_path: Path, artifact: dict[str, Any]) -> None:
             suffix=".tmp",
             delete=False,
         ) as temporary:
+            temporary_path = Path(temporary.name)
             json.dump(artifact, temporary, ensure_ascii=False, indent=2)
             temporary.write("\n")
-            temporary_path = Path(temporary.name)
         # Recheck the final path after the potentially long provider request.
         _reject_symlink_components(output_path, "output")
         os.replace(temporary_path, output_path)
@@ -494,7 +545,7 @@ def _write_json_atomically(output_path: Path, artifact: dict[str, Any]) -> None:
             except OSError:
                 pass
         raise
-    except OSError:
+    except (OSError, UnicodeError):
         if temporary_path is not None:
             try:
                 temporary_path.unlink()
@@ -540,7 +591,7 @@ def main() -> int:
         _write_json_atomically(output_path, artifact)
         print(f"AI semantic review result: {review['status']}")
         return 0 if review["status"] == "PASS" else 1
-    except (OSError, UnicodeError, json.JSONDecodeError, ReviewError) as exc:
+    except (OSError, UnicodeError, json.JSONDecodeError, ReviewError, RecursionError) as exc:
         print(f"AI semantic review blocked: {exc}", file=sys.stderr)
         return 2
 

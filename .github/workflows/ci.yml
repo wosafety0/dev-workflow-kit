@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
@@ -77,7 +79,7 @@ jobs:
       - name: Upload acceptance report
         id: artifact
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: acceptance-report
           path: artifacts/acceptance-report.json
@@ -92,3 +94,40 @@ jobs:
         run: >-
           python scripts/ci_gate.py
           "$TEST_OUTCOME" "$REPORT_OUTCOME" "$ARTIFACT_OUTCOME"
+
+  windows-runner-tests:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Compile Python source
+        run: python -m compileall -q scripts tests
+      - name: Run Harness Runner tests on Windows
+        run: python -m unittest discover -s tests -p test_harness_runner.py -v
+
+  reusable-python-selftest:
+    # Exercise the actual workflow_call boundary, not only its parsed Bash snippets.
+    # A local reusable-workflow reference resolves from this same commit.
+    uses: ./.github/workflows/reusable-acceptance.yml
+    with:
+      runtime: python
+      python-version: "3.12"
+      package-manager: none
+      test-command: "python -m unittest discover -s tests -v"
+
+  reusable-node-pnpm-selftest:
+    # Exercise Node and optional pnpm setup through the real workflow_call boundary.
+    uses: ./.github/workflows/reusable-acceptance.yml
+    with:
+      runtime: node
+      node-version: "24"
+      package-manager: pnpm
+      pnpm-version: "11.4.0"
+      test-command: "node --version && pnpm --version"

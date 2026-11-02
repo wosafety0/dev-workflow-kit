@@ -17,14 +17,14 @@ Set the following process environment variables using your approved local secret
 - `AI_REVIEW_API_KEY`: provider key, or a local placeholder accepted by the inference server.
 - `AI_REVIEW_MODEL`: the exact model identifier exposed by that endpoint.
 
-Then run from the project root:
+The example diff is intentionally synthetic and is not a patch from this repository. Run it through the standalone reviewer (not the Harness runner) so it is not misrepresented as source-bound acceptance:
 
 ```powershell
-python scripts/harness_runner.py --config examples/harness-config-semantic-review.json --review-input examples/semantic-review-negative-input.json --review-output artifacts/semantic-review-output.json
+python -I -S scripts/ai_semantic_review.py --input examples/semantic-review-negative-input.json --output artifacts/semantic-review-output.json
 $LASTEXITCODE
 ```
 
-The runner writes a redacted `artifacts/acceptance-report.json` separately from the detailed review output. Since the fixture is intentionally defective, a correct `NEEDS_CHANGES` result should make the runner return exit code `1` and the acceptance report status `failed`. That is the expected fail-closed result for this negative fixture, not a successful code-review approval.
+The standalone CLI writes only the detailed review output; it does not produce a Harness acceptance report or attest Git source provenance. Since the fixture is intentionally defective, the expected result is `NEEDS_CHANGES`. That is a negative model smoke test, not a successful code-review approval.
 
 If the model returns `PASS`, treat that as a failed smoke-test expectation and do not use the result to approve code. Inspect the detailed output; do not weaken the validator just to make the fixture pass.
 

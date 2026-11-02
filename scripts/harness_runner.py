@@ -11,17 +11,22 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import types
 import os
 import re
+import signal
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
-from scripts.acceptance_report import AcceptanceReportError, build_acceptance_report
-from scripts.harness_config import HarnessConfigError, validate_harness_config
-
+# Keep the documented ``python scripts/harness_runner.py`` entry point working.
+# Direct script execution places scripts/ rather than the repository root on sys.path.
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 class HarnessRunnerError(ValueError):
     """Raised when runner inputs or local project metadata are unsafe or incomplete."""
@@ -30,6 +35,16 @@ class HarnessRunnerError(ValueError):
 _SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 _MAX_TIMEOUT_SECONDS = 3600
 _MAX_REVIEW_INPUT_BYTES = 4 * 1024 * 1024
+_GIT_DIFF_GENERATION_TIMEOUT_SECONDS = 20
+
+
+def _git_environment() -> dict[str, str]:
+    """Prevent caller-controlled GIT_* variables from redirecting provenance checks."""
+    environment = os.environ.copy()
+    for name in tuple(environment):
+        if name.upper().startswith("GIT_"):
+            environment.pop(name, None)
+    return environment
 
 
 def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -123,6 +138,7 @@ def _require_tracked_config(root: Path, config_path: Path) -> None:
             text=True,
             timeout=10,
             check=False,
+            env=_git_environment(),
         )
     except (OSError, subprocess.TimeoutExpired):
         raise HarnessRunnerError("Could not verify tracked Harness config") from None
@@ -146,6 +162,7 @@ def _git_commit_sha(root: Path) -> str:
             text=True,
             timeout=10,
             check=False,
+            env=_git_environment(),
         )
 
     try:
@@ -195,27 +212,89 @@ def _reject_ignored_python_sources(root: Path) -> None:
                 "-z", "--", ".",
             ],
             cwd=root, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            timeout=10, check=False,
+            timeout=10, check=False, env=_git_environment(),
         )
     except (OSError, subprocess.TimeoutExpired):
         raise HarnessRunnerError("Could not verify ignored Python source") from None
     if ignored.returncode != 0:
         raise HarnessRunnerError("Could not verify ignored Python source")
-    generated_or_environment_dirs = {
-        ".venv", "venv", "env", ".tox", "artifacts", "__pycache__",
-    }
+    root_environment_dirs = {".venv", "venv", "env", ".tox", "artifacts"}
     for raw_path in ignored.stdout.split(b"\0"):
         if not raw_path:
             continue
         ignored_path = Path(os.fsdecode(raw_path))
-        if ignored_path.suffix != ".py":
+        if ignored_path.suffix not in {".py", ".pyc", ".so", ".pyd"}:
             continue
-        if any(
-            part in generated_or_environment_dirs or part.startswith(".venv")
-            for part in ignored_path.parts[:-1]
+        parent_parts = ignored_path.parts[:-1]
+        # Only recognized repository-root environments/artifacts are excluded.
+        # A nested directory named "env" or ".venv-custom" may contain mutable
+        # project code and must not silently bypass the ignored-source guard.
+        if "__pycache__" in parent_parts or (
+            parent_parts and parent_parts[0] in root_environment_dirs
         ):
             continue
         raise HarnessRunnerError("ignored Python source must not be executed")
+
+
+def _load_trusted_helpers(root: Path):
+    """Execute helper source from committed Git blobs, never from worktree pyc or dirty files."""
+    loaded_modules = {}
+    helper_paths = (
+        ("_harness_trusted_config", "scripts/harness_config.py", "Harness config module"),
+        ("_harness_trusted_report", "scripts/acceptance_report.py", "acceptance report module"),
+    )
+    for module_name, relative, label in helper_paths:
+        source_path = _resolve_trusted_source(root, relative, label)
+        if not source_path.is_file():
+            raise HarnessRunnerError(f"{label} is missing")
+        try:
+            tree_entry = subprocess.run(
+                ["git", "ls-tree", "HEAD", "--", relative],
+                cwd=root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                timeout=10,
+                check=False,
+                env=_git_environment(),
+            )
+            if tree_entry.returncode != 0:
+                raise HarnessRunnerError(f"{label} is not available in the current Git HEAD")
+            entry = tree_entry.stdout.decode("utf-8", errors="strict").strip()
+            metadata, separator, entry_path = entry.partition("\t")
+            fields = metadata.split()
+            if (
+                not separator
+                or entry_path != relative
+                or len(fields) != 3
+                or fields[0] not in {"100644", "100755"}
+                or fields[1] != "blob"
+                or not _SHA_RE.fullmatch(fields[2])
+            ):
+                raise HarnessRunnerError(f"{label} must be a committed regular source file")
+            blob = subprocess.run(
+                ["git", "cat-file", "blob", fields[2]],
+                cwd=root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                timeout=10,
+                check=False,
+                env=_git_environment(),
+            )
+            if blob.returncode != 0:
+                raise HarnessRunnerError(f"Could not read committed {label}")
+            module = types.ModuleType(module_name)
+            module.__file__ = str(source_path)
+            module.__package__ = "scripts"
+            sys.modules[module_name] = module
+            exec(compile(blob.stdout, str(source_path), "exec"), module.__dict__)
+            loaded_modules[module_name] = module
+        except HarnessRunnerError:
+            raise
+        except Exception:
+            raise HarnessRunnerError(f"Could not load committed {label}") from None
+    config_module = loaded_modules["_harness_trusted_config"]
+    report_module = loaded_modules["_harness_trusted_report"]
+    return report_module.build_acceptance_report, config_module.validate_harness_config
 
 
 def _task_argv(
@@ -228,7 +307,7 @@ def _task_argv(
         tests_dir = _resolve_trusted_source(root, "tests", "tests directory")
         if not tests_dir.is_dir():
             raise HarnessRunnerError("python-unittest task requires a tests/ directory")
-        return [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
+        return [sys.executable, "-I", "-S", "-m", "unittest", "discover", "-s", "tests", "-v"]
     if task_id == "semantic-review":
         if review_input is None or review_output is None:
             raise HarnessRunnerError(
@@ -239,6 +318,8 @@ def _task_argv(
             raise HarnessRunnerError("semantic-review task requires scripts/ai_semantic_review.py")
         return [
             sys.executable,
+            "-I",
+            "-S",
             str(script),
             "--input",
             "-",
@@ -250,28 +331,288 @@ def _task_argv(
     raise HarnessRunnerError(f"No reviewed runner implementation for task ID: {task_id}")
 
 
+def _terminate_process_group(process_group_id: int, grace_seconds: float = 0.5) -> bool:
+    """Stop remaining POSIX task descendants; return whether the group still existed."""
+    try:
+        os.killpg(process_group_id, signal.SIGTERM)
+    except ProcessLookupError:
+        return False
+    except OSError:
+        return True
+
+    deadline = time.monotonic() + grace_seconds
+    while time.monotonic() < deadline:
+        try:
+            os.killpg(process_group_id, 0)
+        except ProcessLookupError:
+            return True
+        except OSError:
+            break
+        time.sleep(0.05)
+
+    try:
+        os.killpg(process_group_id, signal.SIGKILL)
+    except OSError:
+        pass
+    return True
+
+
+def _resume_suspended_windows_process(
+    process: subprocess.Popen[bytes], kernel32
+) -> None:
+    """Find and resume the sole primary thread of a still-suspended process."""
+    import ctypes
+    from ctypes import wintypes
+
+    class ThreadEntry32(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", wintypes.DWORD),
+            ("cntUsage", wintypes.DWORD),
+            ("th32ThreadID", wintypes.DWORD),
+            ("th32OwnerProcessID", wintypes.DWORD),
+            ("tpBasePri", wintypes.LONG),
+            ("tpDeltaPri", wintypes.LONG),
+            ("dwFlags", wintypes.DWORD),
+        ]
+
+    kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    kernel32.Thread32First.argtypes = [
+        wintypes.HANDLE, ctypes.POINTER(ThreadEntry32)
+    ]
+    kernel32.Thread32First.restype = wintypes.BOOL
+    kernel32.Thread32Next.argtypes = [
+        wintypes.HANDLE, ctypes.POINTER(ThreadEntry32)
+    ]
+    kernel32.Thread32Next.restype = wintypes.BOOL
+    kernel32.OpenThread.argtypes = [
+        wintypes.DWORD, wintypes.BOOL, wintypes.DWORD
+    ]
+    kernel32.OpenThread.restype = wintypes.HANDLE
+    kernel32.ResumeThread.argtypes = [wintypes.HANDLE]
+    kernel32.ResumeThread.restype = wintypes.DWORD
+
+    # TH32CS_SNAPTHREAD; the process is suspended so it has only its primary thread.
+    snapshot = kernel32.CreateToolhelp32Snapshot(0x00000004, 0)
+    if not snapshot or snapshot == ctypes.c_void_p(-1).value:
+        raise OSError(ctypes.get_last_error(), "CreateToolhelp32Snapshot failed")
+    resumed = False
+    try:
+        entry = ThreadEntry32()
+        entry.dwSize = ctypes.sizeof(entry)
+        found = kernel32.Thread32First(snapshot, ctypes.byref(entry))
+        while found:
+            if entry.th32OwnerProcessID == process.pid:
+                # THREAD_SUSPEND_RESUME
+                thread = kernel32.OpenThread(0x0002, False, entry.th32ThreadID)
+                if not thread:
+                    raise OSError(ctypes.get_last_error(), "OpenThread failed")
+                try:
+                    if kernel32.ResumeThread(thread) == 0xFFFFFFFF:
+                        raise OSError(ctypes.get_last_error(), "ResumeThread failed")
+                    resumed = True
+                finally:
+                    kernel32.CloseHandle(thread)
+                break
+            entry.dwSize = ctypes.sizeof(entry)
+            found = kernel32.Thread32Next(snapshot, ctypes.byref(entry))
+        if not resumed:
+            raise OSError("Could not locate the suspended task's primary thread")
+    finally:
+        kernel32.CloseHandle(snapshot)
+
+
+def _create_windows_job(process: subprocess.Popen[bytes]):
+    """Assign a suspended task to a kill-on-close Windows Job Object, then resume it."""
+    import ctypes
+    from ctypes import wintypes
+
+    class BasicLimitInformation(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", ctypes.c_longlong),
+            ("PerJobUserTimeLimit", ctypes.c_longlong),
+            ("LimitFlags", wintypes.DWORD),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", wintypes.DWORD),
+            ("Affinity", ctypes.c_size_t),
+            ("PriorityClass", wintypes.DWORD),
+            ("SchedulingClass", wintypes.DWORD),
+        ]
+
+    class IoCounters(ctypes.Structure):
+        _fields_ = [
+            ("ReadOperationCount", ctypes.c_ulonglong),
+            ("WriteOperationCount", ctypes.c_ulonglong),
+            ("OtherOperationCount", ctypes.c_ulonglong),
+            ("ReadTransferCount", ctypes.c_ulonglong),
+            ("WriteTransferCount", ctypes.c_ulonglong),
+            ("OtherTransferCount", ctypes.c_ulonglong),
+        ]
+
+    class ExtendedLimitInformation(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", BasicLimitInformation),
+            ("IoInfo", IoCounters),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel32.SetInformationJobObject.argtypes = [
+        wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD
+    ]
+    kernel32.SetInformationJobObject.restype = wintypes.BOOL
+    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+    kernel32.ResumeThread.argtypes = [wintypes.HANDLE]
+    kernel32.ResumeThread.restype = wintypes.DWORD
+    kernel32.QueryInformationJobObject.argtypes = [
+        wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+    ]
+    kernel32.QueryInformationJobObject.restype = wintypes.BOOL
+    kernel32.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel32.TerminateJobObject.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    job = kernel32.CreateJobObjectW(None, None)
+    if not job:
+        raise OSError(ctypes.get_last_error(), "CreateJobObjectW failed")
+    try:
+        limits = ExtendedLimitInformation()
+        # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        limits.BasicLimitInformation.LimitFlags = 0x00002000
+        if not kernel32.SetInformationJobObject(
+            job, 9, ctypes.byref(limits), ctypes.sizeof(limits)
+        ):
+            raise OSError(ctypes.get_last_error(), "SetInformationJobObject failed")
+
+        process_handle = wintypes.HANDLE(int(process._handle))
+        if not kernel32.AssignProcessToJobObject(job, process_handle):
+            raise OSError(ctypes.get_last_error(), "AssignProcessToJobObject failed")
+
+        # Popen closes the CreateProcess thread handle. Locate the sole primary
+        # thread through Toolhelp32 while the process is still suspended.
+        _resume_suspended_windows_process(process, kernel32)
+        return kernel32, job
+    except Exception:
+        kernel32.CloseHandle(job)
+        raise
+
+
+def _windows_job_has_descendants(job_state, root_pid: int) -> bool | None:
+    """Return whether a Job Object contains any process other than its task root."""
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32, job = job_state
+    pointer_size = ctypes.sizeof(ctypes.c_size_t)
+    header_size = ctypes.sizeof(wintypes.DWORD) * 2
+    buffer_size = header_size + pointer_size * 16
+    while buffer_size <= 1024 * 1024:
+        buffer = ctypes.create_string_buffer(buffer_size)
+        returned = wintypes.DWORD()
+        if kernel32.QueryInformationJobObject(
+            job, 3, buffer, buffer_size, ctypes.byref(returned)
+        ):
+            assigned = wintypes.DWORD.from_buffer(buffer, 0).value
+            count = wintypes.DWORD.from_buffer(buffer, ctypes.sizeof(wintypes.DWORD)).value
+            capacity = (buffer_size - header_size) // pointer_size
+            if count < assigned:
+                required_size = header_size + pointer_size * assigned
+                buffer_size = max(required_size, buffer_size * 2)
+                continue
+            if count > capacity:
+                return None
+            for index in range(count):
+                offset = header_size + index * pointer_size
+                pid = int.from_bytes(
+                    buffer.raw[offset:offset + pointer_size], byteorder=sys.byteorder
+                )
+                if pid != root_pid:
+                    return True
+            return False
+        error = ctypes.get_last_error()
+        if error != 234 or returned.value <= buffer_size:
+            return None
+        buffer_size = returned.value
+    return None
+
+
+def _close_windows_job(job_state) -> bool:
+    """Close the last Job Object handle; KILL_ON_JOB_CLOSE stops all remaining members."""
+    kernel32, job = job_state
+    if kernel32.CloseHandle(job):
+        return True
+    # A failed close must not leave a live task tree behind.
+    kernel32.TerminateJobObject(job, 1)
+    return bool(kernel32.CloseHandle(job))
+
+
 def _run_task(
     argv: list[str],
     root: Path,
     timeout_seconds: int,
     stdin_data: bytes | None = None,
 ) -> tuple[str, int | None]:
+    process: subprocess.Popen[bytes] | None = None
+    posix_process_group = os.name == "posix"
+    windows_job = None
     try:
-        run_options: dict[str, Any] = {
-            "cwd": root,
-            "stdout": subprocess.DEVNULL,
-            "stderr": subprocess.DEVNULL,
-            "timeout": timeout_seconds,
-            "check": False,
-        }
-        if stdin_data is not None:
-            run_options["input"] = stdin_data
-        result = subprocess.run(argv, **run_options)
-    except subprocess.TimeoutExpired:
+        process = subprocess.Popen(
+            argv,
+            cwd=root,
+            stdin=subprocess.PIPE if stdin_data is not None else subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=posix_process_group,
+            creationflags=0x00000004 if os.name == "nt" else 0,  # CREATE_SUSPENDED
+        )
+        if os.name == "nt":
+            windows_job = _create_windows_job(process)
+        try:
+            process.communicate(input=stdin_data, timeout=timeout_seconds)
+        except (subprocess.TimeoutExpired, OSError):
+            if windows_job is not None:
+                _close_windows_job(windows_job)
+                windows_job = None
+            elif posix_process_group:
+                _terminate_process_group(process.pid)
+            else:
+                process.kill()
+            process.wait()
+            return "failed", None
+
+        # A task is not complete while a child it launched is still running.
+        # POSIX sessions and Windows Job Objects stop ordinary descendants before
+        # source-integrity checks; Windows assignment happens before the task resumes.
+        if posix_process_group and _terminate_process_group(process.pid):
+            return "failed", None
+        if windows_job is not None:
+            descendants_remain = _windows_job_has_descendants(windows_job, process.pid)
+            closed = _close_windows_job(windows_job)
+            windows_job = None
+            if descendants_remain is None or descendants_remain or not closed:
+                return "failed", None
+        return ("passed", process.returncode) if process.returncode == 0 else ("failed", process.returncode)
+    except Exception:
+        if windows_job is not None:
+            _close_windows_job(windows_job)
+        if process is not None and process.poll() is None:
+            if posix_process_group:
+                _terminate_process_group(process.pid)
+            else:
+                process.kill()
+            process.wait()
         return "failed", None
-    except OSError:
-        return "failed", None
-    return ("passed", result.returncode) if result.returncode == 0 else ("failed", result.returncode)
 
 
 def _read_review_input(path: Path, field: str) -> bytes:
@@ -286,7 +627,160 @@ def _read_review_input(path: Path, field: str) -> bytes:
     return data
 
 
-def _write_report(output_path: Path, metadata: dict[str, Any]) -> dict[str, Any]:
+def _run_bounded_git_output(root: Path, args: list[str]) -> bytes:
+    """Run Git while bounding captured stdout and execution time."""
+    try:
+        process = subprocess.Popen(
+            ["git", *args],
+            cwd=root,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            env=_git_environment(),
+        )
+    except OSError:
+        raise HarnessRunnerError("Could not verify semantic-review diff provenance") from None
+
+    output = bytearray()
+    reader_errors: list[OSError] = []
+
+    def read_output() -> None:
+        try:
+            assert process.stdout is not None
+            while len(output) <= _MAX_REVIEW_INPUT_BYTES:
+                chunk = process.stdout.read(
+                    min(64 * 1024, _MAX_REVIEW_INPUT_BYTES + 1 - len(output))
+                )
+                if not chunk:
+                    return
+                output.extend(chunk)
+                if len(output) > _MAX_REVIEW_INPUT_BYTES:
+                    return
+        except OSError as exc:
+            reader_errors.append(exc)
+
+    reader = threading.Thread(target=read_output, daemon=True)
+    reader.start()
+    reader.join(timeout=_GIT_DIFF_GENERATION_TIMEOUT_SECONDS)
+    if reader.is_alive() or len(output) > _MAX_REVIEW_INPUT_BYTES:
+        try:
+            process.kill()
+        except OSError:
+            pass
+        try:
+            process.wait(timeout=5)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        reader.join(timeout=5)
+        if process.stdout is not None and not reader.is_alive():
+            process.stdout.close()
+        if len(output) > _MAX_REVIEW_INPUT_BYTES:
+            raise HarnessRunnerError("canonical Git diff exceeds the 4 MiB limit")
+        raise HarnessRunnerError("Could not verify semantic-review diff provenance")
+
+    try:
+        return_code = process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        try:
+            process.kill()
+        except OSError:
+            pass
+        try:
+            process.wait(timeout=5)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        raise HarnessRunnerError("Could not verify semantic-review diff provenance") from None
+    finally:
+        if process.stdout is not None and not reader.is_alive():
+            process.stdout.close()
+
+    if reader_errors or return_code != 0:
+        raise HarnessRunnerError("Could not generate canonical Git diff for semantic-review provenance")
+    return bytes(output)
+
+
+def _verify_review_diff_provenance(
+    root: Path, review_input_bytes: bytes, base_commit: str
+) -> None:
+    """Bind caller-supplied review diff bytes to the current HEAD and an explicit base."""
+    if not isinstance(base_commit, str) or not _SHA_RE.fullmatch(base_commit):
+        raise HarnessRunnerError("--review-base-commit must be a full 40-character Git commit SHA")
+    try:
+        payload = json.loads(
+            review_input_bytes.decode("utf-8"),
+            object_pairs_hook=_reject_duplicate_json_keys,
+        )
+    except (UnicodeError, ValueError):
+        raise HarnessRunnerError("review-input must be valid UTF-8 JSON for provenance verification") from None
+    if not isinstance(payload, dict) or not isinstance(payload.get("diff"), str):
+        raise HarnessRunnerError("review-input must contain a string diff for provenance verification")
+    if not isinstance(payload.get("changed_files"), list):
+        raise HarnessRunnerError("review-input must contain changed_files for provenance verification")
+
+    def run_git(*args: str) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.run(
+            ["git", *args],
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=20,
+            check=False,
+            env=_git_environment(),
+        )
+
+    try:
+        head = run_git("rev-parse", "HEAD")
+        if head.returncode != 0:
+            raise HarnessRunnerError("Could not resolve source commit for review provenance")
+        source_commit = head.stdout.decode("ascii", errors="strict").strip().lower()
+        if not _SHA_RE.fullmatch(source_commit):
+            raise HarnessRunnerError("Could not resolve source commit for review provenance")
+        resolved_base = run_git("rev-parse", "--verify", f"{base_commit.lower()}^{{commit}}")
+        if resolved_base.returncode != 0 or (
+            resolved_base.stdout.decode("ascii", errors="strict").strip().lower() != base_commit.lower()
+        ):
+            raise HarnessRunnerError("--review-base-commit must identify an available Git commit")
+        merge_base = run_git("merge-base", base_commit.lower(), source_commit)
+        if merge_base.returncode != 0 or not _SHA_RE.fullmatch(
+            merge_base.stdout.decode("ascii", errors="strict").strip()
+        ):
+            raise HarnessRunnerError("review base and source commit must share a Git merge base")
+        expected_diff = _run_bounded_git_output(
+            root,
+            [
+                "diff",
+                "--binary",
+                "--full-index",
+                "--no-ext-diff",
+                "--no-textconv",
+                "--no-color",
+                "--no-renames",
+                "--no-relative",
+                "--ignore-submodules=none",
+                "--diff-algorithm=myers",
+                "--src-prefix=a/",
+                "--dst-prefix=b/",
+                f"{base_commit.lower()}...{source_commit}",
+                "--",
+            ],
+        )
+    except (OSError, subprocess.TimeoutExpired, UnicodeError):
+        raise HarnessRunnerError("Could not verify semantic-review diff provenance") from None
+    try:
+        supplied_diff = payload["diff"].encode("utf-8")
+    except UnicodeEncodeError:
+        raise HarnessRunnerError("review-input diff contains invalid Unicode") from None
+    if supplied_diff != expected_diff:
+        raise HarnessRunnerError(
+            "review-input diff does not exactly match the canonical Git diff from --review-base-commit to HEAD"
+        )
+
+
+def _write_report(
+    output_path: Path,
+    metadata: dict[str, Any],
+    build_acceptance_report: Any,
+) -> dict[str, Any]:
     report = build_acceptance_report(metadata)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path: Path | None = None
@@ -299,8 +793,8 @@ def _write_report(output_path: Path, metadata: dict[str, Any]) -> dict[str, Any]
             suffix=".tmp",
             delete=False,
         ) as temporary:
-            temporary.write(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
             temporary_path = Path(temporary.name)
+            temporary.write(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
         os.replace(temporary_path, output_path)
     except OSError:
         if temporary_path is not None:
@@ -360,6 +854,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--review-input", help="Repository-relative semantic-review input JSON")
     parser.add_argument("--review-output", help="Repository-relative semantic-review output JSON")
+    parser.add_argument("--review-base-commit", help="Full Git commit SHA of the target base used to generate the review diff")
     parser.add_argument(
         "--timeout-seconds",
         type=int,
@@ -427,6 +922,8 @@ def main(argv: list[str] | None = None) -> int:
 
         _require_tracked_config(root, config_path)
 
+        # Load only committed helper blobs; dirty worktree state is rejected before tasks.
+        build_acceptance_report, validate_harness_config = _load_trusted_helpers(root)
 
         try:
             raw_config = json.loads(
@@ -446,7 +943,9 @@ def main(argv: list[str] | None = None) -> int:
             raise HarnessRunnerError(
                 "semantic-review requires both --review-input and --review-output"
             )
-        if not wants_review and (review_input is not None or review_output is not None):
+        if wants_review and not args.review_base_commit:
+            raise HarnessRunnerError("semantic-review requires --review-base-commit")
+        if not wants_review and (review_input is not None or review_output is not None or args.review_base_commit is not None):
             raise HarnessRunnerError(
                 "--review-input and --review-output are only valid when semantic-review is configured"
             )
@@ -466,16 +965,17 @@ def main(argv: list[str] | None = None) -> int:
         if review_output is not None:
             review_output.parent.mkdir(parents=True, exist_ok=True)
 
-        # Reject ignored project Python sources before planning or executing tasks.
-        _reject_ignored_python_sources(root)
-
         # Preflight every task before executing any of them, avoiding partial execution if
         # a configured task lacks its required arguments or implementation.
         planned_tasks = [
             (task_id, _task_argv(task_id, root, review_input, review_output))
             for task_id in config["commands"]
         ]
+        _reject_ignored_python_sources(root)
         commit_sha = _git_commit_sha(root)
+        if wants_review and review_input_bytes is not None:
+            _verify_review_diff_provenance(root, review_input_bytes, args.review_base_commit)
+            print(f"Semantic review diff provenance: verified against {args.review_base_commit.lower()}...HEAD")
         rules_pin = _rules_pin(root)
         outcomes: dict[str, str] = {}
         failed = False
@@ -500,11 +1000,28 @@ def main(argv: list[str] | None = None) -> int:
             task_stdin = (
                 review_input_bytes if task_id == "semantic-review" else None
             )
-            status, exit_code = _run_task(
-                argv_for_task, root, args.timeout_seconds, task_stdin
-            )
+            # Give every child a fresh private bytecode-cache prefix so it cannot
+            # load ignored or poisoned .pyc files from project __pycache__ directories.
+            with tempfile.TemporaryDirectory(prefix="harness-task-pycache-") as task_cache:
+                task_cache_path = Path(task_cache).resolve()
+                try:
+                    task_cache_path.relative_to(root.resolve())
+                except ValueError:
+                    pass
+                else:
+                    raise HarnessRunnerError("temporary task bytecode cache must be outside the project root")
+                isolated_argv = [
+                    argv_for_task[0],
+                    "-B",
+                    "-X",
+                    f"pycache_prefix={task_cache_path}",
+                    *argv_for_task[1:],
+                ]
+                status, exit_code = _run_task(
+                    isolated_argv, root, args.timeout_seconds, task_stdin
+                )
             outcomes[task_id] = status
-            suffix = " (timeout or launch failure)" if exit_code is None and status == "failed" else (
+            suffix = " (timeout, launch, or descendant-cleanup failure)" if exit_code is None and status == "failed" else (
                 f" (exit {exit_code})" if exit_code not in (None, 0) else ""
             )
             print(f"Task {task_id}: {status}{suffix}")
@@ -531,11 +1048,11 @@ def main(argv: list[str] | None = None) -> int:
             "tool_version": f"dev-workflow-kit/harness-runner@{commit_sha}",
             "tests": outcomes,
         }
-        report = _write_report(report_path, metadata)
+        report = _write_report(report_path, metadata, build_acceptance_report)
         print(f"Acceptance report written: {report_path.relative_to(root).as_posix()}")
         print(f"Acceptance status: {report['status']}")
         return 0 if report["status"] == "passed" else 1
-    except (HarnessRunnerError, HarnessConfigError, AcceptanceReportError) as exc:
+    except (HarnessRunnerError, ValueError) as exc:
         _invalidate_safe_outputs(root, safe_outputs, (args.config, args.review_input))
         print(f"Harness run blocked: {exc}", file=sys.stderr)
         return 2

@@ -1,7 +1,13 @@
+import importlib.util
 import json
+import marshal
+import os
+import py_compile
+import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
@@ -16,24 +22,55 @@ class HarnessRunnerTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+        (self.root / ".gitignore").write_text("__pycache__/\n", encoding="utf-8")
         (self.root / "docs").mkdir()
         (self.root / "scripts").mkdir()
         (self.root / "tests").mkdir()
         (self.root / "artifacts").mkdir()
+        repo_root = Path(__file__).resolve().parents[1]
+        for relative in ("scripts/harness_config.py", "scripts/acceptance_report.py"):
+            shutil.copyfile(repo_root / relative, self.root / relative)
         (self.root / "docs" / "STABLE_ACCEPTANCE_CONTRACT.md").write_text(
             "contract", encoding="utf-8"
         )
         (self.root / "scripts" / "ai_semantic_review.py").write_text(
             "# test fixture\n", encoding="utf-8"
         )
+        (self.root / "tests" / "test_poisoned_cache.py").write_text(
+            "import unittest\n"
+            "class PoisonedCacheFixture(unittest.TestCase):\n"
+            "    def test_source_fixture_is_safe(self): self.assertTrue(True)\n",
+            encoding="utf-8",
+        )
         (self.root / "tests" / "test_example.py").write_text(
-            "import unittest\nclass Example(unittest.TestCase):\n"
-            "    def test_ok(self): self.assertTrue(True)\n",
+            "import os\nimport sys\nimport unittest\n"
+            "class Example(unittest.TestCase):\n"
+            "    def test_ok(self):\n"
+            "        self.assertEqual(sys.flags.isolated, 1)\n"
+            "        self.assertEqual(sys.flags.no_site, 1)\n"
+            "        self.assertNotEqual(os.environ.get(\"HARNESS_SITE_CUSTOMIZED\"), \"1\")\n",
             encoding="utf-8",
         )
         self.config_path = self.root / "harness.json"
         self.write_config(["python-unittest"])
         self.initialize_git_worktree()
+        self.base_commit_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.root, check=True,
+            stdout=subprocess.PIPE, text=True,
+        ).stdout.strip()
+
+    def write_review_input(self, path, diff="", changed_files=None):
+        payload = {
+            "task": "review the committed change",
+            "diff": diff,
+            "changed_files": [] if changed_files is None else changed_files,
+            "global_rules": "Follow the supplied project rules.",
+            "project_instructions": "Review only the committed source change.",
+        }
+        review_path = Path(path)
+        review_path.parent.mkdir(parents=True, exist_ok=True)
+        review_path.write_text(json.dumps(payload), encoding="utf-8")
+        return payload
 
     def write_config(self, commands):
         self.config_path.write_text(
@@ -44,8 +81,24 @@ class HarnessRunnerTests(unittest.TestCase):
             }),
             encoding="utf-8",
         )
+        if (self.root / ".git").exists():
+            relative = self.config_path.relative_to(self.root).as_posix()
+            subprocess.run(["git", "add", "--", relative], cwd=self.root, check=True)
+            staged = subprocess.run(
+                ["git", "diff", "--cached", "--quiet"], cwd=self.root, check=False
+            )
+            if staged.returncode != 0:
+                subprocess.run(
+                    ["git", "-c", "user.name=Harness Test", "-c",
+                     "user.email=harness-test@example.invalid", "commit", "-qm", "update fixture config"],
+                    cwd=self.root, check=True,
+                )
+            self.base_commit_sha = subprocess.run(
+                ["git", "rev-parse", "HEAD"], cwd=self.root, check=True,
+                stdout=subprocess.PIPE, text=True,
+            ).stdout.strip()
 
-    def run_runner(self, *extra, config="harness.json"):
+    def run_runner(self, *extra, config="harness.json", add_review_base=True):
         args = [
             "--project-root", str(self.root),
             "--config", config,
@@ -53,6 +106,8 @@ class HarnessRunnerTests(unittest.TestCase):
             "--timeout-seconds", "10",
             *extra,
         ]
+        if add_review_base and "--review-input" in extra and "--review-base-commit" not in extra:
+            args.extend(["--review-base-commit", self.base_commit_sha])
         stdout = StringIO()
         stderr = StringIO()
         with redirect_stdout(stdout), redirect_stderr(stderr):
@@ -71,9 +126,12 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(stderr, "")
         self.assertIn("Task python-unittest: passed", stdout)
         argv = run_task.call_args.args[0]
+        self.assertEqual(argv[0], sys.executable)
+        self.assertEqual(argv[1:3], ["-B", "-X"])
+        self.assertTrue(argv[3].startswith("pycache_prefix="))
         self.assertEqual(
-            argv,
-            [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
+            argv[4:],
+            ["-I", "-S", "-m", "unittest", "discover", "-s", "tests", "-v"],
         )
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["status"], "passed")
@@ -82,6 +140,70 @@ class HarnessRunnerTests(unittest.TestCase):
             set(report),
             {"schema_version", "commit_sha", "rules_pin", "tool_version", "tests", "status"},
         )
+
+    def test_runner_ignores_poisoned_project_pycache(self):
+        source = self.root / "tests" / "test_poisoned_cache.py"
+        cache_path = Path(importlib.util.cache_from_source(str(source)))
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        py_compile.compile(str(source), cfile=str(cache_path), doraise=True)
+        compiled = cache_path.read_bytes()
+        malicious = compile(
+            "raise RuntimeError('poisoned project bytecode executed')",
+            str(source),
+            "exec",
+        )
+        cache_path.write_bytes(compiled[:16] + marshal.dumps(malicious))
+        with patch("scripts.harness_runner._git_commit_sha", return_value=self.base_commit_sha), patch(
+            "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
+        ):
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 0, stderr)
+        self.assertEqual(stderr, "")
+
+    def test_trusted_helper_imports_bypass_poisoned_project_pycache(self):
+        helper_sources = (
+            self.root / "scripts" / "acceptance_report.py",
+            self.root / "scripts" / "harness_config.py",
+        )
+        cache_paths = [
+            Path(importlib.util.cache_from_source(str(source)))
+            for source in helper_sources
+        ]
+        originals = {path: path.read_bytes() if path.exists() else None for path in cache_paths}
+        try:
+            for path, source in zip(cache_paths, helper_sources):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                py_compile.compile(str(source), cfile=str(path), doraise=True)
+                compiled = path.read_bytes()
+                malicious = compile(
+                    "raise RuntimeError('poisoned helper bytecode executed')",
+                    str(source),
+                    "exec",
+                )
+                path.write_bytes(compiled[:16] + marshal.dumps(malicious))
+            build_report, validate_config = harness_runner._load_trusted_helpers(self.root)
+            self.assertTrue(callable(build_report))
+            self.assertTrue(callable(validate_config))
+        finally:
+            for path, original in originals.items():
+                if original is None:
+                    path.unlink(missing_ok=True)
+                else:
+                    path.write_bytes(original)
+
+    def test_trusted_helper_loading_ignores_modified_worktree_source(self):
+        helper_path = self.root / "scripts" / "harness_config.py"
+        helper_path.write_text(
+            "raise RuntimeError('modified worktree helper executed')\\n",
+            encoding="utf-8",
+        )
+        _, validate_config = harness_runner._load_trusted_helpers(self.root)
+        validated = validate_config({
+            "schema_version": 1,
+            "project": "fixture",
+            "commands": ["python-unittest"],
+        })
+        self.assertEqual(validated["commands"], ["python-unittest"])
 
     def test_runner_executes_fixed_task_end_to_end(self):
         with patch("scripts.harness_runner._git_commit_sha", return_value="c" * 40), patch(
@@ -95,6 +217,25 @@ class HarnessRunnerTests(unittest.TestCase):
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["status"], "passed")
         self.assertEqual(report["tests"], {"python-unittest": "passed"})
+
+    def test_python_task_ignores_pythonpath_and_sitecustomize(self):
+        injection = tempfile.TemporaryDirectory()
+        self.addCleanup(injection.cleanup)
+        injection_path = Path(injection.name)
+        (injection_path / "sitecustomize.py").write_text(
+            "import os\nos.environ[\"HARNESS_SITE_CUSTOMIZED\"] = \"1\"\n",
+            encoding="utf-8",
+        )
+        with patch.dict(
+            os.environ,
+            {"PYTHONPATH": injection.name, "HARNESS_SITE_CUSTOMIZED": ""},
+        ), patch("scripts.harness_runner._git_commit_sha", return_value="e" * 40), patch(
+            "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
+        ):
+            code, _, stderr = self.run_runner()
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
 
     def test_task_failure_writes_failed_report_and_returns_one(self):
         with patch("scripts.harness_runner._git_commit_sha", return_value="b" * 40), patch(
@@ -113,14 +254,14 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_stops_after_failure_and_marks_remaining_tasks_not_run(self):
         self.write_config(["python-unittest", "semantic-review"])
-        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         with patch("scripts.harness_runner._git_commit_sha", return_value="f" * 40), patch(
             "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
         ), patch(
             "scripts.harness_runner._run_task", return_value=("failed", 23)
         ) as run_task:
             code, stdout, stderr = self.run_runner(
-                "--review-input", "review-input.json",
+                "--review-input", "artifacts/review-input.json",
                 "--review-output", "artifacts/review.json",
             )
 
@@ -138,10 +279,10 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_semantic_review_must_be_last_configured_task(self):
         self.write_config(["semantic-review", "python-unittest"])
-        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(
-                "--review-input", "review-input.json",
+                "--review-input", "artifacts/review-input.json",
                 "--review-output", "artifacts/review.json",
             )
 
@@ -151,7 +292,7 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_runs_configured_tasks_in_order_with_explicit_review_paths(self):
         self.write_config(["python-unittest", "semantic-review"])
-        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         with patch("scripts.harness_runner._git_commit_sha", return_value="d" * 40), patch(
             "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
         ), patch(
@@ -159,7 +300,7 @@ class HarnessRunnerTests(unittest.TestCase):
             side_effect=[("passed", 0), ("passed", 0)],
         ) as run_task:
             code, stdout, stderr = self.run_runner(
-                "--review-input", "review-input.json",
+                "--review-input", "artifacts/review-input.json",
                 "--review-output", "artifacts/review.json",
             )
 
@@ -168,16 +309,20 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("Task python-unittest: passed", stdout)
         self.assertIn("Task semantic-review: passed", stdout)
         calls = [call.args[0] for call in run_task.call_args_list]
-        self.assertEqual(calls[0], [
-            sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"
+        for call in calls:
+            self.assertEqual(call[0], sys.executable)
+            self.assertEqual(call[1:3], ["-B", "-X"])
+            self.assertTrue(call[3].startswith("pycache_prefix="))
+            self.assertEqual(call[4:6], ["-I", "-S"])
+        self.assertEqual(calls[0][6:], [
+            "-m", "unittest", "discover", "-s", "tests", "-v"
         ])
-        self.assertEqual(calls[1], [
-            sys.executable,
+        self.assertEqual(calls[1][6:], [
             str((self.root / "scripts" / "ai_semantic_review.py").resolve()),
             "--input", "-",
             "--output", str((self.root / "artifacts" / "review.json").resolve()),
         ])
-        self.assertEqual(run_task.call_args_list[1].args[3], b"{}")
+        self.assertEqual(run_task.call_args_list[1].args[3], (self.root / "artifacts" / "review-input.json").read_bytes())
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["status"], "passed")
         self.assertEqual(
@@ -192,6 +337,243 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("inside the artifacts/", stderr)
         run_task.assert_not_called()
 
+    def test_semantic_review_rejects_unencodable_diff_before_task_execution(self):
+        self.write_config(["semantic-review"])
+        review_path = self.root / "artifacts" / "review-input.json"
+        payload = self.write_review_input(review_path)
+        payload["diff"] = "\ud800"
+        review_path.write_text(json.dumps(payload), encoding="utf-8")
+        with patch("scripts.harness_runner._git_commit_sha", return_value=self.base_commit_sha), patch(
+            "scripts.harness_runner._run_task"
+        ) as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("invalid Unicode", stderr)
+        run_task.assert_not_called()
+
+    def test_semantic_review_rejects_diff_not_matching_git_source(self):
+        self.write_config(["semantic-review"])
+        review_path = self.root / "artifacts" / "review-input.json"
+        payload = self.write_review_input(review_path)
+        payload["diff"] = "diff --git a/fake.py b/fake.py\\n"
+        review_path.write_text(json.dumps(payload), encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("does not exactly match the canonical Git diff", stderr)
+        run_task.assert_not_called()
+
+    def test_semantic_review_requires_explicit_base_commit(self):
+        self.write_config(["semantic-review"])
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+                add_review_base=False,
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("semantic-review requires --review-base-commit", stderr)
+        run_task.assert_not_called()
+
+    def test_semantic_review_accepts_canonical_diff_for_declared_base_and_head(self):
+        self.write_config(["semantic-review"])
+        source_dir = self.root / "src"
+        source_dir.mkdir()
+        source_file = source_dir / "feature.py"
+        source_file.write_text("def feature():\\n    return 42\\n", encoding="utf-8")
+        subprocess.run(["git", "add", "harness.json", "src/feature.py"], cwd=self.root, check=True)
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test", "-c",
+             "user.email=harness-test@example.invalid", "commit", "-qm", "add feature"],
+            cwd=self.root, check=True,
+        )
+        diff = subprocess.run(
+            [
+                "git", "diff", "--binary", "--full-index", "--no-ext-diff",
+                "--no-textconv", "--no-color", "--no-renames", "--no-relative",
+                "--diff-algorithm=myers", "--src-prefix=a/", "--dst-prefix=b/",
+                f"{self.base_commit_sha}...HEAD", "--",
+            ],
+            cwd=self.root, check=True, stdout=subprocess.PIPE,
+        ).stdout.decode("utf-8")
+        self.write_review_input(
+            self.root / "artifacts" / "review-input.json",
+            diff=diff,
+            changed_files=["src/feature.py"],
+        )
+        with patch("scripts.harness_runner._run_task", return_value=("passed", 0)) as run_task:
+            code, stdout, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 0, stderr)
+        self.assertEqual(stderr, "")
+        self.assertIn("Semantic review diff provenance: verified", stdout)
+        run_task.assert_called_once()
+
+    def test_semantic_review_rejects_git_diff_generation_timeout_before_task_execution(self):
+        self.write_config(["semantic-review"])
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
+        real_popen = subprocess.Popen
+        processes = []
+
+        def slow_git_diff(args, *popen_args, **popen_kwargs):
+            if args[:2] == ["git", "diff"]:
+                process = real_popen(
+                    [sys.executable, "-c", "import time; time.sleep(30)"],
+                    *popen_args,
+                    **popen_kwargs,
+                )
+                processes.append(process)
+                return process
+            return real_popen(args, *popen_args, **popen_kwargs)
+
+        with patch(
+            "scripts.harness_runner._GIT_DIFF_GENERATION_TIMEOUT_SECONDS", 0.05
+        ), patch(
+            "scripts.harness_runner.subprocess.Popen", side_effect=slow_git_diff
+        ), patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+
+        self.assertEqual(code, 2)
+        self.assertIn("Could not verify semantic-review diff provenance", stderr)
+        self.assertEqual(len(processes), 1)
+        self.assertIsNotNone(processes[0].poll(), "timed-out Git process must be terminated")
+        run_task.assert_not_called()
+
+    def test_semantic_review_rejects_canonical_git_diff_over_4_mib_before_task_execution(self):
+        self.write_config(["semantic-review"])
+        large_source = self.root / "src" / "large.txt"
+        large_source.parent.mkdir()
+        large_source.write_bytes(
+            b"x" * (harness_runner._MAX_REVIEW_INPUT_BYTES + 1)
+        )
+        subprocess.run(
+            ["git", "add", "src/large.txt"], cwd=self.root, check=True
+        )
+        subprocess.run(
+            [
+                "git", "-c", "user.name=Harness Test",
+                "-c", "user.email=harness-test@example.invalid",
+                "commit", "-qm", "add oversized review diff",
+            ],
+            cwd=self.root,
+            check=True,
+        )
+        self.write_review_input(
+            self.root / "artifacts" / "review-input.json",
+            diff="",
+            changed_files=["src/large.txt"],
+        )
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("canonical Git diff exceeds the 4 MiB limit", stderr)
+        run_task.assert_not_called()
+
+    def test_semantic_review_diff_provenance_includes_submodule_changes_despite_git_config(self):
+        self.write_config(["semantic-review"])
+        submodule_temp = tempfile.TemporaryDirectory()
+        self.addCleanup(submodule_temp.cleanup)
+        submodule_root = Path(submodule_temp.name)
+        subprocess.run(["git", "init", "-q"], cwd=submodule_root, check=True)
+        subprocess.run(
+            ["git", "config", "user.name", "Harness Test"],
+            cwd=submodule_root, check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.email", "harness-test@example.invalid"],
+            cwd=submodule_root, check=True,
+        )
+        (submodule_root / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
+        subprocess.run(["git", "add", "module.py"], cwd=submodule_root, check=True)
+        subprocess.run(
+            ["git", "commit", "-qm", "initial submodule"],
+            cwd=submodule_root, check=True,
+        )
+        first_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=submodule_root, check=True,
+            stdout=subprocess.PIPE, text=True,
+        ).stdout.strip()
+
+        submodule_path = self.root / "vendor" / "submodule"
+        submodule_path.parent.mkdir(parents=True)
+        subprocess.run(
+            ["git", "clone", "-q", str(submodule_root), str(submodule_path)],
+            cwd=self.root, check=True,
+        )
+        subprocess.run(
+            ["git", "update-index", "--add", "--cacheinfo",
+             f"160000,{first_sha},vendor/submodule"],
+            cwd=self.root, check=True,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test", "-c",
+             "user.email=harness-test@example.invalid", "commit", "-qm", "add submodule"],
+            cwd=self.root, check=True,
+        )
+
+        (submodule_root / "module.py").write_text("VALUE = 2\n", encoding="utf-8")
+        subprocess.run(["git", "commit", "-qam", "advance submodule"], cwd=submodule_root, check=True)
+        second_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=submodule_root, check=True,
+            stdout=subprocess.PIPE, text=True,
+        ).stdout.strip()
+        subprocess.run(["git", "fetch", "-q", "origin"], cwd=submodule_path, check=True)
+        subprocess.run(["git", "checkout", "-q", second_sha], cwd=submodule_path, check=True)
+        subprocess.run(
+            ["git", "update-index", "--cacheinfo",
+             f"160000,{second_sha},vendor/submodule"],
+            cwd=self.root, check=True,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test", "-c",
+             "user.email=harness-test@example.invalid", "commit", "-qm", "advance submodule"],
+            cwd=self.root, check=True,
+        )
+        subprocess.run(
+            ["git", "config", "diff.ignoreSubmodules", "all"],
+            cwd=self.root, check=True,
+        )
+
+        diff = subprocess.run(
+            [
+                "git", "diff", "--binary", "--full-index", "--no-ext-diff",
+                "--no-textconv", "--no-color", "--no-renames", "--no-relative",
+                "--ignore-submodules=none", "--diff-algorithm=myers",
+                "--src-prefix=a/", "--dst-prefix=b/",
+                f"{self.base_commit_sha}...HEAD", "--",
+            ],
+            cwd=self.root, check=True, stdout=subprocess.PIPE,
+        ).stdout.decode("utf-8")
+        self.assertIn("Subproject commit", diff)
+        self.write_review_input(
+            self.root / "artifacts" / "review-input.json",
+            diff=diff,
+            changed_files=["vendor/submodule"],
+        )
+        with patch("scripts.harness_runner._run_task", return_value=("passed", 0)) as run_task:
+            code, stdout, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 0, stderr)
+        self.assertIn("Semantic review diff provenance: verified", stdout)
+        run_task.assert_called_once()
+
     def test_semantic_review_requires_explicit_input_and_output_before_any_task_runs(self):
         self.write_config(["python-unittest", "semantic-review"])
         with patch("scripts.harness_runner._run_task") as run_task:
@@ -202,10 +584,10 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_semantic_review_output_must_not_overwrite_source_files(self):
         self.write_config(["semantic-review"])
-        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(
-                "--review-input", "review-input.json",
+                "--review-input", "artifacts/review-input.json",
                 "--review-output", "scripts/ai_semantic_review.py",
             )
         self.assertEqual(code, 2)
@@ -215,11 +597,11 @@ class HarnessRunnerTests(unittest.TestCase):
         self.config_path = self.root / "artifacts" / "harness.json"
         self.write_config(["semantic-review"])
         original_config = self.config_path.read_bytes()
-        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(
                 "--config", "artifacts/harness.json",
-                "--review-input", "review-input.json",
+                "--review-input", "artifacts/review-input.json",
                 "--review-output", "artifacts/harness.json",
             )
         self.assertEqual(code, 2)
@@ -229,11 +611,11 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_runner_rejects_oversized_review_input_before_tasks(self):
         self.write_config(["semantic-review"])
-        review_input = self.root / "review-input.json"
+        review_input = self.root / "artifacts" / "review-input.json"
         review_input.write_bytes(b"x" * (harness_runner._MAX_REVIEW_INPUT_BYTES + 1))
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(
-                "--review-input", "review-input.json",
+                "--review-input", "artifacts/review-input.json",
                 "--review-output", "artifacts/review.json",
             )
         self.assertEqual(code, 2)
@@ -243,8 +625,8 @@ class HarnessRunnerTests(unittest.TestCase):
 
     def test_runner_rejects_review_input_mutated_by_preceding_task(self):
         self.write_config(["python-unittest", "semantic-review"])
-        review_input = self.root / "review-input.json"
-        review_input.write_text('{"task":"original"}', encoding="utf-8")
+        review_input = self.root / "artifacts" / "review-input.json"
+        self.write_review_input(review_input)
 
         def mutate_review_input(argv, *_args):
             if "-m" in argv:
@@ -258,7 +640,7 @@ class HarnessRunnerTests(unittest.TestCase):
             "scripts.harness_runner._run_task", side_effect=mutate_review_input
         ) as run_task:
             code, _, stderr = self.run_runner(
-                "--review-input", "review-input.json",
+                "--review-input", "artifacts/review-input.json",
                 "--review-output", "artifacts/review.json",
             )
 
@@ -272,7 +654,7 @@ class HarnessRunnerTests(unittest.TestCase):
         from scripts.ai_semantic_review import validate_model_config
 
         self.write_config(["python-unittest", "semantic-review"])
-        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         endpoint, key, model = validate_model_config({
             "AI_REVIEW_API_BASE": "http://127.0.0.1:1235/v1",
             "AI_REVIEW_API_KEY": "fixture-key",
@@ -287,13 +669,13 @@ class HarnessRunnerTests(unittest.TestCase):
             side_effect=[("passed", 0), ("failed", 1)],
         ) as run_task:
             code, _, stderr = self.run_runner(
-                "--review-input", "review-input.json",
+                "--review-input", "artifacts/review-input.json",
                 "--review-output", "artifacts/review.json",
             )
         self.assertEqual(code, 1)
         self.assertEqual(stderr, "")
         self.assertEqual(run_task.call_count, 2)
-        self.assertEqual(run_task.call_args_list[1].args[0][1], str(
+        self.assertEqual(run_task.call_args_list[1].args[0][6], str(
             (self.root / "scripts" / "ai_semantic_review.py").resolve()
         ))
         report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
@@ -356,7 +738,7 @@ class HarnessRunnerTests(unittest.TestCase):
     def test_blocked_post_task_integrity_removes_semantic_review_pass_artifact(self):
         self.write_config(["python-unittest", "semantic-review"])
         review_input = self.root / "artifacts" / "review-input.json"
-        review_input.write_text("{}", encoding="utf-8")
+        self.write_review_input(review_input)
         review_output = self.root / "artifacts" / "review.json"
         tracked_source = self.root / "tests" / "test_example.py"
 
@@ -380,13 +762,15 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
     def test_timeout_is_a_failed_task_without_echoing_process_output(self):
-        with patch(
-            "scripts.harness_runner.subprocess.run",
-            side_effect=harness_runner.subprocess.TimeoutExpired(["test"], 1),
-        ):
-            status, exit_code = harness_runner._run_task(
-                [sys.executable, "-c", "pass"], self.root, 1
-            )
+        status, exit_code = harness_runner._run_task(
+            [
+                sys.executable,
+                "-c",
+                "import time; print('private child output'); time.sleep(5)",
+            ],
+            self.root,
+            0.1,
+        )
         self.assertEqual((status, exit_code), ("failed", None))
 
 
@@ -518,6 +902,50 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("clean", stderr)
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
+    def test_commit_provenance_ignores_git_repository_redirect_environment(self):
+        actual_head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.root, check=True,
+            stdout=subprocess.PIPE, text=True,
+        ).stdout.strip()
+        alternate_temp = tempfile.TemporaryDirectory()
+        self.addCleanup(alternate_temp.cleanup)
+        alternate_root = Path(alternate_temp.name)
+        subprocess.run(
+            ["git", "clone", "-q", str(self.root), str(alternate_root)],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Harness Test"],
+            cwd=alternate_root, check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.email", "harness-test@example.invalid"],
+            cwd=alternate_root, check=True,
+        )
+        subprocess.run(
+            ["git", "commit", "--allow-empty", "-qm", "alternate repository identity"],
+            cwd=alternate_root, check=True,
+        )
+        alternate_head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=alternate_root, check=True,
+            stdout=subprocess.PIPE, text=True,
+        ).stdout.strip()
+        self.assertNotEqual(actual_head, alternate_head)
+
+        with patch.dict(
+            os.environ,
+            {
+                "GIT_DIR": str(alternate_root / ".git"),
+                "GIT_WORK_TREE": str(self.root),
+            },
+        ):
+            redirected_head = subprocess.run(
+                ["git", "rev-parse", "HEAD"], cwd=self.root, check=True,
+                stdout=subprocess.PIPE, text=True,
+            ).stdout.strip()
+            self.assertEqual(redirected_head, alternate_head)
+            self.assertEqual(harness_runner._git_commit_sha(self.root), actual_head)
+
     def test_commit_provenance_rejects_nested_project_root(self):
         self.initialize_git_worktree()
         with self.assertRaisesRegex(harness_runner.HarnessRunnerError, "repository root"):
@@ -534,7 +962,9 @@ class HarnessRunnerTests(unittest.TestCase):
         for raw in duplicate_configs:
             with self.subTest(raw=raw):
                 self.config_path.write_text(raw, encoding="utf-8")
-                with patch("scripts.harness_runner._run_task") as run_task:
+                with patch("scripts.harness_runner._git_commit_sha", return_value=self.base_commit_sha), patch(
+                    "scripts.harness_runner._run_task"
+                ) as run_task:
                     code, _, stderr = self.run_runner()
                 self.assertEqual(code, 2)
                 self.assertIn("Could not read a valid JSON Harness config", stderr)
@@ -598,6 +1028,57 @@ class HarnessRunnerTests(unittest.TestCase):
         run_task.assert_not_called()
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
+
+
+    def test_runner_rejects_ignored_python_bytecode_before_execution(self):
+        helper = self.root / "tests" / "helper.pyc"
+        helper.write_bytes(b"\x00\x01compiled-python-bytecode")
+        (self.root / ".gitignore").write_text(
+            "tests/helper.pyc\n", encoding="utf-8"
+        )
+        subprocess.run(
+            ["git", "add", ".gitignore"], cwd=self.root, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test",
+             "-c", "user.email=harness-test@example.invalid",
+             "commit", "-qm", "ignore Python bytecode helper"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("ignored Python source", stderr)
+        run_task.assert_not_called()
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
+
+
+    def test_runner_rejects_ignored_python_source_in_nested_env_directory(self):
+        helper = self.root / "src" / "env" / "helper.py"
+        helper.parent.mkdir(parents=True)
+        helper.write_text("VALUE = 'mutable nested source'\n", encoding="utf-8")
+        (self.root / ".gitignore").write_text(
+            "src/env/helper.py\n", encoding="utf-8"
+        )
+        subprocess.run(
+            ["git", "add", ".gitignore"], cwd=self.root, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test",
+             "-c", "user.email=harness-test@example.invalid",
+             "commit", "-qm", "ignore nested env helper"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner()
+        self.assertEqual(code, 2)
+        self.assertIn("ignored Python source", stderr)
+        run_task.assert_not_called()
+        self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
 
     def test_runner_rejects_ignored_python_source_outside_tests_before_execution(self):
@@ -735,10 +1216,10 @@ class HarnessRunnerTests(unittest.TestCase):
             script.write_text("# test fixture\\n", encoding="utf-8")
             self.skipTest("file symlink creation is unavailable")
         self.write_config(["semantic-review"])
-        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        self.write_review_input(self.root / "artifacts" / "review-input.json")
         with patch("scripts.harness_runner._run_task") as run_task:
             code, _, stderr = self.run_runner(
-                "--review-input", "review-input.json",
+                "--review-input", "artifacts/review-input.json",
                 "--review-output", "artifacts/review.json",
             )
         self.assertEqual(code, 2)
@@ -842,6 +1323,188 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertEqual(target.read_text(encoding="utf-8"), '{"keep": true}')
         self.assertTrue(report.is_symlink())
 
+    def test_documented_script_entrypoint_supports_direct_execution(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-S",
+                str(repo_root / "scripts" / "harness_runner.py"),
+                "--project-root", str(self.root),
+                "--config", "harness.json",
+                "--report-output", "artifacts/report.json",
+                "--timeout-seconds", "10",
+            ],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Task python-unittest: passed", result.stdout)
+        report_path = self.root / "artifacts" / "report.json"
+        self.assertTrue(report_path.is_file())
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        self.assertEqual(report["status"], "passed")
+        self.assertEqual(report["tests"], {"python-unittest": "passed"})
+
+
+    @unittest.skipUnless(os.name == "posix", "POSIX process-group behavior")
+    def test_run_task_stops_descendant_after_successful_parent_exit(self):
+        marker = self.root / "late-descendant-write.txt"
+        child_code = (
+            "import pathlib,time; time.sleep(0.4); "
+            f"pathlib.Path({str(marker)!r}).write_text('late mutation')"
+        )
+        task_code = (
+            "import subprocess,sys; "
+            "subprocess.Popen([sys.executable, '-c', sys.argv[1]])"
+        )
+        status, exit_code = harness_runner._run_task(
+            [sys.executable, "-c", task_code, child_code], self.root, 5
+        )
+        self.assertEqual((status, exit_code), ("failed", None))
+        time.sleep(0.6)
+        self.assertFalse(marker.exists())
+
+    @unittest.skipUnless(os.name == "posix", "POSIX process-group behavior")
+    def test_run_task_timeout_stops_descendant_processes(self):
+        marker = self.root / "timed-out-descendant-write.txt"
+        child_code = (
+            "import pathlib,time; time.sleep(0.6); "
+            f"pathlib.Path({str(marker)!r}).write_text('late mutation')"
+        )
+        task_code = (
+            "import subprocess,sys,time; "
+            "subprocess.Popen([sys.executable, '-c', sys.argv[1]]); time.sleep(30)"
+        )
+        status, exit_code = harness_runner._run_task(
+            [sys.executable, "-c", task_code, child_code], self.root, 0.2
+        )
+        self.assertEqual((status, exit_code), ("failed", None))
+        time.sleep(0.8)
+        self.assertFalse(marker.exists())
+
+    @unittest.skipUnless(os.name == "nt", "Windows Job Object behavior")
+    def test_run_task_fails_closed_when_windows_job_setup_fails(self):
+        marker = self.root / "windows-job-setup-failure-executed.txt"
+        task_code = (
+            "import pathlib,time; time.sleep(0.2); "
+            f"pathlib.Path({str(marker)!r}).write_text('must not execute')"
+        )
+        with patch(
+            "scripts.harness_runner._create_windows_job",
+            side_effect=OSError("simulated Job Object setup failure"),
+        ):
+            status, exit_code = harness_runner._run_task(
+                [sys.executable, "-c", task_code], self.root, 5
+            )
+        self.assertEqual((status, exit_code), ("failed", None))
+        time.sleep(0.4)
+        self.assertFalse(marker.exists())
+
+    @unittest.skipUnless(os.name == "nt", "Windows Job Object behavior")
+    def test_windows_job_object_reports_no_descendants_after_task_exit(self):
+        process = subprocess.Popen(
+            [sys.executable, "-c", "pass"],
+            cwd=self.root,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=0x00000004,  # Win32 CREATE_SUSPENDED
+        )
+        job_state = None
+        try:
+            job_state = harness_runner._create_windows_job(process)
+            process.communicate(timeout=5)
+            self.assertEqual(process.returncode, 0)
+            descendants = harness_runner._windows_job_has_descendants(
+                job_state, process.pid
+            )
+            self.assertIs(descendants, False, f"unexpected Job Object query result: {descendants!r}")
+        finally:
+            if job_state is not None:
+                harness_runner._close_windows_job(job_state)
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+
+    @unittest.skipUnless(os.name == "nt", "Windows Job Object behavior")
+    def test_run_task_executes_and_passes_without_descendants_windows(self):
+        marker = self.root / "windows-task-ran.txt"
+        task_code = (
+            "import pathlib,sys; "
+            f"pathlib.Path({str(marker)!r}).write_text('executed')"
+        )
+        status, exit_code = harness_runner._run_task(
+            [sys.executable, "-c", task_code], self.root, 5
+        )
+        self.assertEqual((status, exit_code), ("passed", 0))
+        self.assertEqual(marker.read_text(encoding="utf-8"), "executed")
+
+    @unittest.skipUnless(os.name == "nt", "Windows Job Object behavior")
+    def test_run_task_stops_descendant_after_successful_parent_exit_windows(self):
+        marker = self.root / "late-windows-descendant-write.txt"
+        child_code = (
+            "import pathlib,time; time.sleep(0.6); "
+            f"pathlib.Path({str(marker)!r}).write_text('late mutation')"
+        )
+        task_code = (
+            "import subprocess,sys; "
+            "subprocess.Popen([sys.executable, '-c', sys.argv[1]])"
+        )
+        status, exit_code = harness_runner._run_task(
+            [sys.executable, "-c", task_code, child_code], self.root, 5
+        )
+        self.assertEqual((status, exit_code), ("failed", None))
+        time.sleep(0.8)
+        self.assertFalse(marker.exists())
+
+    @unittest.skipUnless(os.name == "nt", "Windows Job Object behavior")
+    def test_run_task_timeout_stops_descendant_processes_windows(self):
+        marker = self.root / "timed-out-windows-descendant-write.txt"
+        child_code = (
+            "import pathlib,time; time.sleep(0.8); "
+            f"pathlib.Path({str(marker)!r}).write_text('late mutation')"
+        )
+        task_code = (
+            "import subprocess,sys,time; "
+            "subprocess.Popen([sys.executable, '-c', sys.argv[1]]); time.sleep(30)"
+        )
+        status, exit_code = harness_runner._run_task(
+            [sys.executable, "-c", task_code, child_code], self.root, 0.2
+        )
+        self.assertEqual((status, exit_code), ("failed", None))
+        time.sleep(1.0)
+        self.assertFalse(marker.exists())
+
+    def test_report_write_failure_cleans_temporary_artifact(self):
+        output = self.root / "artifacts" / "report.json"
+        with patch(
+            "scripts.harness_runner.json.dumps",
+            side_effect=OSError("simulated disk write failure"),
+        ):
+            with self.assertRaisesRegex(
+                harness_runner.HarnessRunnerError,
+                "Could not write the acceptance report",
+            ):
+                harness_runner._write_report(
+                    output,
+                    {
+                        "commit_sha": "a" * 40,
+                        "rules_pin": "sha256:" + "b" * 64,
+                        "tool_version": "test",
+                        "tests": {"python-unittest": "passed"},
+                    },
+                    lambda metadata: {
+                        "schema_version": 1,
+                        **metadata,
+                        "status": "passed",
+                    },
+                )
+        self.assertFalse(output.exists())
+        self.assertEqual(list(output.parent.iterdir()), [])
 
 if __name__ == "__main__":
     unittest.main()

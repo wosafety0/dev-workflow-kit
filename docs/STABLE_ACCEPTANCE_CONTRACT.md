@@ -17,11 +17,11 @@ The review input must contain non-empty string fields:
 - \`global_rules\`
 - \`project_instructions\`
 
-It must also contain \`changed_files\`, a list of non-empty, trimmed path strings. Duplicate paths are rejected. Paths must be repository-relative and must not contain absolute-path prefixes, Windows separators, drive prefixes, empty path segments, \`.\` or \`..\` segments, or control characters. A path longer than 4096 characters is rejected.
+It must also contain \`changed_files\`, a list of non-empty, trimmed path strings. Duplicate paths are rejected. Paths must be repository-relative and must not contain absolute-path prefixes, Windows separators, drive prefixes, empty path segments, \`.\` or \`..\` segments, or control characters. A path longer than 4096 characters is rejected. Both old and new paths in every \`diff --git\` header must pass the same safety checks, including rename source paths; validating only the destination is insufficient.
 
 ## 3. Diff integrity and numeric bounds
 
-The supplied diff must be structurally parseable and consistent with the declared changed-file set. The validator rejects malformed hunk headers and bodies, hunk counts that disagree with the body, unsupported path/header mismatches, duplicate file sections, and evidence that cannot be mapped to the diff.
+The supplied diff must be structurally parseable and consistent with the declared changed-file set. The validator rejects malformed hunk headers and bodies, hunk counts that disagree with the body, unsupported path/header mismatches, duplicate file sections, and evidence that cannot be mapped to the diff. Added-line and context-line evidence uses resulting-file coordinates; deleted-line evidence uses old-file coordinates. Context within a deleted file also uses old-file coordinates. Evidence that combines old-file and resulting-file coordinates in one finding is rejected. Binary patch metadata (\`Binary files ... differ\` or \`GIT binary patch\`), Git submodule gitlinks (mode \`160000\`), and Git LFS v1 pointer files make a semantic \`PASS\` invalid because their underlying payload is not reviewable from the parent repository diff.
 
 Hunk numeric fields are bounded before integer conversion. Supported hunk values and computed line ranges must not exceed 2,147,483,647. Over-limit or malformed values must be rejected as a review-validation error; they must not escape as an uncaught conversion exception or be treated as valid evidence.
 
@@ -32,7 +32,7 @@ The output must be a JSON object with exactly these top-level keys:
 - \`status\`: one of \`PASS\`, \`NEEDS_CHANGES\`, \`INCONCLUSIVE\`
 - \`summary\`: non-empty string
 - \`checked_scope\`: non-empty list of non-empty strings
-- \`limitations\`: list of non-empty strings
+- \`limitations\`: non-empty list of non-empty strings
 - \`findings\`: list of findings matching the validator's required schema
 
 Each finding must use a supported severity and identify a changed file, a valid line range, a rule reference and quote, diff evidence, rationale, and recommendation. Findings must be supported by the supplied diff and rules; unverified claims must not be accepted as grounded findings.
@@ -43,12 +43,17 @@ The following conditions must never yield an accepted passing review:
 
 - Missing or malformed required input.
 - Unsafe or inconsistent changed-file paths.
+- Unsafe rename source paths, even when the destination path is safe.
+- Binary, Git submodule gitlink, or Git LFS pointer changes that receive a `PASS` despite their underlying payload being unavailable for source review.
+- A review result with an empty `limitations` list.
 - Malformed or internally inconsistent diff structure.
 - Hunk numbers outside supported bounds.
 - Invalid output schema or unsupported status/severity.
 - Findings whose file, line range, rule quote, or evidence cannot be verified.
 - Missing required provider configuration, network/provider errors, or malformed provider responses.
 - Model-provider response bodies larger than 1 MiB; the client reads at most 1 MiB plus one sentinel byte before failing closed.
+- Excessively nested review input, provider envelopes, or model-produced JSON must fail closed through a controlled validation error rather than an uncaught recursion traceback.
+- If semantic-review artifact serialization fails, including on invalid Unicode, the temporary file must be cleaned up and no partial artifact may be published.
 
 The caller must treat validation/provider failures as failure or inconclusive outcomes, not as approval to merge or perform project actions.
 
@@ -85,4 +90,35 @@ This document is a living 0.x contract. A change that weakens a fail-closed rule
 - The config must be tracked by the current Git HEAD and must not resolve under generated `artifacts/`; a blocked run must invalidate stale passing report/review artifacts before configuration validation.
 - Config, report, review-input, and review-output paths reject symlink components. Trusted test, semantic-review, and contract sources must resolve inside the project root, outside `artifacts/`, and contain no symlinked source paths.
 - The runner must preserve fail-fast task ordering and revalidate the full Git worktree (tracked changes and non-ignored untracked files outside `artifacts/`), HEAD commit SHA, ignored Python source inventory, and generated output paths after task execution before writing the final acceptance report. Task-created or task-modified source files must block report emission.
-- Before task execution and again after all tasks, the runner must reject ignored Python source files that could be imported from the project tree, excluding generated artifacts, common virtual-environment directories, and Python cache directories. This protects source-to-commit provenance but does not attest the installed dependency environment.
+- The acceptance report writer must record its same-directory temporary path immediately after creation and remove the temporary file if serialization or writing fails; the final report must be published only through atomic replacement.
+- Before task execution and again after all tasks, the runner must reject ignored importable Python code files (`.py`, `.pyc`, `.so`, `.pyd`) from the project tree, excluding only repository-root generated artifacts and recognized repository-root virtual-environment directories (`.venv`, `venv`, `env`, `.tox`), plus `__pycache__` directories at any depth. Nested project directories with environment-like names are not exempt. This protects source-to-commit provenance but does not attest the installed dependency environment.
+
+
+## Task process lifecycle
+
+- On POSIX, each fixed task must run in a dedicated process session. After the direct task exits, the runner must terminate any remaining processes in that session before performing post-task source-integrity checks; a task that leaves descendants running must fail. The same process-group cleanup must occur on timeout.
+- On Windows, each task must be created suspended, assigned to a Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, and resumed only after assignment. After normal parent exit, the runner must query the Job Object process ID list; any remaining descendants make the task fail, and closing the Job Object must terminate them. Timeout and setup/error paths must close the Job Object. Assignment, accounting, or cleanup failures must fail closed.
+- POSIX process-session cleanup and Windows Job Object cleanup are lifecycle controls, not a sandbox. Tasks may escape POSIX process groups or cause work through external Windows brokers/services and other host facilities. Windows Job Object assignment may be unavailable under restrictive enclosing-job policies; in that case the runner must fail closed. The runner is intended for trusted worktrees and trusted task code.
+- The runner must revalidate generated output paths immediately before report emission and use a same-directory temporary file plus atomic replacement. This path-based check is not race-free against a hostile concurrent replacement of the `artifacts/` parent directory; the runner is not a filesystem sandbox. Consumers must provide a trusted worktree and prevent untrusted concurrent writers.
+
+## Python task interpreter isolation
+
+- Fixed Python task invocations in the Harness runner must use isolated mode (`-I`) and disable site initialization (`-S`). This prevents inherited `PYTHONPATH`, user-site packages, `sitecustomize`, and `.pth` startup hooks from altering task imports.
+- The current Harness task implementation must remain compatible with the Python standard library alone unless a separately reviewed dependency-installation contract is introduced.
+- This boundary does not attest the Python executable, standard library, host operating system, Git executable, or the underlying runner image; the Harness is not a sandbox.
+
+
+## Semantic-review source provenance
+
+- When the Harness runner executes the `semantic-review` task, it must require an explicit full `--review-base-commit` SHA. The current source is the clean worktree's `HEAD`.
+- All Git subprocesses owned by the runner must remove inherited `GIT_*` environment variables before invocation so caller-provided `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, and related variables cannot redirect provenance checks.
+- The runner must regenerate the canonical three-dot Git diff from the declared base to `HEAD` with fixed options: binary/full-index output, no external diff or text conversion, no color, no rename detection, repository-root-relative paths, explicit `--ignore-submodules=none`, and the Myers algorithm. This prevents local `diff.ignoreSubmodules=all` configuration from suppressing changed gitlinks. The UTF-8 bytes of the input `diff` must exactly equal the generated Git output before any task executes. Both the supplied review input and generated canonical diff are limited to 4 MiB; canonical diff output must be streamed/bounded, generated within a 20-second timeout, and overflow or timeout must block before task execution.
+- The declared base must resolve to an available commit and share a merge base with `HEAD`. CI checkouts must fetch enough history to contain the target base and common ancestor; shallow checkouts missing that history fail closed. A missing base, unavailable commit, malformed input, or byte mismatch blocks the run.
+- This binds the reviewed patch to the checked-out source and declared base; it does not prove that the caller selected the correct target branch/base policy. The standalone semantic-review CLI remains an explicit lower-level interface and does not claim runner-level Git provenance.
+
+
+## Python bytecode-cache isolation
+
+- The runner must not execute helper code from mutable worktree files before task-integrity checks. Trusted helper modules must be loaded from their committed Git blob contents, not from worktree files or bytecode caches.
+- Each Python task subprocess must use a fresh private `-X pycache_prefix` directory and `-B`, in addition to `-I -S`. The task must not read or write project-local bytecode caches.
+- This prevents project-local bytecode cache injection; it does not attest Python interpreter or standard-library bytecode installed outside the project.

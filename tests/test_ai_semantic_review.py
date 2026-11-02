@@ -60,6 +60,14 @@ class SemanticReviewValidationTests(unittest.TestCase):
             }],
         }
 
+    def test_rejects_review_without_explicit_limitations(self):
+        for review in (self.pass_review(), self.finding()):
+            with self.subTest(status=review["status"]):
+                review["limitations"] = []
+                with self.assertRaisesRegex(ReviewError, "limitations must identify at least one"):
+                    validate_review(self.payload, review)
+
+
     def test_accepts_structurally_valid_pass(self):
         self.assertEqual(validate_review(self.payload, self.pass_review())["status"], "PASS")
 
@@ -147,6 +155,65 @@ class SemanticReviewValidationTests(unittest.TestCase):
         )
         payload["changed_files"] = ["new_name.py"]
         self.assertEqual(validate_review(payload, self.pass_review())["status"], "PASS")
+
+    def test_external_git_payloads_cannot_receive_semantic_pass(self):
+        gitlink = (
+            "diff --git a/vendor/library b/vendor/library\n"
+            "index 263f3fb2afdf444cd7c2a1eaf2dbf8c5096f2058..9dfdfc14f469ff720689174533c19458b51c6ec5 160000\n"
+            "--- a/vendor/library\n"
+            "+++ b/vendor/library\n"
+            "@@ -1 +1 @@\n"
+            "-Subproject commit 263f3fb2afdf444cd7c2a1eaf2dbf8c5096f2058\n"
+            "+Subproject commit 9dfdfc14f469ff720689174533c19458b51c6ec5\n"
+        )
+        lfs = (
+            "diff --git a/assets/scene.exr b/assets/scene.exr\n"
+            "index 1234567890abcdef1234567890abcdef12345678..abcdef1234567890abcdef1234567890abcdef12 100644\n"
+            "--- a/assets/scene.exr\n"
+            "+++ b/assets/scene.exr\n"
+            "@@ -1,3 +1,3 @@\n"
+            " version https://git-lfs.github.com/spec/v1\n"
+            "-oid sha256:" + "1" * 64 + "\n"
+            "+oid sha256:" + "2" * 64 + "\n"
+            " size 4096\n"
+        )
+        for path, section in (("vendor/library", gitlink), ("assets/scene.exr", lfs)):
+            with self.subTest(path=path):
+                payload = dict(self.payload)
+                payload["diff"] += section
+                payload["changed_files"] = ["src/client.py", "README.md", path]
+                with self.assertRaisesRegex(
+                    ReviewError, "PASS is forbidden when binary changes or external payloads"
+                ):
+                    validate_review(payload, self.pass_review())
+                inconclusive = self.pass_review()
+                inconclusive["status"] = "INCONCLUSIVE"
+                self.assertEqual(validate_review(payload, inconclusive)["status"], "INCONCLUSIVE")
+
+    def test_binary_changes_cannot_receive_semantic_pass(self):
+        for binary_marker in (
+            "Binary files a/assets/logo.png and b/assets/logo.png differ\n",
+            "GIT binary patch\nliteral 1\nA\n",
+        ):
+            with self.subTest(binary_marker=binary_marker):
+                payload = dict(self.payload)
+                payload["diff"] += (
+                    "diff --git a/assets/logo.png b/assets/logo.png\n"
+                    "index 1234567..89abcde 100644\n"
+                    "--- a/assets/logo.png\n"
+                    "+++ b/assets/logo.png\n"
+                    + binary_marker
+                )
+                payload["changed_files"] = ["src/client.py", "README.md", "assets/logo.png"]
+                with self.assertRaisesRegex(ReviewError, "PASS is forbidden when binary changes"):
+                    validate_review(payload, self.pass_review())
+
+                inconclusive = self.pass_review()
+                inconclusive["status"] = "INCONCLUSIVE"
+                self.assertEqual(
+                    validate_review(payload, inconclusive)["status"], "INCONCLUSIVE"
+                )
+
 
     def test_accepts_file_deletion(self):
         payload = dict(self.payload)
@@ -459,6 +526,29 @@ class SemanticReviewValidationTests(unittest.TestCase):
             validate_review(payload, review)
 
 
+    def test_rejects_evidence_mixing_deleted_and_context_coordinates(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/src/client.py b/src/client.py\n"
+            "--- a/src/client.py\n"
+            "+++ b/src/client.py\n"
+            "@@ -10,3 +20,2 @@\n"
+            " context before\n"
+            "-removed line\n"
+            " context after\n"
+        )
+        payload["changed_files"] = ["src/client.py"]
+        review = self.finding()
+        finding = review["findings"][0]
+        finding["evidence"] = "-removed line\n context after"
+        # The deleted line is old-file line 11; the context line is new-file line 21.
+        # Combining them into 11-21 would falsely imply one source coordinate system.
+        finding["line_start"] = 11
+        finding["line_end"] = 21
+        with self.assertRaisesRegex(ReviewError, "mixes deleted and context"):
+            validate_review(payload, review)
+
+
     def test_accepts_no_newline_at_end_of_file_marker(self):
         payload = dict(self.payload)
         payload["diff"] = (
@@ -702,6 +792,19 @@ class SemanticReviewValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ReviewError, "new-file header does not match"):
             validate_review(payload, self.pass_review())
 
+    def test_rejects_rename_with_unsafe_source_path(self):
+        payload = dict(self.payload)
+        payload["diff"] = (
+            "diff --git a/../outside.txt b/safe.txt\n"
+            "similarity index 100%\n"
+            "rename from ../outside.txt\n"
+            "rename to safe.txt\n"
+        )
+        payload["changed_files"] = ["safe.txt"]
+        with self.assertRaisesRegex(ReviewError, "Git diff contains an unsafe path"):
+            validate_review(payload, self.pass_review())
+
+
     def test_rejects_rename_from_path_header_mismatch(self):
         payload = dict(self.payload)
         payload["diff"] = (
@@ -874,6 +977,8 @@ class SemanticReviewValidationTests(unittest.TestCase):
             b"not-json",
             b"{}",
             b'{"choices":[]}',
+            b"[" * 10000 + b"0" + b"]" * 10000,
+            b'{"choices":[{"message":{"content":"' + b"[" * 10000 + b"0" + b"]" * 10000 + b'"}}]}',
             b'{"choices":[{"message":{"content":"not-json"}}]}',
             b'{"choices":[{"message":{"content":null}}]}',
             b'{"choices":[],"choices":[{"message":{"content":"{}"}}]}',
@@ -1140,6 +1245,36 @@ class SemanticReviewValidationTests(unittest.TestCase):
                 config[field] = bad
                 with self.assertRaises(ReviewError):
                     validate_model_config(config)
+
+
+    def test_deeply_nested_review_input_fails_without_traceback(self):
+        from contextlib import redirect_stderr
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "review.json"
+            nested = "[" * 10000 + "0" + "]" * 10000
+            raw = (
+                '{"task":"task","diff":"diff","changed_files":["file.txt"],'
+                '"global_rules":"rules","project_instructions":"instructions",'
+                '"extra":' + nested + '}'
+            )
+            stderr = StringIO()
+            with patch("sys.stdin", StringIO(raw)), patch(
+                "sys.argv", ["ai_semantic_review.py", "--input", "-", "--output", str(output)]
+            ), redirect_stderr(stderr):
+                self.assertEqual(main(), 2)
+            self.assertIn("AI semantic review blocked:", stderr.getvalue())
+            self.assertNotIn("Traceback", stderr.getvalue())
+            self.assertFalse(output.exists())
+
+    def test_json_write_failure_cleans_temporary_artifact(self):
+        from scripts.ai_semantic_review import _write_json_atomically
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "review.json"
+            with self.assertRaisesRegex(ReviewError, "Could not write semantic-review artifact"):
+                _write_json_atomically(output, {"summary": chr(0xD800)})
+            self.assertEqual(list(Path(directory).iterdir()), [])
 
 
 
