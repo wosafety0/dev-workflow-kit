@@ -148,6 +148,8 @@ jobs:
         with:
           name: consumer-acceptance-report
           path: artifacts/consumer-acceptance-report.json
+          if-no-files-found: error
+          retention-days: 14
         env:
           NODE_OPTIONS: ""
           NODE_PATH: ""
@@ -155,8 +157,6 @@ jobs:
           LD_AUDIT: ""
           LD_LIBRARY_PATH: ""
           PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-          if-no-files-found: error
-          retention-days: 14
       - name: Verify consumer report identity and passing status
         id: verification
         if: always()
