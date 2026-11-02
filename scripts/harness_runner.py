@@ -542,7 +542,7 @@ def _windows_job_has_descendants(job_state, root_pid: int) -> bool | None:
 
 def _close_windows_job(job_state) -> bool:
     """Close the last Job Object handle; KILL_ON_JOB_CLOSE stops all remaining members."""
-    kernel32, job, _ = job_state
+    kernel32, job = job_state
     if kernel32.CloseHandle(job):
         return True
     # A failed close must not leave a live task tree behind.
