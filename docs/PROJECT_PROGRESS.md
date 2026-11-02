@@ -856,3 +856,8 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - The exact implementation/test head `7699d138a98420bd5cc1fce7a769cd678884246d` passed Push CI [41365075114](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41365075114) and PR-context CI [41365080354](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41365080354). All three jobs succeeded in both runs; each offline suite reported **198 tests, OK**.
 - Updated `docs/HARNESS_RUNNER_V1.md` and `docs/STABLE_ACCEPTANCE_CONTRACT.md` to state the lifecycle guarantee and limitations. Non-POSIX systems currently terminate only the direct task process; descendant cleanup is not guaranteed. Process-group cleanup is not a sandbox, and a task can deliberately escape its group.
 - PR #40 remains Draft/open/unmerged. No merge, tag, release, deployment, consumer change, permission, secret, billing, visibility, or Actions-policy change was made.
+
+
+## Release-review documentation synchronization — 2026-11-02
+- Updated the release-candidate review's leading status section with the POSIX descendant-process finding, verified implementation evidence, and non-POSIX limitation. The 0.x release decision and outstanding consumer/owner gates are unchanged.
+- Documentation archive head `91b96808cf63da7b42039bce428423c430158e04` passed exact-head Push CI [41365245949](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41365245949) and PR-context CI [41365252280](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41365252280). All three jobs succeeded in both runs; offline suite reported **198 tests, OK**.
