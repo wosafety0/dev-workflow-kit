@@ -18,6 +18,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -625,6 +626,78 @@ def _read_review_input(path: Path, field: str) -> bytes:
     return data
 
 
+def _run_bounded_git_output(root: Path, args: list[str]) -> bytes:
+    """Run Git while bounding captured stdout and execution time."""
+    try:
+        process = subprocess.Popen(
+            ["git", *args],
+            cwd=root,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            env=_git_environment(),
+        )
+    except OSError:
+        raise HarnessRunnerError("Could not verify semantic-review diff provenance") from None
+
+    output = bytearray()
+    reader_errors: list[OSError] = []
+
+    def read_output() -> None:
+        try:
+            assert process.stdout is not None
+            while len(output) <= _MAX_REVIEW_INPUT_BYTES:
+                chunk = process.stdout.read(
+                    min(64 * 1024, _MAX_REVIEW_INPUT_BYTES + 1 - len(output))
+                )
+                if not chunk:
+                    return
+                output.extend(chunk)
+                if len(output) > _MAX_REVIEW_INPUT_BYTES:
+                    return
+        except OSError as exc:
+            reader_errors.append(exc)
+
+    reader = threading.Thread(target=read_output, daemon=True)
+    reader.start()
+    reader.join(timeout=20)
+    if reader.is_alive() or len(output) > _MAX_REVIEW_INPUT_BYTES:
+        try:
+            process.kill()
+        except OSError:
+            pass
+        try:
+            process.wait(timeout=5)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        reader.join(timeout=5)
+        if process.stdout is not None and not reader.is_alive():
+            process.stdout.close()
+        if len(output) > _MAX_REVIEW_INPUT_BYTES:
+            raise HarnessRunnerError("canonical Git diff exceeds the 4 MiB limit")
+        raise HarnessRunnerError("Could not verify semantic-review diff provenance")
+
+    try:
+        return_code = process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        try:
+            process.kill()
+        except OSError:
+            pass
+        try:
+            process.wait(timeout=5)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        raise HarnessRunnerError("Could not verify semantic-review diff provenance") from None
+    finally:
+        if process.stdout is not None and not reader.is_alive():
+            process.stdout.close()
+
+    if reader_errors or return_code != 0:
+        raise HarnessRunnerError("Could not generate canonical Git diff for semantic-review provenance")
+    return bytes(output)
+
+
 def _verify_review_diff_provenance(
     root: Path, review_input_bytes: bytes, base_commit: str
 ) -> None:
@@ -671,31 +744,32 @@ def _verify_review_diff_provenance(
             merge_base.stdout.decode("ascii", errors="strict").strip()
         ):
             raise HarnessRunnerError("review base and source commit must share a Git merge base")
-        expected = run_git(
-            "diff",
-            "--binary",
-            "--full-index",
-            "--no-ext-diff",
-            "--no-textconv",
-            "--no-color",
-            "--no-renames",
-            "--no-relative",
-            "--ignore-submodules=none",
-            "--diff-algorithm=myers",
-            "--src-prefix=a/",
-            "--dst-prefix=b/",
-            f"{base_commit.lower()}...{source_commit}",
-            "--",
+        expected_diff = _run_bounded_git_output(
+            root,
+            [
+                "diff",
+                "--binary",
+                "--full-index",
+                "--no-ext-diff",
+                "--no-textconv",
+                "--no-color",
+                "--no-renames",
+                "--no-relative",
+                "--ignore-submodules=none",
+                "--diff-algorithm=myers",
+                "--src-prefix=a/",
+                "--dst-prefix=b/",
+                f"{base_commit.lower()}...{source_commit}",
+                "--",
+            ],
         )
     except (OSError, subprocess.TimeoutExpired, UnicodeError):
         raise HarnessRunnerError("Could not verify semantic-review diff provenance") from None
-    if expected.returncode != 0:
-        raise HarnessRunnerError("Could not generate canonical Git diff for semantic-review provenance")
     try:
         supplied_diff = payload["diff"].encode("utf-8")
     except UnicodeEncodeError:
         raise HarnessRunnerError("review-input diff contains invalid Unicode") from None
-    if supplied_diff != expected.stdout:
+    if supplied_diff != expected_diff:
         raise HarnessRunnerError(
             "review-input diff does not exactly match the canonical Git diff from --review-base-commit to HEAD"
         )

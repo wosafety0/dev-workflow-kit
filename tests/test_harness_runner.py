@@ -418,6 +418,39 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("Semantic review diff provenance: verified", stdout)
         run_task.assert_called_once()
 
+    def test_semantic_review_rejects_canonical_git_diff_over_4_mib_before_task_execution(self):
+        self.write_config(["semantic-review"])
+        large_source = self.root / "src" / "large.txt"
+        large_source.parent.mkdir()
+        large_source.write_bytes(
+            b"x" * (harness_runner._MAX_REVIEW_INPUT_BYTES + 1)
+        )
+        subprocess.run(
+            ["git", "add", "src/large.txt"], cwd=self.root, check=True
+        )
+        subprocess.run(
+            [
+                "git", "-c", "user.name=Harness Test",
+                "-c", "user.email=harness-test@example.invalid",
+                "commit", "-qm", "add oversized review diff",
+            ],
+            cwd=self.root,
+            check=True,
+        )
+        self.write_review_input(
+            self.root / "artifacts" / "review-input.json",
+            diff="",
+            changed_files=["src/large.txt"],
+        )
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "artifacts/review-input.json",
+                "--review-output", "artifacts/review.json",
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("canonical Git diff exceeds the 4 MiB limit", stderr)
+        run_task.assert_not_called()
+
     def test_semantic_review_diff_provenance_includes_submodule_changes_despite_git_config(self):
         self.write_config(["semantic-review"])
         submodule_temp = tempfile.TemporaryDirectory()
