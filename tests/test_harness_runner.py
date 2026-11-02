@@ -696,13 +696,15 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
     def test_timeout_is_a_failed_task_without_echoing_process_output(self):
-        with patch(
-            "scripts.harness_runner.subprocess.run",
-            side_effect=harness_runner.subprocess.TimeoutExpired(["test"], 1),
-        ):
-            status, exit_code = harness_runner._run_task(
-                [sys.executable, "-c", "pass"], self.root, 1
-            )
+        status, exit_code = harness_runner._run_task(
+            [
+                sys.executable,
+                "-c",
+                "import time; print('private child output'); time.sleep(5)",
+            ],
+            self.root,
+            0.1,
+        )
         self.assertEqual((status, exit_code), ("failed", None))
 
 
