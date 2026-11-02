@@ -355,6 +355,71 @@ def _terminate_process_group(process_group_id: int, grace_seconds: float = 0.5) 
     return True
 
 
+def _resume_suspended_windows_process(
+    process: subprocess.Popen[bytes], kernel32
+) -> None:
+    """Find and resume the sole primary thread of a still-suspended process."""
+    import ctypes
+    from ctypes import wintypes
+
+    class ThreadEntry32(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", wintypes.DWORD),
+            ("cntUsage", wintypes.DWORD),
+            ("th32ThreadID", wintypes.DWORD),
+            ("th32OwnerProcessID", wintypes.DWORD),
+            ("tpBasePri", wintypes.LONG),
+            ("tpDeltaPri", wintypes.LONG),
+            ("dwFlags", wintypes.DWORD),
+        ]
+
+    kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    kernel32.Thread32First.argtypes = [
+        wintypes.HANDLE, ctypes.POINTER(ThreadEntry32)
+    ]
+    kernel32.Thread32First.restype = wintypes.BOOL
+    kernel32.Thread32Next.argtypes = [
+        wintypes.HANDLE, ctypes.POINTER(ThreadEntry32)
+    ]
+    kernel32.Thread32Next.restype = wintypes.BOOL
+    kernel32.OpenThread.argtypes = [
+        wintypes.DWORD, wintypes.BOOL, wintypes.DWORD
+    ]
+    kernel32.OpenThread.restype = wintypes.HANDLE
+    kernel32.ResumeThread.argtypes = [wintypes.HANDLE]
+    kernel32.ResumeThread.restype = wintypes.DWORD
+
+    # TH32CS_SNAPTHREAD; the process is suspended so it has only its primary thread.
+    snapshot = kernel32.CreateToolhelp32Snapshot(0x00000004, 0)
+    if not snapshot or snapshot == ctypes.c_void_p(-1).value:
+        raise OSError(ctypes.get_last_error(), "CreateToolhelp32Snapshot failed")
+    resumed = False
+    try:
+        entry = ThreadEntry32()
+        entry.dwSize = ctypes.sizeof(entry)
+        found = kernel32.Thread32First(snapshot, ctypes.byref(entry))
+        while found:
+            if entry.th32OwnerProcessID == process.pid:
+                # THREAD_SUSPEND_RESUME
+                thread = kernel32.OpenThread(0x0002, False, entry.th32ThreadID)
+                if not thread:
+                    raise OSError(ctypes.get_last_error(), "OpenThread failed")
+                try:
+                    if kernel32.ResumeThread(thread) == 0xFFFFFFFF:
+                        raise OSError(ctypes.get_last_error(), "ResumeThread failed")
+                    resumed = True
+                finally:
+                    kernel32.CloseHandle(thread)
+                break
+            entry.dwSize = ctypes.sizeof(entry)
+            found = kernel32.Thread32Next(snapshot, ctypes.byref(entry))
+        if not resumed:
+            raise OSError("Could not locate the suspended task's primary thread")
+    finally:
+        kernel32.CloseHandle(snapshot)
+
+
 def _create_windows_job(process: subprocess.Popen[bytes]):
     """Assign a suspended task to a kill-on-close Windows Job Object, then resume it."""
     import ctypes
@@ -432,13 +497,9 @@ def _create_windows_job(process: subprocess.Popen[bytes]):
         if not kernel32.AssignProcessToJobObject(job, process_handle):
             raise OSError(ctypes.get_last_error(), "AssignProcessToJobObject failed")
 
-        # Popen exposes the primary thread handle as _thread on CPython/Windows.
-        # The child remains suspended until it is safely inside the Job Object.
-        thread_handle = getattr(process, "_thread", None)
-        if thread_handle is None:
-            raise OSError("Popen primary thread handle is unavailable")
-        if kernel32.ResumeThread(wintypes.HANDLE(int(thread_handle))) == 0xFFFFFFFF:
-            raise OSError(ctypes.get_last_error(), "ResumeThread failed")
+        # Popen closes the CreateProcess thread handle. Locate the sole primary
+        # thread through Toolhelp32 while the process is still suspended.
+        _resume_suspended_windows_process(process, kernel32)
         return kernel32, job
     except Exception:
         kernel32.CloseHandle(job)
