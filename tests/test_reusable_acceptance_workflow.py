@@ -306,6 +306,31 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
                     + inline.stdout + inline.stderr,
                 )
 
+    def test_actual_inline_verifier_enforces_one_mibibyte_report_limit(self):
+        report = {
+            "schema_version": 1,
+            "consumer_commit_sha": SHA,
+            "caller_workflow_ref": WORKFLOW_REF,
+            "caller_workflow_sha": WORKFLOW_SHA,
+            "harness_workflow_ref": HARNESS_WORKFLOW_REF,
+            "harness_workflow_sha": HARNESS_WORKFLOW_SHA,
+            "tests": {
+                "runtime-validation": "passed",
+                "consumer-acceptance-command": "passed",
+            },
+            "status": "passed",
+        }
+        limit = 1_048_576
+        raw = json.dumps(report)
+        at_limit = raw + " " * (limit - len(raw.encode("utf-8")))
+        self.assertEqual(len(at_limit.encode("utf-8")), limit)
+        accepted = self.run_inline_verifier_payload(at_limit)
+        self.assertEqual(accepted.returncode, 0, accepted.stdout + accepted.stderr)
+        oversized = self.run_inline_verifier_payload(at_limit + " ")
+        self.assertEqual(oversized.returncode, 1)
+        self.assertIn("verification failed", oversized.stdout.lower())
+        self.assertNotIn("Traceback", oversized.stderr)
+
     def test_actual_inline_verifier_rejects_duplicate_json_object_keys(self):
         duplicate_top_level = (
             '{"schema_version":1,"consumer_commit_sha":"' + SHA

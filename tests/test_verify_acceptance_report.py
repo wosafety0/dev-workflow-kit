@@ -140,6 +140,25 @@ class AcceptanceReportVerifierTests(unittest.TestCase):
             self.assertEqual(nested.returncode, 1)
             self.assertNotIn("Traceback", nested.stderr)
 
+    def test_cli_enforces_one_mibibyte_report_limit(self):
+        limit = 1_048_576
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "report.json"
+            raw = json.dumps(valid()).encode("utf-8")
+            at_limit = raw + b" " * (limit - len(raw))
+            self.assertEqual(len(at_limit), limit)
+            path.write_bytes(at_limit)
+            command = [sys.executable, "scripts/verify_acceptance_report.py",
+                       "--report", str(path), "--expected-sha", SHA,
+                       "--expected-rules-pin", PIN]
+            accepted = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            path.write_bytes(at_limit + b" ")
+            rejected = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(rejected.returncode, 1)
+            self.assertIn("verification failed", rejected.stdout.lower())
+            self.assertNotIn("Traceback", rejected.stderr)
+
     def test_rejects_malformed_identity(self):
         self.assertFalse(verify_report(valid(), "not-a-sha", PIN))
         self.assertFalse(verify_report(valid(), SHA, "not-a-pin"))

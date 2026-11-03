@@ -43,6 +43,7 @@ Replace the placeholder with a real, reviewed commit SHA from this repository. D
 - `test-command` is executable shell supplied by the consuming repository. Treat it as code, review it, and do not populate it from untrusted PR text, issue comments, model output, or other untrusted data.
 - This workflow checks out and executes code from the consuming repository. Use it only for repositories and events where executing that code is appropriate.
 - The reusable workflow does not install project dependencies, access model-provider APIs, publish releases/packages, merge PRs, or perform project business actions. It does upload one redacted acceptance-report artifact for CI inspection, with a 14-day retention period.
+- The inline consumer-report verifier reads at most 1 MiB plus one sentinel byte and rejects larger report files before decoding/parsing. The standalone Harness report verifiers enforce the same 1 MiB input bound.
 - The workflow's SHA pin makes the reusable workflow definition immutable for that call. Third-party actions in the current workflow are pinned to full commit SHAs; when upgrading an action, verify the selected commit against the upstream release and update the pin deliberately.
 - A green run establishes only that the consumer-provided command exited successfully. It does not prove the quality or completeness of the command itself.
 

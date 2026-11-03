@@ -9,6 +9,7 @@ from pathlib import Path
 _SHA = re.compile(r"^[0-9a-f]{40}$")
 _PIN = re.compile(r"^sha256:[0-9a-f]{64}$")
 _KEYS = {"schema_version", "commit_sha", "rules_pin", "tool_version", "tests", "status"}
+_MAX_REPORT_BYTES = 1_048_576
 
 
 def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -18,6 +19,14 @@ def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]
             raise ValueError("duplicate JSON object key")
         result[key] = value
     return result
+
+
+def _read_report(path: Path) -> object:
+    with path.open("rb") as report_file:
+        raw = report_file.read(_MAX_REPORT_BYTES + 1)
+    if len(raw) > _MAX_REPORT_BYTES:
+        raise ValueError("acceptance report exceeds size limit")
+    return json.loads(raw.decode("utf-8"), object_pairs_hook=_reject_duplicate_keys)
 
 
 def verify_report(report: object, expected_sha: str, expected_rules_pin: str) -> bool:
@@ -56,10 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--expected-rules-pin", required=True)
     args = parser.parse_args(argv)
     try:
-        report = json.loads(
-            Path(args.report).read_text(encoding="utf-8"),
-            object_pairs_hook=_reject_duplicate_keys,
-        )
+        report = _read_report(Path(args.report))
     except (OSError, UnicodeError, ValueError, RecursionError):
         print("Acceptance report verification failed")
         return 1
