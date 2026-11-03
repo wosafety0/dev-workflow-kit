@@ -1,3 +1,13 @@
+## 2026-11-03 — Report-verifier and Node/pnpm 0.x candidate integration
+
+- The owner approved expanding the current 0.x candidate to include PR #25–31 acceptance-report verification alongside PR #40 Node.js/pnpm runtime support. The integration preserves separate workstream evidence and does not merge either source PR.
+- [Draft PR #41](https://github.com/wosafety0/dev-workflow-kit/pull/41) is stacked on PR #40 at exact code/test head `cfe4321c26e6bcf0dbb1d35a9f796d720a5f1170`. It adds the Harness report verifier and final gate, the reusable consumer report producer/identity verifier/artifact upload/final gate, and their regression tests while retaining Node.js 24 and pnpm 11.4.0 support.
+- Exact-head Push CI [41578968574](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41578968574) and PR-context CI [41578971093](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41578971093) both passed all four jobs. Offline suite: **244 tests, OK (5 skipped)**. Windows Runner suite: **65 tests, OK (2 skipped)**. Python and Node/pnpm reusable acceptance, report artifact upload, identity verification, and final gates passed.
+- PR #31 and PR #40 remain Draft/open/unmerged; PR #41 is Draft/open/unmerged. Public Python and Node/pnpm consumers remain pinned to the earlier immutable SHA `3df51ca949872fdc75d18feb902220b95957ec37`; no consumer repin occurred.
+- **Release decision:** the integrated candidate has passed its exact-head CI but is not release-ready. Private consumer runtime acceptance, browser E2E, consumer-specific archive-path acceptance, final candidate SHA selection, and release preflight remain open. No merge, tag, release, deployment, billing, permission, secret, visibility, or Actions-policy change occurred.
+
+---
+
 ## 2026-11-03 — Post-archive exact-head verification
 
 - PR #40 is Open/Draft/unmerged at `c393b92a06fd3900d1c3b36c7085156efc895973`, based on PR #37 integration head `a6839563ebff0e53642a03fa531551aa6abd8463`; GitHub reports mergeable/clean.
