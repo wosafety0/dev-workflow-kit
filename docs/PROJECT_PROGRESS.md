@@ -1064,3 +1064,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - **COMMIT:** code/test/docs commit d54a084af9a3d855786f57cd8a57ec780d2f0310 on fix/bounded-acceptance-report-read-20261104, stacked on PR #41 head fda7215f47747da45437025cfcfeb14d0a7a398d.
 - **REMOTE READBACK:** verifier blobs 99191b472faebd328d9de69520c6f7c9f640bad7 and 8779244ff46ffca6ef3b28e0ebe128bde3c7ac74; reusable workflow blob 496b92ce165aa7a3ab52cac6e9bf7f1473aad007; regression test blobs 6bb887632ba19be8a36a73236bf20811a3398783, 54a5a6690fe26e934122235dbbe4e967e807f7b0, and 04dde937065b9c4133bd21cca952444ba77c8cc2; documentation blobs 62711296bc8e1e60351150ed121933d9d742fed5 and a09167a8d7278553dffbe1bdd28e0b6dd6f9f3c0.
 - **LIMITS:** This bounds report-file allocation only; it does not attest the runner host or make the Harness a sandbox. The private consumer, browser E2E, consumer archive-path acceptance, final 0.x SHA selection, and Release Preflight remain open. No consumer repin, private-consumer rerun, billing/permission/policy change, secret access, merge, release, or deployment occurred.
+
+
+### 2026-11-04 — Final archive-head verification
+
+- Final progress/archive head f4893c3ff5e2e8605e3f9978063c5eb13cafe80f passed exact-head Push [41738164723](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41738164723) and PR-context [41738172234](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41738172234). All four jobs succeeded in both runs: 247 offline tests (5 skipped), 65 Windows Runner tests (2 skipped), reusable Python acceptance, and reusable Node/pnpm acceptance.
+- The exact-boundary and over-limit tests passed for both standalone verifiers and the actual inline consumer verifier. The archive head includes only the already-tested code/test commit d54a084af9a3d855786f57cd8a57ec780d2f0310 plus the progress-file append; no code changed after the verified implementation.
+- This entry is a documentation-only follow-up. No consumer repin, private-consumer rerun, billing/permission/policy change, secret access, merge, release, or deployment occurred.

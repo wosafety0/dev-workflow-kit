@@ -1,3 +1,14 @@
+# Current status — 2026-11-04 (bounded acceptance-report verification)
+
+- **PR #42:** [Draft/open/unmerged](https://github.com/wosafety0/dev-workflow-kit/pull/42), branch fix/bounded-acceptance-report-read-20261104, stacked on PR #41 at base head fda7215f47747da45437025cfcfeb14d0a7a398d. It bounds both standalone report verifiers and the reusable workflow's inline consumer verifier to 1 MiB plus one sentinel byte, rejecting larger files before decode/parse.
+- **Code/test commit:** d54a084af9a3d855786f57cd8a57ec780d2f0310. Regression coverage accepts exactly 1 MiB and rejects 1 MiB + 1 byte through both standalone CLIs and the actual inline verifier.
+- **Final archive head:** f4893c3ff5e2e8605e3f9978063c5eb13cafe80f. Exact-head Push CI [41738164723](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41738164723) and PR-context CI [41738172234](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41738172234) both passed all four jobs: 247 offline tests (5 skipped), 65 Windows Runner tests (2 skipped), reusable Python acceptance, and reusable Node/pnpm acceptance. Report generation, upload, identity verification, and final gates passed.
+- PR #42 remains a separate follow-up on PR #41; PR #41 remains stacked on PR #40. All remain Draft/open/unmerged. Public Python and Node/pnpm consumer pilots remain pinned to the earlier immutable SHA 3df51ca949872fdc75d18feb902220b95957ec37; no consumer repin occurred.
+- The private consumer's exact-head run 41099042827 still failed before runner allocation with unavailable logs; current evidence does not establish a root cause. Browser E2E and consumer-specific archive-path acceptance remain incomplete.
+- **Release decision:** Not ready to tag/release. Private consumer runtime acceptance, browser E2E, archive-path acceptance, final 0.x candidate SHA selection, owner approval, and Release Preflight remain open. No merge, tag, release, deployment, consumer repin, billing/permission/policy change, or secret access occurred.
+
+---
+
 # Current status — 2026-11-03 (report-verifier + runtime integration)
 
 The 0.x candidate scope now includes both acceptance-report verification and the Node.js/pnpm runtime path. The integration is maintained as a separate Draft PR stacked on PR #40; the historical report branch is not merged wholesale.
