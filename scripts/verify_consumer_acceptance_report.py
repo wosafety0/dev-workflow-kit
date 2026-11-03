@@ -8,6 +8,7 @@ from pathlib import Path
 
 _SHA = re.compile(r"^[0-9a-f]{40}$")
 _EXPECTED_TESTS = {"runtime-validation", "consumer-acceptance-command"}
+_MAX_REPORT_BYTES = 1_048_576
 _KEYS = {
     "schema_version",
     "consumer_commit_sha",
@@ -75,6 +76,14 @@ def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]
     return result
 
 
+def _read_report(path: Path) -> object:
+    with path.open("rb") as report_file:
+        raw = report_file.read(_MAX_REPORT_BYTES + 1)
+    if len(raw) > _MAX_REPORT_BYTES:
+        raise ValueError("consumer acceptance report exceeds size limit")
+    return json.loads(raw.decode("utf-8"), object_pairs_hook=_reject_duplicate_keys)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report", required=True)
@@ -85,10 +94,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--expected-harness-workflow-sha", required=True)
     args = parser.parse_args(argv)
     try:
-        report = json.loads(
-            Path(args.report).read_text(encoding="utf-8"),
-            object_pairs_hook=_reject_duplicate_keys,
-        )
+        report = _read_report(Path(args.report))
     except (OSError, UnicodeError, ValueError, RecursionError):
         print("Consumer acceptance report verification failed")
         return 1

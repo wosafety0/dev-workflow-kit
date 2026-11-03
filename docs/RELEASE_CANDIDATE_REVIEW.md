@@ -1,3 +1,12 @@
+## 2026-11-04 — Bounded acceptance-report verifier input
+
+- [Draft PR #42](https://github.com/wosafety0/dev-workflow-kit/pull/42) is stacked on PR #41 and caps all three acceptance-report file readers at 1 MiB plus one sentinel byte. Oversized files are rejected before UTF-8 decoding or JSON parsing; duplicate-key rejection, recursion handling, identity checks, report schema, and permissions are unchanged.
+- Code/test commit d54a084af9a3d855786f57cd8a57ec780d2f0310 passed exact-head Push [41737836291](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41737836291) and PR-context [41737854391](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41737854391). Both passed all four jobs, including 247 offline tests (5 skipped), 65 Windows Runner tests (2 skipped), and reusable Python/Node-pnpm acceptance.
+- Final archive head f4893c3ff5e2e8605e3f9978063c5eb13cafe80f passed Push [41738164723](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41738164723) and PR-context [41738172234](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41738172234), all four jobs successful in each.
+- The 1 MiB limit is a bounded file-read safeguard, not a sandbox or host attestation. It does not close the private consumer, browser E2E, archive-path, candidate-selection, or release-preflight gates. PR #42 remains Draft/open/unmerged; no consumer repin, merge, tag, release, deployment, billing, permission, or Actions-policy change occurred.
+
+---
+
 ## 2026-11-03 — Report-verifier and Node/pnpm 0.x candidate integration
 
 - The owner approved expanding the current 0.x candidate to include PR #25–31 acceptance-report verification alongside PR #40 Node.js/pnpm runtime support. The integration preserves separate workstream evidence and does not merge either source PR.

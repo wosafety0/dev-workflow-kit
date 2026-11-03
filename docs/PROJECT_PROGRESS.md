@@ -1053,3 +1053,29 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - **EXACT CODE-HEAD CI:** Push [run 41692697626](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41692697626) and PR-context [run 41692704548](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41692704548) both succeeded. All four jobs passed in each run. Offline suite **244 tests, 5 skipped**; Windows Runner suite **65 tests, 2 skipped**; reusable Python and Node/pnpm acceptance both passed with report generation, upload, identity verification, and final gates.
 - **COMMITS:** Code/test commit `4f7313ae062d7bbb9bd14fc9979de45509fd5131`. This progress entry is a documentation-only follow-up; it does not alter the tested code tree.
 - **LIMITS:** The private consumer's last readable run still failed before runner/steps and its logs remain unavailable. No private consumer rerun, billing/permission/policy change, secret access, merge, release, or deployment was performed.
+
+
+## 2026-11-04 — Bound acceptance-report verifier file reads
+
+- **FINDING:** Both standalone acceptance-report CLIs and the reusable workflow's inline consumer verifier read the entire report file before parsing. Deep nesting is now handled, but an oversized report could still cause unbounded allocation before JSON validation.
+- **IMPLEMENTED:** All three readers now read at most 1 MiB plus one sentinel byte and reject files larger than 1 MiB before UTF-8 decoding or JSON parsing. Duplicate-key rejection, recursion handling, schema checks, report identity binding, permissions, and action pins are unchanged.
+- **TESTED:** Added exact-boundary and over-limit regressions: a valid report exactly 1 MiB is accepted; a 1 MiB + 1 byte report is rejected without a traceback. Coverage exercises both standalone CLIs and the actual inline reusable-workflow verifier.
+- **TEST COMMANDS:** CI ran `python -m compileall -q scripts tests`; `python -m unittest discover -s tests -v`; Windows Runner `python -m unittest discover -s tests -p test_harness_runner.py -v`; reusable Python self-test command `python -m unittest discover -s tests -v`; reusable Node/pnpm self-test command `node --version && pnpm --version`.
+- **EXACT-HEAD CI:** Push [run 41737836291](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41737836291) and PR-context [run 41737854391](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41737854391) both succeeded. All four jobs passed in both runs: offline tests (**247 tests, 5 skipped**), Windows Runner tests (**65 tests, 2 skipped**), reusable Python self-test, and reusable Node/pnpm self-test. Report generation, artifact upload, identity verification, and final fail-closed gates passed in both runtime paths.
+- **COMMIT:** code/test/docs commit d54a084af9a3d855786f57cd8a57ec780d2f0310 on fix/bounded-acceptance-report-read-20261104, stacked on PR #41 head fda7215f47747da45437025cfcfeb14d0a7a398d.
+- **REMOTE READBACK:** verifier blobs 99191b472faebd328d9de69520c6f7c9f640bad7 and 8779244ff46ffca6ef3b28e0ebe128bde3c7ac74; reusable workflow blob 496b92ce165aa7a3ab52cac6e9bf7f1473aad007; regression test blobs 6bb887632ba19be8a36a73236bf20811a3398783, 54a5a6690fe26e934122235dbbe4e967e807f7b0, and 04dde937065b9c4133bd21cca952444ba77c8cc2; documentation blobs 62711296bc8e1e60351150ed121933d9d742fed5 and a09167a8d7278553dffbe1bdd28e0b6dd6f9f3c0.
+- **LIMITS:** This bounds report-file allocation only; it does not attest the runner host or make the Harness a sandbox. The private consumer, browser E2E, consumer archive-path acceptance, final 0.x SHA selection, and Release Preflight remain open. No consumer repin, private-consumer rerun, billing/permission/policy change, secret access, merge, release, or deployment occurred.
+
+
+### 2026-11-04 — Final archive-head verification
+
+- Final progress/archive head f4893c3ff5e2e8605e3f9978063c5eb13cafe80f passed exact-head Push [41738164723](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41738164723) and PR-context [41738172234](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41738172234). All four jobs succeeded in both runs: 247 offline tests (5 skipped), 65 Windows Runner tests (2 skipped), reusable Python acceptance, and reusable Node/pnpm acceptance.
+- The exact-boundary and over-limit tests passed for both standalone verifiers and the actual inline consumer verifier. The archive head includes only the already-tested code/test commit d54a084af9a3d855786f57cd8a57ec780d2f0310 plus the progress-file append; no code changed after the verified implementation.
+- This entry is a documentation-only follow-up. No consumer repin, private-consumer rerun, billing/permission/policy change, secret access, merge, release, or deployment occurred.
+
+
+## 2026-11-04 — Final roadmap and release-review verification
+
+- Documentation reconciliation commit 4940b2c705397669f44e162ca7c4e3332d2ac288 passed exact-head Push [41738790681](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41738790681) and PR-context [41738798237](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41738798237). All four jobs succeeded in both runs: 247 offline tests (5 skipped), 65 Windows Runner tests (2 skipped), reusable Python acceptance, and reusable Node/pnpm acceptance.
+- Remote readback at that commit confirmed ROADMAP blob f0e75c2459971c4e7721194414926a8623427c8b, RELEASE_CANDIDATE_REVIEW blob 6f312e80e2977be18c935b91061783db7f93eaef, and PROJECT_PROGRESS blob c7ad350d59d70e234136424e62ed3daec96aeb14.
+- This entry is an archive-only follow-up. The tested implementation remains commit d54a084af9a3d855786f57cd8a57ec780d2f0310; no code changed after its successful exact-head tests. No merge, release, deployment, consumer repin, billing/permission/policy change, or secret access occurred.

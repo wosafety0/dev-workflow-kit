@@ -37,6 +37,10 @@ The report contains only `schema_version`, `commit_sha`, `rules_pin`, `tool_vers
 
 Overall status is `passed` only when every declared test status is exactly `passed`. A `failed`, `skipped`, or `not_run` test produces overall `failed`. Missing or malformed required data and unknown input keys are rejected. This strict allowlist prevents arbitrary input fields—including credentials, environment dumps, and raw logs—from being copied into the report.
 
+## Verifier input bound
+
+The standalone acceptance-report verifier, the standalone consumer-report verifier, and the reusable workflow's inline consumer verifier accept serialized report files up to **1 MiB**. Each reads at most 1 MiB plus one sentinel byte and rejects an oversized file before UTF-8 decoding or JSON parsing. A report exactly at the limit is accepted if its contents satisfy the schema; larger files fail closed with the generic verification error. Generated reports are expected to remain far below this limit.
+
 ## Boundaries
 
 - The workflow supplies the current commit SHA, the content hash of the acceptance contract, the toolkit revision label, and the test step outcome. These values are traceable but do not constitute a cryptographic attestation of every runtime action.

@@ -108,6 +108,30 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
             path.write_text("[" * 10000 + "0" + "]" * 10000, encoding="utf-8")
             self.assertEqual(main(args), 1)
 
+    def test_cli_enforces_one_mibibyte_report_limit(self):
+        limit = 1_048_576
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "report.json"
+            raw = json.dumps(valid_report()).encode("utf-8")
+            at_limit = raw + b" " * (limit - len(raw))
+            self.assertEqual(len(at_limit), limit)
+            path.write_bytes(at_limit)
+            command = [
+                sys.executable, "scripts/verify_consumer_acceptance_report.py",
+                "--report", str(path), "--expected-sha", SHA,
+                "--expected-workflow-ref", WORKFLOW_REF,
+                "--expected-workflow-sha", WORKFLOW_SHA,
+                "--expected-harness-workflow-ref", HARNESS_WORKFLOW_REF,
+                "--expected-harness-workflow-sha", HARNESS_WORKFLOW_SHA,
+            ]
+            accepted = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            path.write_bytes(at_limit + b" ")
+            rejected = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(rejected.returncode, 1)
+            self.assertIn("verification failed", rejected.stdout.lower())
+            self.assertNotIn("Traceback", rejected.stderr)
+
     def test_cli_rejects_duplicate_json_object_keys(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "duplicate.json"
