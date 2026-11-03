@@ -233,7 +233,7 @@ jobs:
                   report_path.read_text(encoding="utf-8"),
                   object_pairs_hook=reject_duplicate_keys,
               )
-          except (OSError, UnicodeError, ValueError):
+          except (OSError, UnicodeError, ValueError, RecursionError):
               report = None
 
           valid = (

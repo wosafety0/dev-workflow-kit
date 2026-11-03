@@ -60,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.report).read_text(encoding="utf-8"),
             object_pairs_hook=_reject_duplicate_keys,
         )
-    except (OSError, UnicodeError, ValueError):
+    except (OSError, UnicodeError, ValueError, RecursionError):
         print("Acceptance report verification failed")
         return 1
     if not verify_report(report, args.expected_sha, args.expected_rules_pin):

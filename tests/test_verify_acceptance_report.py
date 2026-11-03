@@ -133,6 +133,12 @@ class AcceptanceReportVerifierTests(unittest.TestCase):
             corrupt = subprocess.run(command, capture_output=True, text=True)
             self.assertEqual(corrupt.returncode, 1)
             self.assertNotIn("Traceback", corrupt.stderr)
+            nested_path = Path(tmp) / "nested.json"
+            nested_path.write_text("[" * 10000 + "0" + "]" * 10000, encoding="utf-8")
+            command[command.index("--report") + 1] = str(nested_path)
+            nested = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(nested.returncode, 1)
+            self.assertNotIn("Traceback", nested.stderr)
 
     def test_rejects_malformed_identity(self):
         self.assertFalse(verify_report(valid(), "not-a-sha", PIN))

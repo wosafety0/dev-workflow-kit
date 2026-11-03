@@ -105,6 +105,8 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
             self.assertEqual(main(args), 1)
             path.write_text("{broken", encoding="utf-8")
             self.assertEqual(main(args), 1)
+            path.write_text("[" * 10000 + "0" + "]" * 10000, encoding="utf-8")
+            self.assertEqual(main(args), 1)
 
     def test_cli_rejects_duplicate_json_object_keys(self):
         with tempfile.TemporaryDirectory() as directory:

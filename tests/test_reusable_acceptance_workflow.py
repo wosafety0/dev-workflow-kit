@@ -341,6 +341,9 @@ class ReusableAcceptanceWorkflowTests(unittest.TestCase):
         corrupt = self.run_inline_verifier_payload("{not-json")
         self.assertEqual(corrupt.returncode, 1)
         self.assertNotIn("Traceback", corrupt.stderr)
+        nested = self.run_inline_verifier_payload("[" * 10000 + "0" + "]" * 10000)
+        self.assertEqual(nested.returncode, 1)
+        self.assertNotIn("Traceback", nested.stderr)
 
     def test_workflow_does_not_require_verifier_script_from_consumer_checkout(self):
         source = WORKFLOW.read_text(encoding="utf-8")
