@@ -86,3 +86,12 @@ This document is a living 0.x contract. A change that weakens a fail-closed rule
 - Config, report, review-input, and review-output paths reject symlink components. Trusted test, semantic-review, and contract sources must resolve inside the project root, outside `artifacts/`, and contain no symlinked source paths.
 - The runner must preserve fail-fast task ordering and revalidate the full Git worktree (tracked changes and non-ignored untracked files outside `artifacts/`), HEAD commit SHA, ignored Python source inventory, and generated output paths after task execution before writing the final acceptance report. Task-created or task-modified source files must block report emission.
 - Before task execution and again after all tasks, the runner must reject ignored Python source files that could be imported from the project tree, excluding generated artifacts, common virtual-environment directories, and Python cache directories. This protects source-to-commit provenance but does not attest the installed dependency environment.
+
+## Optional Git-bound semantic-review mode
+
+- Compatibility mode continues to accept caller-supplied `diff` and `changed_files`. An unchanged input fingerprint proves byte stability only; it does not prove Git provenance.
+- Strict mode is opt-in and requires both `--review-base` and `--review-head` as full 40-character commit SHAs. The referenced objects must be commits, and the head SHA must equal the clean checked-out `HEAD`.
+- The runner derives the merge base, diff, and changed-file list from Git itself. Caller-provided `diff` and `changed_files` are replaced before review. Diff output is bounded to 4 MiB and validated by the semantic-review input validator; unsupported, malformed, oversized, or mismatched diff/path data must block the run.
+- When strict provenance is present, the acceptance report uses schema version 2 and includes `review_provenance` with base/head/merge-base SHAs, SHA-256 of the exact Git diff bytes, and changed paths. The report's `review_provenance.head_sha` must equal its top-level `commit_sha`. Compatibility-mode reports remain schema version 1.
+- Git-bound provenance establishes which Git diff was supplied to the reviewer; it does not establish that the reviewer detected every defect, that the runtime/dependencies are attested, or that the result authorizes merge/deployment/action.
+

@@ -59,6 +59,17 @@ class HarnessRunnerTests(unittest.TestCase):
             code = harness_runner.main(args)
         return code, stdout.getvalue(), stderr.getvalue()
 
+    def test_git_executable_ignores_caller_controlled_path(self):
+        with patch.dict(harness_runner.os.environ, {"PATH": "/tmp/untrusted-bin"}), patch(
+            "scripts.harness_runner.shutil.which", return_value="/trusted/bin/git"
+        ) as which:
+            argv = harness_runner._git_argv("status", "--porcelain")
+        self.assertEqual(
+            argv,
+            [str(Path("/trusted/bin/git").resolve()), "status", "--porcelain"],
+        )
+        which.assert_called_once_with("git", path=harness_runner.os.defpath)
+
     def test_python_unittest_maps_to_fixed_argv_and_writes_allowlisted_report(self):
         with patch("scripts.harness_runner._git_commit_sha", return_value="a" * 40), patch(
             "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
@@ -379,6 +390,38 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertFalse(review_output.exists(), "blocked run must not leave a PASS review artifact")
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
 
+    def test_task_environment_blocks_python_import_path_overrides(self):
+        overrides = {
+            "PYTHONPATH": "/tmp/untrusted-modules",
+            "PYTHONHOME": "/tmp/untrusted-python",
+            "PYTHONUSERBASE": "/tmp/untrusted-user-base",
+            "PYTHONINSPECT": "1",
+            "GIT_DIR": "/tmp/untrusted-git",
+            "GIT_WORK_TREE": "/tmp/untrusted-worktree",
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "core.fsmonitor",
+            "GIT_CONFIG_VALUE_0": "true",
+            "LD_PRELOAD": "/tmp/untrusted.so",
+            "LD_LIBRARY_PATH": "/tmp/untrusted-libraries",
+            "DYLD_INSERT_LIBRARIES": "/tmp/untrusted.dylib",
+        }
+        with patch.dict(harness_runner.os.environ, overrides), patch(
+            "scripts.harness_runner.subprocess.run",
+            return_value=subprocess.CompletedProcess(["test"], 0),
+        ) as run:
+            status, exit_code = harness_runner._run_task(
+                [sys.executable, "-c", "pass"], self.root, 1
+            )
+        self.assertEqual((status, exit_code), ("passed", 0))
+        task_env = run.call_args.kwargs["env"]
+        for key in overrides:
+            self.assertNotIn(key, task_env)
+        self.assertEqual(task_env["PYTHONNOUSERSITE"], "1")
+        self.assertEqual(task_env["GIT_NO_REPLACE_OBJECTS"], "1")
+        self.assertEqual(task_env["GIT_CONFIG_NOSYSTEM"], "1")
+        self.assertEqual(task_env["GIT_CONFIG_GLOBAL"], harness_runner.os.devnull)
+        self.assertEqual(task_env["GIT_GRAFT_FILE"], harness_runner.os.devnull)
+
     def test_timeout_is_a_failed_task_without_echoing_process_output(self):
         with patch(
             "scripts.harness_runner.subprocess.run",
@@ -389,6 +432,115 @@ class HarnessRunnerTests(unittest.TestCase):
             )
         self.assertEqual((status, exit_code), ("failed", None))
 
+
+    def test_git_bound_review_passes_derived_input_and_reports_provenance(self):
+        self.write_config(["semantic-review"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        head = "c" * 40
+        provenance = {
+            "base_sha": "a" * 40,
+            "head_sha": head,
+            "merge_base_sha": "b" * 40,
+            "diff_sha256": "d" * 64,
+            "changed_files": ["tests/test_example.py"],
+        }
+        derived_input = b'{"task":"derived from Git"}\n'
+        with patch("scripts.harness_runner._git_commit_sha", return_value=head), patch(
+            "scripts.harness_runner._rules_pin", return_value="sha256:" + "b" * 64
+        ), patch(
+            "scripts.harness_runner._build_git_bound_review_input",
+            return_value=(derived_input, provenance),
+        ), patch(
+            "scripts.harness_runner._run_task", return_value=("passed", 0)
+        ) as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+                "--review-base", provenance["base_sha"],
+                "--review-head", head,
+            )
+        self.assertEqual((code, stderr), (0, ""))
+        self.assertEqual(run_task.call_args.args[3], derived_input)
+        report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["schema_version"], 2)
+        self.assertEqual(report["review_provenance"], provenance)
+
+    def test_git_bound_review_derives_diff_from_real_commit_range(self):
+        self.write_config(["semantic-review"])
+        (self.root / "review-input.json").write_text(json.dumps({
+            "task": "Review the selected Git range",
+            "diff": "caller-supplied forged diff",
+            "changed_files": ["forged.py"],
+            "global_rules": "Follow the global rules.",
+            "project_instructions": "Review only the selected changes.",
+        }), encoding="utf-8")
+        subprocess.run(
+            ["git", "add", "harness.json", "review-input.json"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test",
+             "-c", "user.email=harness-test@example.invalid",
+             "commit", "-qm", "configure strict review fixture"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        base_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.root, check=True,
+            capture_output=True, text=True,
+        ).stdout.strip()
+        source = self.root / "tests" / "test_example.py"
+        source.write_text(source.read_text(encoding="utf-8") + "# bound source change\n", encoding="utf-8")
+        spaced_source = self.root / "tests" / "test file.py"
+        spaced_source.write_text("value = 1\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "add", "tests/test_example.py", "tests/test file.py"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        subprocess.run(
+            ["git", "-c", "user.name=Harness Test",
+             "-c", "user.email=harness-test@example.invalid",
+             "commit", "-qm", "change source under review"],
+            cwd=self.root, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        head_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.root, check=True,
+            capture_output=True, text=True,
+        ).stdout.strip()
+
+        with patch("scripts.harness_runner._run_task", return_value=("passed", 0)) as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+                "--review-base", base_sha,
+                "--review-head", head_sha,
+            )
+
+        self.assertEqual((code, stderr), (0, ""))
+        payload = json.loads(run_task.call_args.args[3].decode("utf-8"))
+        self.assertNotEqual(payload["diff"], "caller-supplied forged diff")
+        self.assertEqual(
+            payload["changed_files"], ["tests/test file.py", "tests/test_example.py"]
+        )
+        self.assertIn("diff --git a/tests/test_example.py b/tests/test_example.py", payload["diff"])
+        self.assertIn("diff --git a/tests/test file.py b/tests/test file.py", payload["diff"])
+        report = json.loads((self.root / "artifacts" / "report.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["schema_version"], 2)
+        self.assertEqual(report["review_provenance"]["base_sha"], base_sha)
+        self.assertEqual(report["review_provenance"]["head_sha"], head_sha)
+        self.assertEqual(report["commit_sha"], head_sha)
+
+    def test_git_bound_review_requires_base_and_head_together(self):
+        self.write_config(["semantic-review"])
+        (self.root / "review-input.json").write_text("{}", encoding="utf-8")
+        with patch("scripts.harness_runner._run_task") as run_task:
+            code, _, stderr = self.run_runner(
+                "--review-input", "review-input.json",
+                "--review-output", "artifacts/review.json",
+                "--review-base", "a" * 40,
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("must be supplied together", stderr)
+        run_task.assert_not_called()
 
     def initialize_git_worktree(self):
         """Commit fixture sources once so provenance checks use a real Git worktree."""
@@ -458,6 +610,54 @@ class HarnessRunnerTests(unittest.TestCase):
         self.assertIn("clean", stderr)
         run_task.assert_not_called()
         self.assertFalse((self.root / "artifacts" / "report.json").exists())
+
+    def test_git_commit_sha_rejects_sparse_checkout_before_acceptance(self):
+        def git(*args):
+            return subprocess.run(
+                ["git", *args], cwd=self.root, check=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            ).stdout.strip()
+
+        git("sparse-checkout", "init", "--cone")
+        git("sparse-checkout", "set", "docs", "scripts")
+        self.assertEqual(git("config", "--bool", "--get", "core.sparseCheckout"), "true")
+        self.assertFalse((self.root / "tests" / "test_example.py").exists())
+
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError, "Sparse checkouts are not supported"
+        ):
+            harness_runner._git_commit_sha(self.root)
+
+    def test_git_commit_sha_detects_dirty_submodule_despite_local_ignore_config(self):
+        child = self.root / "child-source"
+        child.mkdir()
+
+        def git(cwd, *args):
+            return subprocess.run(
+                ["git", *args], cwd=cwd, check=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            ).stdout.strip()
+
+        git(child, "init", "-q")
+        git(child, "config", "user.name", "Harness Test")
+        git(child, "config", "user.email", "harness-test@example.invalid")
+        (child / "module.py").write_text("VALUE = 1\\n", encoding="utf-8")
+        git(child, "add", "module.py")
+        git(child, "commit", "-qm", "submodule base")
+
+        git(self.root, "config", "user.name", "Harness Test")
+        git(self.root, "config", "user.email", "harness-test@example.invalid")
+        git(self.root, "-c", "protocol.file.allow=always", "submodule", "add", "-q",
+            str(child), "deps/sub")
+        git(self.root, "commit", "-qam", "add submodule")
+        (self.root / "deps/sub/module.py").write_text("VALUE = 2\\n", encoding="utf-8")
+        git(self.root, "config", "diff.ignoreSubmodules", "all")
+        git(self.root, "config", "submodule.deps/sub.ignore", "all")
+
+        with self.assertRaisesRegex(
+            harness_runner.HarnessRunnerError, "Git worktree must be clean"
+        ):
+            harness_runner._git_commit_sha(self.root)
 
     def test_runner_rejects_untracked_source_but_allows_artifact_files(self):
         self.initialize_git_worktree()

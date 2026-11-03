@@ -23,6 +23,113 @@ class AcceptanceReportTests(unittest.TestCase):
             "schema_version", "commit_sha", "rules_pin", "tool_version", "tests", "status"
         })
 
+    def test_git_bound_provenance_uses_schema_v2_and_binds_head_to_report_commit(self):
+        metadata = self.valid_metadata()
+        metadata["review_provenance"] = {
+            "base_sha": "b" * 40,
+            "head_sha": "a" * 40,
+            "merge_base_sha": "c" * 40,
+            "diff_sha256": "d" * 64,
+            "changed_files": ["src/z.py", "src/a.py"],
+        }
+        report = build_acceptance_report(metadata)
+        self.assertEqual(report["schema_version"], 2)
+        self.assertEqual(report["review_provenance"]["head_sha"], report["commit_sha"])
+        self.assertEqual(report["review_provenance"]["changed_files"], ["src/a.py", "src/z.py"])
+
+    def test_ci_context_emits_schema_v3_and_binds_tested_commit(self):
+        metadata = self.valid_metadata()
+        metadata["ci_context"] = {
+            "tested_commit_sha": "a" * 40,
+            "run_id": 123,
+            "run_attempt": 2,
+            "event_name": "pull_request",
+            "pull_request_head_sha": "e" * 40,
+        }
+        report = build_acceptance_report(metadata)
+        self.assertEqual(report["schema_version"], 3)
+        self.assertEqual(report["ci_context"]["tested_commit_sha"], report["commit_sha"])
+        self.assertEqual(report["ci_context"]["run_id"], 123)
+        self.assertEqual(report["ci_context"]["run_attempt"], 2)
+        self.assertEqual(report["ci_context"]["event_name"], "pull_request")
+        self.assertEqual(report["ci_context"]["pull_request_head_sha"], "e" * 40)
+
+    def test_ci_context_requires_pr_head_only_for_pull_request_event(self):
+        metadata = self.valid_metadata()
+        metadata["ci_context"] = {
+            "tested_commit_sha": "a" * 40,
+            "run_id": 1,
+            "run_attempt": 1,
+            "event_name": "push",
+            "pull_request_head_sha": None,
+        }
+        self.assertEqual(build_acceptance_report(metadata)["schema_version"], 3)
+        for event_name, pr_head in (("push", "e" * 40), ("workflow_dispatch", "e" * 40),
+                                    ("pull_request", None), ("pull_request", "bad-sha")):
+            broken = self.valid_metadata()
+            broken["ci_context"] = {
+                "tested_commit_sha": "a" * 40,
+                "run_id": 1,
+                "run_attempt": 1,
+                "event_name": event_name,
+                "pull_request_head_sha": pr_head,
+            }
+            with self.subTest(event_name=event_name, pr_head=pr_head), self.assertRaises(AcceptanceReportError):
+                build_acceptance_report(broken)
+
+    def test_ci_context_rejects_invalid_run_metadata(self):
+        for field, value in (("run_id", 0), ("run_attempt", -1), ("run_id", True),
+                             ("event_name", "schedule"), ("tested_commit_sha", "f" * 40)):
+            metadata = self.valid_metadata()
+            metadata["ci_context"] = {
+                "tested_commit_sha": "a" * 40,
+                "run_id": 1,
+                "run_attempt": 1,
+                "event_name": "push",
+                "pull_request_head_sha": None,
+            }
+            metadata["ci_context"][field] = value
+            with self.subTest(field=field, value=value), self.assertRaises(AcceptanceReportError):
+                build_acceptance_report(metadata)
+
+    def test_git_bound_provenance_allows_internal_spaces_in_valid_paths(self):
+        metadata = self.valid_metadata()
+        metadata["review_provenance"] = {
+            "base_sha": "b" * 40,
+            "head_sha": "a" * 40,
+            "merge_base_sha": "c" * 40,
+            "diff_sha256": "d" * 64,
+            "changed_files": ["src/my file.py"],
+        }
+        report = build_acceptance_report(metadata)
+        self.assertEqual(
+            report["review_provenance"]["changed_files"], ["src/my file.py"]
+        )
+
+    def test_git_bound_provenance_rejects_mismatched_head_or_unsafe_paths(self):
+        mutations = (
+            lambda p: p.update(head_sha="e" * 40),
+            lambda p: p.update(diff_sha256="not-a-digest"),
+            lambda p: p.update(changed_files=["../outside.py"]),
+            lambda p: p.update(changed_files=["C:/outside.py"]),
+            lambda p: p.update(changed_files=["C:relative.py"]),
+            lambda p: p.update(changed_files=["src/" + chr(0x85) + "a.py"]),
+            lambda p: p.update(changed_files=["src/a.py", "src/a.py"]),
+        )
+        for mutate in mutations:
+            metadata = self.valid_metadata()
+            provenance = {
+                "base_sha": "b" * 40,
+                "head_sha": "a" * 40,
+                "merge_base_sha": "c" * 40,
+                "diff_sha256": "d" * 64,
+                "changed_files": ["src/a.py"],
+            }
+            mutate(provenance)
+            metadata["review_provenance"] = provenance
+            with self.subTest(provenance=provenance), self.assertRaises(AcceptanceReportError):
+                build_acceptance_report(metadata)
+
     def test_normalizes_commit_sha_case(self):
         metadata = self.valid_metadata()
         metadata["commit_sha"] = "A" * 40
