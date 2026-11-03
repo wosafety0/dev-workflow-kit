@@ -31,7 +31,7 @@ When current-facing documents conflict, follow the latest applicable, verified p
 - [x] Verify PR-head CI run [40691689194](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40691689194) succeeded for tested commit `4fa5f05316876cefa39bd8cdbe4187f63ee0757a`. This establishes the result for that exact PR head only; it does not independently verify the later merge commit `9b236112d4d6f07e15480b5b0ae6e9a3ef5c8aea`.
 - [x] Add failure-injection tests for model-provider fail-closed behavior.
 - [x] Add an orchestration fault matrix and test that test, report-generation, and artifact-upload outcomes must all be exactly successful before the final gate opens (`docs/ORCHESTRATION_FAULT_MATRIX.md`, `tests/test_ci_gate.py`).
-- [ ] Exercise real hosted-workflow failure injection (including an actual artifact-upload failure) and verify the resulting run evidence.
+- [x] Exercise hosted-workflow failure injection, including an actual artifact-upload step failure, and verify the run evidence: [run 40712433963](https://github.com/wosafety0/dev-workflow-kit/actions/runs/40712433963). The test intentionally referenced a missing artifact path; the upload step failed and the final gate failed closed with `ARTIFACT_OUTCOME=failure`. This does **not** simulate a GitHub Artifact service outage; service-level outage behavior remains unverified.
 
 ## Stage 3 — versioned distribution
 
