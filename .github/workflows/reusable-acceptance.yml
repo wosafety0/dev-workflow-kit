@@ -91,7 +91,7 @@ jobs:
             exit 2
           fi
           bash -euo pipefail -c "$ACCEPTANCE_COMMAND"
-- name: Build redacted consumer acceptance report
+      - name: Build redacted consumer acceptance report
         id: report
         if: always()
         shell: bash
