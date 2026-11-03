@@ -1,12 +1,17 @@
-# Current status — 2026-11-03 (post-archive exact-head verification)
+# Current status — 2026-11-03 (report-verifier + runtime integration)
 
-This section supersedes the 2026-11-02 current-status snapshot below. Historical results remain tied to their named commits.
+The 0.x candidate scope now includes both acceptance-report verification and the Node.js/pnpm runtime path. The integration is maintained as a separate Draft PR stacked on PR #40; the historical report branch is not merged wholesale.
 
-- **PR #40:** Draft/open/unmerged at `c393b92a06fd3900d1c3b36c7085156efc895973`, based on integration PR #37 head `a6839563ebff0e53642a03fa531551aa6abd8463`; GitHub reports mergeable.
-- **Exact-head CI:** Push [41502194116](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41502194116) and PR-context [41502200621](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41502200621) both passed all four jobs. Offline suite: 205 tests (5 optional skips); Windows Runner suite: 65 tests (2 optional skips); reusable Python and Node/pnpm selftests, acceptance-report upload, and final fail-closed gate passed.
-- **Consumer pin:** Python and Node/pnpm consumers remain on immutable pin `3df51ca949872fdc75d18feb902220b95957ec37`. The current PR #40 head is 16 commits ahead/0 behind that pin, and the intervening diff is limited to three progress/review documents; reusable workflow and semantic-review client blobs are unchanged. No repin is needed.
-- **Independent report-verifier stack:** PR #31 remains separate and Draft/open; it is not included in PR #40. Private consumer exact-head execution, browser E2E, consumer-specific archive-path acceptance, bounded 0.x scope approval, candidate selection, and release preflight remain open.
-- No merge, tag, release, deployment, consumer repin, billing, permission, visibility, secret, or Actions-policy change occurred.
+- **PR #41:** [Draft/open/unmerged](https://github.com/wosafety0/dev-workflow-kit/pull/41), branch `integration/report-verifier-node-pnpm-20261103`, exact code/test head `cfe4321c26e6bcf0dbb1d35a9f796d720a5f1170`, based on PR #40 branch head `ac17571e5d8558973069526da2288b04758708e1`.
+- **PR #41 exact-head Push CI:** [run 41578968574](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41578968574) passed all four jobs.
+- **PR #41 exact-head PR-context CI:** [run 41578971093](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41578971093) passed all four jobs.
+- **Verification:** 244 offline tests passed (5 optional skips); Windows Runner suite passed 65 tests (2 optional skips); reusable Python and Node.js 24/pnpm 11.4.0 acceptance self-tests passed. Harness acceptance-report generation, upload, identity verification, and final fail-closed gate passed. Consumer acceptance-report generation, artifact upload, inline identity verification, and final fail-closed gate passed in both runtime paths.
+- **PR #40:** remains Draft/open/unmerged and retains Node.js/pnpm runtime inputs and setup. **PR #31:** remains Draft/open/unmerged as the independent report-verifier source/evidence branch. PR #41 ports the report capabilities onto PR #40 rather than merging the divergent historical stack.
+- **Consumer pilots:** public Python and Node/pnpm consumers remain on immutable pin `3df51ca949872fdc75d18feb902220b95957ec37`; neither was repinned to PR #41. Their prior exact-head evidence remains tied to that older pin.
+- **Remaining release gates:** private consumer exact-head execution, browser E2E, consumer-specific archive-path acceptance, final 0.x candidate SHA selection, and release preflight remain open. The scope decision does not authorize merge, tag, release, deployment, or consumer repinning.
+
+No PR merge, tag, release, deployment, consumer repin, billing, permission, visibility, secret, or Actions-policy change occurred.
+
 
 ---
 

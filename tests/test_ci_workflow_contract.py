@@ -52,5 +52,13 @@ class CIWorkflowContractTests(unittest.TestCase):
         self.assertNotRegex(self.source, r"\$\{\{\s*secrets\.")
         self.assertNotIn("secrets: inherit", self.source)
 
+    def test_acceptance_report_verification_is_required_before_final_gate(self):
+        self.assertIn("Verify acceptance report identity and passing status", self.source)
+        self.assertIn("VERIFICATION_OUTCOME: ${{ steps.verification.outcome }}", self.source)
+        self.assertIn('"$TEST_OUTCOME" "$REPORT_OUTCOME" "$ARTIFACT_OUTCOME" "$VERIFICATION_OUTCOME"', self.source)
+
+    def test_acceptance_report_tool_identity_is_bound_to_runner_commit(self):
+        self.assertIn("TOOL_VERSION: dev-workflow-kit/harness-runner@${{ github.sha }}", self.source)
+
 if __name__ == "__main__":
     unittest.main()
