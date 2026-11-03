@@ -86,7 +86,7 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
 
         step = self.source.split(
             "      - name: Run consumer-owned acceptance command", 1
-        )[1]
+        )[1].split("\\n      - name: ", 1)[0]
         script = step.split("        run: |\n", 1)[1]
         script = "\n".join(
             line[10:] if line.startswith("          ") else line
@@ -182,7 +182,7 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
 
         step = self.source.split(
             "      - name: Run consumer-owned acceptance command", 1
-        )[1]
+        )[1].split("\\n      - name: ", 1)[0]
         script = step.split("        run: |\n", 1)[1]
         script = "\n".join(
             line[10:] if line.startswith("          ") else line
@@ -208,7 +208,7 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
 
         step = self.source.split(
             "      - name: Run consumer-owned acceptance command", 1
-        )[1]
+        )[1].split("\\n      - name: ", 1)[0]
         script = step.split("        run: |\n", 1)[1]
         script = "\n".join(
             line[10:] if line.startswith("          ") else line
@@ -235,7 +235,7 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
 
         step = self.source.split(
             "      - name: Run consumer-owned acceptance command", 1
-        )[1]
+        )[1].split("\\n      - name: ", 1)[0]
         script = step.split("        run: |\n", 1)[1]
         script = "\n".join(
             line[10:] if line.startswith("          ") else line
@@ -257,7 +257,7 @@ class ReusableAcceptanceWorkflowContractTests(unittest.TestCase):
 
         step = self.source.split(
             "      - name: Run consumer-owned acceptance command", 1
-        )[1]
+        )[1].split("\\n      - name: ", 1)[0]
         script = step.split("        run: |\n", 1)[1]
         script = "\n".join(
             line[10:] if line.startswith("          ") else line
