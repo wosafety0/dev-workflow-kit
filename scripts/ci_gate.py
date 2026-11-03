@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import sys
 
-_REQUIRED_STAGES = ("tests", "report", "artifact")
+_REQUIRED_STAGES = ("tests", "report", "artifact", "verification")
 
 
 def gate_passes(*outcomes: str) -> bool:
-    """Only exact success for tests, report generation, and artifact upload opens the gate."""
+    """Only exact success for every required stage opens the gate."""
     return len(outcomes) == len(_REQUIRED_STAGES) and all(
         outcome == "success" for outcome in outcomes
     )
@@ -17,7 +17,8 @@ def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
     if len(args) != len(_REQUIRED_STAGES):
         print(
-            "Usage: python scripts/ci_gate.py <test-outcome> <report-outcome> <artifact-outcome>",
+            "Usage: python scripts/ci_gate.py "
+            "<test-outcome> <report-outcome> <artifact-outcome> <verification-outcome>",
             file=sys.stderr,
         )
         return 2
