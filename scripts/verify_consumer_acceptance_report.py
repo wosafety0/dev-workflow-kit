@@ -56,7 +56,11 @@ def verify_report(
     if type(report["status"]) is not str or report["status"] != "passed":
         return False
     tests = report["tests"]
-    if type(tests) is not dict or set(tests) != _EXPECTED_TESTS:
+    if (
+        type(tests) is not dict
+        or any(type(name) is not str for name in tests)
+        or set(tests) != _EXPECTED_TESTS
+    ):
         return False
     return all(
         type(name) is str
