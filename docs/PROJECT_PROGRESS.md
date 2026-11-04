@@ -1090,3 +1090,10 @@ The final gate requires the test, report-build, and artifact-upload stages to re
 - **COMMITS:** standalone verifier commits `f7132508419af2a555bf76f9cd29b55434504bae` and `cf37a3350fcd01766c8477a3c182d5df7ad84b1f`; regression test commits `a6dee18a0867b0985060b202d551c7a91c60877f` and `ad5fe813151bc96d02f898824abd3279a2b653bb`.
 - **PR:** [Draft PR #43](https://github.com/wosafety0/dev-workflow-kit/pull/43), stacked on PR #42. Keep all related PRs Draft/open/unmerged; no release or consumer repin.
 - **LIMITS:** This hardens direct in-process validator calls; it does not make the Harness a sandbox or attest the runner host. Private-consumer runtime acceptance, browser E2E, consumer-specific archive-path acceptance, candidate selection, owner approval, and Release Preflight remain open. No billing, permission, secret, Actions-policy, merge, tag, release, or deployment change.
+
+
+### 2026-11-05 — Reject hostile non-string consumer test keys
+
+- A follow-up review found that the consumer verifier compared `set(tests)` with the required stage set before checking that every key was a built-in string. A custom hashable key could therefore run caller-defined equality during set comparison.
+- The consumer verifier now checks all nested test keys are exact strings before constructing/comparing the stage set. Added a hostile-key regression whose equality method raises; it must be rejected before equality is invoked.
+- Follow-up code commit `f9fee1f22fdaeb958f951ad3a66c20e20cdc05c8`; regression test commit `3fcc5a171ab0f111536d18a55ebf5732c3f4c369`. Exact-head CI for the follow-up is pending.
