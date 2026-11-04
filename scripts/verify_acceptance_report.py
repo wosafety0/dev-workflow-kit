@@ -30,29 +30,35 @@ def _read_report(path: Path) -> object:
 
 
 def verify_report(report: object, expected_sha: str, expected_rules_pin: str) -> bool:
-    if not isinstance(report, dict) or set(report) != _KEYS:
+    if type(report) is not dict or any(type(key) is not str for key in report) or set(report) != _KEYS:
         return False
-    if not isinstance(expected_sha, str) or not _SHA.fullmatch(expected_sha):
+    if type(expected_sha) is not str or not _SHA.fullmatch(expected_sha):
         return False
-    if not isinstance(expected_rules_pin, str) or not _PIN.fullmatch(expected_rules_pin):
+    if type(expected_rules_pin) is not str or not _PIN.fullmatch(expected_rules_pin):
         return False
     if type(report["schema_version"]) is not int or report["schema_version"] != 1:
         return False
-    if report["commit_sha"] != expected_sha or report["rules_pin"] != expected_rules_pin:
+    if type(report["commit_sha"]) is not str or report["commit_sha"] != expected_sha:
         return False
-    if report["status"] != "passed":
+    if type(report["rules_pin"]) is not str or report["rules_pin"] != expected_rules_pin:
+        return False
+    if type(report["status"]) is not str or report["status"] != "passed":
         return False
     # Bind the tool identity to the same commit as the report.
     # A non-empty arbitrary version string is insufficient provenance.
-    if report["tool_version"] != f"dev-workflow-kit/harness-runner@{expected_sha}":
+    if (
+        type(report["tool_version"]) is not str
+        or report["tool_version"] != f"dev-workflow-kit/harness-runner@{expected_sha}"
+    ):
         return False
     tests = report["tests"]
-    if not isinstance(tests, dict) or not tests:
+    if type(tests) is not dict or not tests:
         return False
     return all(
-        isinstance(name, str)
+        type(name) is str
         and bool(name)
         and name == name.strip()
+        and type(status) is str
         and status == "passed"
         for name, status in tests.items()
     )

@@ -1,3 +1,12 @@
+## 2026-11-05 — Strict input boundary for acceptance-report verifier APIs
+
+- Draft PR [#43](https://github.com/wosafety0/dev-workflow-kit/pull/43) rejects custom top-level/nested dict containers and non-string identity/status/test values before invoking caller-defined accessors. A follow-up also checks nested test keys are exact strings before set comparison, preventing hostile equality methods from running.
+- Code/test head `9a6f3847766dcfe6a335ca6c49a1f99b2217a045` passed exact-head PR-context CI [41885629507](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885629507). Final archive head `2dbfb83b73661b2623c618197e33c1bae4b26605` passed Push [41885912748](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885912748) and PR-context [41885925025](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885925025); all four jobs passed in both archive-head runs.
+- This closes the direct-Python-object validation gap in the current verifier surface only. It does not make the Harness a sandbox, attest the runner host, or prove a complete security review.
+- Release remains **not ready**: private consumer runtime acceptance, browser E2E, consumer-specific archive-path acceptance, final 0.x candidate SHA selection, owner approval, and Release Preflight remain open. No consumer repin, merge, tag, release, deployment, billing, permission, secret, visibility, or Actions-policy change.
+
+---
+
 ## 2026-11-04 — Bounded acceptance-report verifier input
 
 - [Draft PR #42](https://github.com/wosafety0/dev-workflow-kit/pull/42) is stacked on PR #41 and caps all three acceptance-report file readers at 1 MiB plus one sentinel byte. Oversized files are rejected before UTF-8 decoding or JSON parsing; duplicate-key rejection, recursion handling, identity checks, report schema, and permissions are unchanged.

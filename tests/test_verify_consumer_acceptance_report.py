@@ -32,6 +32,28 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
     def test_valid_report_passes(self):
         self.assertTrue(verify_report(valid_report(), SHA, WORKFLOW_REF, WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
 
+    def test_rejects_dict_subclasses_before_custom_accessors(self):
+        class AccessorDict(dict):
+            def __iter__(self):
+                raise AssertionError("custom iterator must not run")
+
+            def __getitem__(self, key):
+                raise AssertionError("custom item accessor must not run")
+
+            def items(self):
+                raise AssertionError("custom items accessor must not run")
+
+        self.assertFalse(verify_report(
+            AccessorDict(valid_report()), SHA, WORKFLOW_REF, WORKFLOW_SHA,
+            HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA,
+        ))
+        report = valid_report()
+        report["tests"] = AccessorDict(report["tests"])
+        self.assertFalse(verify_report(
+            report, SHA, WORKFLOW_REF, WORKFLOW_SHA,
+            HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA,
+        ))
+
     def test_wrong_commit_or_workflow_identity_fails(self):
         for field, expected in (
             ("consumer_commit_sha", "c" * 40),
@@ -64,6 +86,24 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
             report["tests"] = tests
             with self.subTest(tests=tests):
                 self.assertFalse(verify_report(report, SHA, WORKFLOW_REF, WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
+
+    def test_rejects_non_string_test_keys_before_set_comparison(self):
+        class HostileKey:
+            def __hash__(self):
+                return hash("runtime-validation")
+
+            def __eq__(self, other):
+                raise AssertionError("custom key equality must not run")
+
+        report = valid_report()
+        report["tests"] = {
+            HostileKey(): "passed",
+            "consumer-acceptance-command": "passed",
+        }
+        self.assertFalse(verify_report(
+            report, SHA, WORKFLOW_REF, WORKFLOW_SHA,
+            HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA,
+        ))
 
     def test_schema_and_expected_identity_are_strict(self):
         for mutate in (
