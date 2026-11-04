@@ -29,39 +29,40 @@ def verify_report(
     expected_harness_workflow_ref: str,
     expected_harness_workflow_sha: str,
 ) -> bool:
-    if not isinstance(report, dict) or set(report) != _KEYS:
+    if type(report) is not dict or any(type(key) is not str for key in report) or set(report) != _KEYS:
         return False
-    if not isinstance(expected_sha, str) or not _SHA.fullmatch(expected_sha):
+    if type(expected_sha) is not str or not _SHA.fullmatch(expected_sha):
         return False
-    if not isinstance(expected_workflow_ref, str) or not expected_workflow_ref.strip():
+    if type(expected_workflow_ref) is not str or not expected_workflow_ref.strip():
         return False
-    if not isinstance(expected_workflow_sha, str) or not _SHA.fullmatch(expected_workflow_sha):
+    if type(expected_workflow_sha) is not str or not _SHA.fullmatch(expected_workflow_sha):
         return False
-    if not isinstance(expected_harness_workflow_ref, str) or not expected_harness_workflow_ref.strip():
+    if type(expected_harness_workflow_ref) is not str or not expected_harness_workflow_ref.strip():
         return False
-    if not isinstance(expected_harness_workflow_sha, str) or not _SHA.fullmatch(expected_harness_workflow_sha):
+    if type(expected_harness_workflow_sha) is not str or not _SHA.fullmatch(expected_harness_workflow_sha):
         return False
     if type(report["schema_version"]) is not int or report["schema_version"] != 1:
         return False
-    if report["consumer_commit_sha"] != expected_sha:
+    if type(report["consumer_commit_sha"]) is not str or report["consumer_commit_sha"] != expected_sha:
         return False
-    if report["caller_workflow_ref"] != expected_workflow_ref:
+    if type(report["caller_workflow_ref"]) is not str or report["caller_workflow_ref"] != expected_workflow_ref:
         return False
-    if report["caller_workflow_sha"] != expected_workflow_sha:
+    if type(report["caller_workflow_sha"]) is not str or report["caller_workflow_sha"] != expected_workflow_sha:
         return False
-    if report["harness_workflow_ref"] != expected_harness_workflow_ref:
+    if type(report["harness_workflow_ref"]) is not str or report["harness_workflow_ref"] != expected_harness_workflow_ref:
         return False
-    if report["harness_workflow_sha"] != expected_harness_workflow_sha:
+    if type(report["harness_workflow_sha"]) is not str or report["harness_workflow_sha"] != expected_harness_workflow_sha:
         return False
-    if report["status"] != "passed":
+    if type(report["status"]) is not str or report["status"] != "passed":
         return False
     tests = report["tests"]
-    if not isinstance(tests, dict) or set(tests) != _EXPECTED_TESTS:
+    if type(tests) is not dict or set(tests) != _EXPECTED_TESTS:
         return False
     return all(
-        isinstance(name, str)
+        type(name) is str
         and bool(name)
         and name == name.strip()
+        and type(status) is str
         and status == "passed"
         for name, status in tests.items()
     )
