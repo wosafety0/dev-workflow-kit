@@ -32,6 +32,28 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
     def test_valid_report_passes(self):
         self.assertTrue(verify_report(valid_report(), SHA, WORKFLOW_REF, WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
 
+    def test_rejects_dict_subclasses_before_custom_accessors(self):
+        class AccessorDict(dict):
+            def __iter__(self):
+                raise AssertionError("custom iterator must not run")
+
+            def __getitem__(self, key):
+                raise AssertionError("custom item accessor must not run")
+
+            def items(self):
+                raise AssertionError("custom items accessor must not run")
+
+        self.assertFalse(verify_report(
+            AccessorDict(valid_report()), SHA, WORKFLOW_REF, WORKFLOW_SHA,
+            HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA,
+        ))
+        report = valid_report()
+        report["tests"] = AccessorDict(report["tests"])
+        self.assertFalse(verify_report(
+            report, SHA, WORKFLOW_REF, WORKFLOW_SHA,
+            HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA,
+        ))
+
     def test_wrong_commit_or_workflow_identity_fails(self):
         for field, expected in (
             ("consumer_commit_sha", "c" * 40),
