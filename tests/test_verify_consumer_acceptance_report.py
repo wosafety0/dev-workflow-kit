@@ -87,6 +87,24 @@ class VerifyConsumerAcceptanceReportTests(unittest.TestCase):
             with self.subTest(tests=tests):
                 self.assertFalse(verify_report(report, SHA, WORKFLOW_REF, WORKFLOW_SHA, HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA))
 
+    def test_rejects_non_string_test_keys_before_set_comparison(self):
+        class HostileKey:
+            def __hash__(self):
+                return hash("runtime-validation")
+
+            def __eq__(self, other):
+                raise AssertionError("custom key equality must not run")
+
+        report = valid_report()
+        report["tests"] = {
+            HostileKey(): "passed",
+            "consumer-acceptance-command": "passed",
+        }
+        self.assertFalse(verify_report(
+            report, SHA, WORKFLOW_REF, WORKFLOW_SHA,
+            HARNESS_WORKFLOW_REF, HARNESS_WORKFLOW_SHA,
+        ))
+
     def test_schema_and_expected_identity_are_strict(self):
         for mutate in (
             lambda r: r.update(schema_version=True),
