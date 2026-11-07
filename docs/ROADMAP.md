@@ -2,7 +2,7 @@
 
 - **PR #43:** [Draft/open/unmerged](https://github.com/wosafety0/dev-workflow-kit/pull/43), branch `fix/reject-custom-report-mappings-20261105`, stacked on PR #42. The verifier APIs now require exact built-in dictionaries for the report and nested tests map, exact built-in strings for identity/status/test fields, and validate string keys before set comparison so hostile key equality cannot execute during validation.
 - **Exact code/test head:** `9a6f3847766dcfe6a335ca6c49a1f99b2217a045`; PR-context CI [41885629507](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885629507) passed all four jobs (250 offline tests, 5 skipped; 65 Windows Runner tests, 2 skipped; reusable Python and Node/pnpm acceptance).
-- **Final archive head:** `2dbfb83b73661b2623c618197e33c1bae4b26605); Push [41885912748](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885912748) and PR-context [41885925025](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885925025) both passed all four jobs.
+- **Final archive head:** `2dbfb83b73661b2623c618197e33c1bae4b26605`; Push [41885912748](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885912748) and PR-context [41885925025](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885925025) both passed all four jobs.
 - PR #43 remains Draft/open/unmerged and is stacked on PR #42 → #41 → #40. The private consumer, browser E2E, consumer archive-path acceptance, final 0.x candidate SHA selection, owner approval, and Release Preflight remain open; no release or deployment is authorized by these CI results.
 
 ---
