@@ -1,4 +1,12 @@
-# Current status — 2026-11-05 (strict acceptance-report verifier inputs)
+# Current status — 2026-11-09 (exact archive-head revalidation)
+
+- **PR #43:** [Draft/open/unmerged](https://github.com/wosafety0/dev-workflow-kit/pull/43), branch `fix/reject-custom-report-mappings-20261105`. Current archive HEAD `8a8083331eb105c64246980a2898860005a1e379` is a documentation-only correction to a malformed Markdown code span; verifier implementation/test head remains `9a6f3847766dcfe6a335ca6c49a1f99b2217a045`.
+- **Exact archive-head CI:** Push [run 42427363066](https://github.com/wosafety0/dev-workflow-kit/actions/runs/42427363066) and PR-context [run 42427366207](https://github.com/wosafety0/dev-workflow-kit/actions/runs/42427366207) both passed all four jobs on `8a8083331eb105c64246980a2898860005a1e379`. Logs confirm 250 offline tests (5 skipped), 65 Windows Runner tests (2 skipped), reusable Python acceptance, and reusable Node/pnpm acceptance. Report generation, upload, identity verification, and final gates succeeded.
+- **Private consumer:** `wosafety0/chatgpt-auto-send-assistant` Draft PR [#1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) remains open/unmerged at head `0d64bf825cc5a76f3d8603f2e0fb431613715b56`. Latest run remains [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) from 2026-10-30; no newer attempt appears in the run inventory. Its job-log endpoint returns `BlobNotFound`; the current connector cannot retrieve the check-run annotations. The recorded pre-runner failure does not establish a root cause. No rerun or settings change was made.
+- **Release decision:** Not ready. Private exact-head runtime acceptance, browser E2E, consumer-specific archive-path acceptance, final 0.x candidate SHA selection, owner approval, and Release Preflight remain open. No merge, tag, release, deployment, consumer repin, billing/permission/policy change, or secret access occurred.
+
+---
+# Historical status — 2026-11-05 (strict acceptance-report verifier inputs)
 
 - **PR #43:** [Draft/open/unmerged](https://github.com/wosafety0/dev-workflow-kit/pull/43), branch `fix/reject-custom-report-mappings-20261105`, stacked on PR #42. The verifier APIs now require exact built-in dictionaries for the report and nested tests map, exact built-in strings for identity/status/test fields, and validate string keys before set comparison so hostile key equality cannot execute during validation.
 - **Exact code/test head:** `9a6f3847766dcfe6a335ca6c49a1f99b2217a045`; PR-context CI [41885629507](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885629507) passed all four jobs (250 offline tests, 5 skipped; 65 Windows Runner tests, 2 skipped; reusable Python and Node/pnpm acceptance).

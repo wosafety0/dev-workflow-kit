@@ -1,4 +1,12 @@
-## 2026-11-05 — Strict input boundary for acceptance-report verifier APIs
+## 2026-11-09 — Exact archive-head CI revalidation; release remains blocked
+
+- Draft PR [#43](https://github.com/wosafety0/dev-workflow-kit/pull/43) remains open/unmerged. Current archive HEAD `8a8083331eb105c64246980a2898860005a1e379` is a documentation-only correction after verifier code/test head `9a6f3847766dcfe6a335ca6c49a1f99b2217a045`.
+- Exact-head Push [42427363066](https://github.com/wosafety0/dev-workflow-kit/actions/runs/42427363066) and PR-context [42427366207](https://github.com/wosafety0/dev-workflow-kit/actions/runs/42427366207) both passed all four jobs: 250 offline tests (5 skipped), 65 Windows Runner tests (2 skipped), reusable Python acceptance, and reusable Node/pnpm acceptance.
+- Private consumer Draft PR [#1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) has no newer Actions attempt after [run 41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827). Logs remain unavailable (`BlobNotFound`) and check-run annotations cannot be retrieved through the current connector. The failure is still before usable runner/step evidence; root cause is unknown. No rerun or settings change was made.
+- Release remains **not ready**: private exact-head runtime acceptance, browser E2E, archive-path acceptance, final candidate SHA selection, owner approval, and Release Preflight remain open. No consumer repin, merge, tag, release, deployment, billing, permission, visibility, secret, or Actions-policy change.
+
+---
+## Historical — 2026-11-05 — Strict input boundary for acceptance-report verifier APIs
 
 - Draft PR [#43](https://github.com/wosafety0/dev-workflow-kit/pull/43) rejects custom top-level/nested dict containers and non-string identity/status/test values before invoking caller-defined accessors. A follow-up also checks nested test keys are exact strings before set comparison, preventing hostile equality methods from running.
 - Code/test head `9a6f3847766dcfe6a335ca6c49a1f99b2217a045` passed exact-head PR-context CI [41885629507](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885629507). Final archive head `2dbfb83b73661b2623c618197e33c1bae4b26605` passed Push [41885912748](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885912748) and PR-context [41885925025](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885925025); all four jobs passed in both archive-head runs.
