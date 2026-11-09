@@ -1,10 +1,9 @@
-## 2026-11-09 — Exact archive-head CI revalidation; release remains blocked
+## 2026-11-10 — Exact archive-head revalidation; release remains blocked
 
-- Draft PR [#43](https://github.com/wosafety0/dev-workflow-kit/pull/43) remains open/unmerged. Current archive HEAD `8a8083331eb105c64246980a2898860005a1e379` is a documentation-only correction after verifier code/test head `9a6f3847766dcfe6a335ca6c49a1f99b2217a045`.
-- Exact-head Push [42427363066](https://github.com/wosafety0/dev-workflow-kit/actions/runs/42427363066) and PR-context [42427366207](https://github.com/wosafety0/dev-workflow-kit/actions/runs/42427366207) both passed all four jobs: 250 offline tests (5 skipped), 65 Windows Runner tests (2 skipped), reusable Python acceptance, and reusable Node/pnpm acceptance.
-- Private consumer Draft PR [#1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) has no newer Actions attempt after [run 41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827). Logs remain unavailable (`BlobNotFound`) and check-run annotations cannot be retrieved through the current connector. The failure is still before usable runner/step evidence; root cause is unknown. No rerun or settings change was made.
-- Release remains **not ready**: private exact-head runtime acceptance, browser E2E, archive-path acceptance, final candidate SHA selection, owner approval, and Release Preflight remain open. No consumer repin, merge, tag, release, deployment, billing, permission, visibility, secret, or Actions-policy change.
-
+- Draft PR [#43](https://github.com/wosafety0/dev-workflow-kit/pull/43) remains open/unmerged at archive HEAD `121283aa6490c193e96a17bcbd4bb89108bd34b6`; verifier code/test head is `9a6f3847766dcfe6a335ca6c49a1f99b2217a045`.
+- Exact-head Push [42535585645](https://github.com/wosafety0/dev-workflow-kit/actions/runs/42535585645) and PR-context [42535589463](https://github.com/wosafety0/dev-workflow-kit/actions/runs/42535589463) both passed all four jobs: 250 offline tests (5 skipped), 65 Windows Runner tests (2 skipped), reusable Python acceptance, and reusable Node/pnpm acceptance.
+- Private consumer Draft PR [#1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) remains open/unmerged at `0d64bf825cc5a76f3d8603f2e0fb431613715b56`. Latest known run [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) remains a pre-runner failure with no steps; logs are unavailable (BlobNotFound) and annotations are not exposed. The root cause remains unknown.
+- Release remains **not ready**: private exact-head runtime acceptance, browser E2E, archive-path acceptance, final candidate SHA selection, owner approval, and Release Preflight remain open. No consumer repin, merge, tag, release, deployment, billing/permission/policy change, visibility change, or secret access.
 ---
 ## Historical — 2026-11-05 — Strict input boundary for acceptance-report verifier APIs
 
