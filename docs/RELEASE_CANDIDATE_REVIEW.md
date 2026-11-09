@@ -1,3 +1,18 @@
+## 2026-11-10 — Final PR #43 archive-head verification; release remains blocked
+
+- Draft PR [#43](https://github.com/wosafety0/dev-workflow-kit/pull/43) remains Open/Draft/unmerged on `fix/reject-custom-report-mappings-20261105`. The verified parent archive head for this record is `f420d09f5bab37a28d8bb301b0bf669926130919`; verifier implementation/test head remains `9a6f3847766dcfe6a335ca6c49a1f99b2217a045`.
+- Exact-head Push [42680866471](https://github.com/wosafety0/dev-workflow-kit/actions/runs/42680866471) and PR-context [42680872082](https://github.com/wosafety0/dev-workflow-kit/actions/runs/42680872082) both passed all four jobs: 250 offline tests (5 skipped), 65 Windows Runner tests (2 skipped), reusable Python acceptance, and reusable Node/pnpm acceptance. Report generation/upload, identity verification, and final gates passed.
+- Private consumer Draft PR [#1](https://github.com/wosafety0/chatgpt-auto-send-assistant/pull/1) remains open/unmerged at `0d64bf825cc5a76f3d8603f2e0fb431613715b56`. Latest known run [41099042827](https://github.com/wosafety0/chatgpt-auto-send-assistant/actions/runs/41099042827) remains a pre-runner failure with no steps; logs are unavailable (BlobNotFound), annotations are not exposed, and no newer run exists. Root cause remains unknown.
+- Release remains **not ready**: private exact-head runtime acceptance, browser E2E, consumer archive-path acceptance, final candidate SHA selection, owner approval, and Release Preflight remain open. No consumer repin, merge, tag, release, deployment, billing/permission/policy change, visibility change, or secret access.---
+## Historical — 2026-11-05 — Strict input boundary for acceptance-report verifier APIs
+
+- Draft PR [#43](https://github.com/wosafety0/dev-workflow-kit/pull/43) rejects custom top-level/nested dict containers and non-string identity/status/test values before invoking caller-defined accessors. A follow-up also checks nested test keys are exact strings before set comparison, preventing hostile equality methods from running.
+- Code/test head `9a6f3847766dcfe6a335ca6c49a1f99b2217a045` passed exact-head PR-context CI [41885629507](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885629507). Final archive head `2dbfb83b73661b2623c618197e33c1bae4b26605` passed Push [41885912748](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885912748) and PR-context [41885925025](https://github.com/wosafety0/dev-workflow-kit/actions/runs/41885925025); all four jobs passed in both archive-head runs.
+- This closes the direct-Python-object validation gap in the current verifier surface only. It does not make the Harness a sandbox, attest the runner host, or prove a complete security review.
+- Release remains **not ready**: private consumer runtime acceptance, browser E2E, consumer-specific archive-path acceptance, final 0.x candidate SHA selection, owner approval, and Release Preflight remain open. No consumer repin, merge, tag, release, deployment, billing, permission, secret, visibility, or Actions-policy change.
+
+---
+
 ## 2026-11-04 — Bounded acceptance-report verifier input
 
 - [Draft PR #42](https://github.com/wosafety0/dev-workflow-kit/pull/42) is stacked on PR #41 and caps all three acceptance-report file readers at 1 MiB plus one sentinel byte. Oversized files are rejected before UTF-8 decoding or JSON parsing; duplicate-key rejection, recursion handling, identity checks, report schema, and permissions are unchanged.

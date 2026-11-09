@@ -26,6 +26,22 @@ class AcceptanceReportVerifierTests(unittest.TestCase):
     def test_accepts_matching_pass_report(self):
         self.assertTrue(verify_report(valid(), SHA, PIN))
 
+    def test_rejects_dict_subclasses_before_custom_accessors(self):
+        class AccessorDict(dict):
+            def __iter__(self):
+                raise AssertionError("custom iterator must not run")
+
+            def __getitem__(self, key):
+                raise AssertionError("custom item accessor must not run")
+
+            def items(self):
+                raise AssertionError("custom items accessor must not run")
+
+        self.assertFalse(verify_report(AccessorDict(valid()), SHA, PIN))
+        report = valid()
+        report["tests"] = AccessorDict(report["tests"])
+        self.assertFalse(verify_report(report, SHA, PIN))
+
     def test_ci_report_tool_identity_matches_verifier_contract(self):
         workflow = (
             Path(__file__).resolve().parents[1]
